@@ -1,0 +1,6 @@
+RewriteEngine On
+
+# Envia todas las rutas al front controller cuando no exista archivo/carpeta real.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

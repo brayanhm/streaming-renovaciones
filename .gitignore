@@ -1,7 +1,8 @@
 /vendor/
 /node_modules/
-/storage/logs/*
-.env
+/.env
+/storage/logs/*.log
+!/storage/logs/.gitkeep
 *.log
 Thumbs.db
 .DS_Store
