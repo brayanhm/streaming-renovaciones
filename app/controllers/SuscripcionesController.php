@@ -143,14 +143,14 @@ class SuscripcionesController extends Controller
             !in_array($payload['estado'], Suscripcion::ESTADOS, true)
         ) {
             set_old($payload);
-            flash('danger', 'Completa todos los campos obligatorios.');
+            flash('danger', 'Completa todos los campos obligatorios de la suscripcion.');
 
             return null;
         }
 
         if ($payload['fecha_inicio'] > $payload['fecha_vencimiento']) {
             set_old($payload);
-            flash('danger', 'La fecha de inicio no puede ser mayor a la fecha de vencimiento.');
+            flash('danger', 'La fecha de inicio no puede ser posterior a la fecha de vencimiento.');
 
             return null;
         }
@@ -158,12 +158,21 @@ class SuscripcionesController extends Controller
         $modalidad = $this->modalidades->find($payload['modalidad_id']);
         if ($modalidad === null || (int) $modalidad['plataforma_id'] !== $payload['plataforma_id']) {
             set_old($payload);
-            flash('danger', 'El tipo de suscripcion no corresponde a la plataforma seleccionada.');
+            flash('danger', 'El plan seleccionado no corresponde a la plataforma elegida.');
 
             return null;
         }
 
-        $priceValue = $payload['precio_venta'] === '' ? (float) $modalidad['precio'] : (float) $payload['precio_venta'];
+        if ($payload['precio_venta'] !== '' && !preg_match('/^\d+$/', $payload['precio_venta'])) {
+            set_old($payload);
+            flash('danger', 'El precio de venta debe ser un numero entero mayor a 0.');
+
+            return null;
+        }
+
+        $priceValue = $payload['precio_venta'] === ''
+            ? (int) round((float) $modalidad['precio'])
+            : (int) $payload['precio_venta'];
         if ($priceValue <= 0) {
             set_old($payload);
             flash('danger', 'El precio de venta debe ser mayor a 0.');
@@ -171,7 +180,7 @@ class SuscripcionesController extends Controller
             return null;
         }
 
-        $payload['precio_venta'] = number_format($priceValue, 2, '.', '');
+        $payload['precio_venta'] = (string) $priceValue;
 
         return $payload;
     }

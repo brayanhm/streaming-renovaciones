@@ -95,6 +95,7 @@ class PlataformasController extends Controller
         $payload = [
             'nombre' => trim((string) ($_POST['nombre'] ?? '')),
             'tipo_servicio' => strtoupper(trim((string) ($_POST['tipo_servicio'] ?? ''))),
+            'duraciones_disponibles' => trim((string) ($_POST['duraciones_disponibles'] ?? '')),
             'mensaje_menos_2' => trim((string) ($_POST['mensaje_menos_2'] ?? '')),
             'mensaje_menos_1' => trim((string) ($_POST['mensaje_menos_1'] ?? '')),
             'mensaje_rec_7' => trim((string) ($_POST['mensaje_rec_7'] ?? '')),
@@ -103,10 +104,19 @@ class PlataformasController extends Controller
 
         if ($payload['nombre'] === '' || !in_array($payload['tipo_servicio'], ['RENOVABLE', 'DESECHABLE'], true)) {
             set_old($payload);
-            flash('danger', 'Nombre y tipo de servicio son obligatorios.');
+            flash('danger', 'Completa el nombre y el tipo de servicio de la plataforma.');
 
             return null;
         }
+
+        $normalizedDurations = Plataforma::normalizeDuracionesDisponibles($payload['duraciones_disponibles']);
+        if ($payload['duraciones_disponibles'] !== '' && $normalizedDurations === null) {
+            set_old($payload);
+            flash('danger', 'Duraciones no validas. Usa meses positivos separados por comas, por ejemplo: 1,3,7.');
+
+            return null;
+        }
+        $payload['duraciones_disponibles'] = $normalizedDurations;
 
         return $payload;
     }

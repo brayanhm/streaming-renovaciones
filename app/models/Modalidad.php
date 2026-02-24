@@ -7,19 +7,29 @@ class Modalidad extends BaseModel
 {
     public const TIPOS_CUENTA = ['CUENTA_COMPLETA', 'POR_DISPOSITIVOS', 'AMBOS'];
 
-    public function all(string $search = ''): array
+    public function all(string $search = '', int $plataformaId = 0): array
     {
         $sql = 'SELECT m.*, p.nombre AS plataforma_nombre
             FROM modalidades m
             INNER JOIN plataformas p ON p.id = m.plataforma_id';
+        $conditions = [];
         $params = [];
 
+        if ($plataformaId > 0) {
+            $conditions[] = 'm.plataforma_id = :plataforma_id';
+            $params['plataforma_id'] = $plataformaId;
+        }
+
         if ($search !== '') {
-            $sql .= ' WHERE m.nombre_modalidad LIKE :term OR p.nombre LIKE :term OR m.tipo_cuenta LIKE :term';
+            $conditions[] = '(m.nombre_modalidad LIKE :term OR p.nombre LIKE :term OR m.tipo_cuenta LIKE :term)';
             $params['term'] = '%' . $search . '%';
         }
 
-        $sql .= ' ORDER BY p.nombre ASC, m.nombre_modalidad ASC';
+        if ($conditions !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+
+        $sql .= ' ORDER BY p.nombre ASC, m.nombre_modalidad ASC, m.duracion_meses ASC';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

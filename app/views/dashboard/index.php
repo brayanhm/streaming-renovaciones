@@ -2,15 +2,16 @@
 declare(strict_types=1);
 
 use App\Models\Modalidad;
+use App\Models\Plataforma;
 
 $states = [
     'TODOS' => ['label' => 'Todos', 'badge' => 'secondary'],
-    'CONTACTAR_2D' => ['label' => 'Contactar -2', 'badge' => 'warning'],
-    'REENVIAR_1D' => ['label' => 'Reenviar -1', 'badge' => 'info'],
+    'CONTACTAR_2D' => ['label' => 'Contactar (-2 dias)', 'badge' => 'warning'],
+    'REENVIAR_1D' => ['label' => 'Reenviar (-1 dia)', 'badge' => 'info'],
     'ESPERA' => ['label' => 'Espera', 'badge' => 'primary'],
-    'ACTIVO' => ['label' => 'Activos', 'badge' => 'success'],
+    'ACTIVO' => ['label' => 'Al dia', 'badge' => 'success'],
     'VENCIDO' => ['label' => 'Vencidos', 'badge' => 'danger'],
-    'RECUP' => ['label' => 'Recuperacion', 'badge' => 'dark'],
+    'RECUP' => ['label' => 'Recuperar', 'badge' => 'dark'],
 ];
 
 if (!function_exists('status_badge_class')) {
@@ -38,11 +39,20 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
         return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' - ' . $duracion . ' mes(es)';
     }
 }
+
+if (!function_exists('renewal_options')) {
+    function renewal_options(array $row): array
+    {
+        $configured = Plataforma::parseDuracionesDisponibles((string) ($row['plataforma_duraciones_disponibles'] ?? ''));
+
+        return $configured !== [] ? $configured : [1, 3, 6];
+    }
+}
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="h3 mb-1">Dashboard de renovaciones</h1>
-        <p class="text-secondary mb-0">Control diario de clientes y vencimientos.</p>
+        <h1 class="h3 mb-1">Panel de renovaciones</h1>
+        <p class="text-secondary mb-0">Seguimiento diario de clientes, vencimientos y renovaciones.</p>
     </div>
     <div class="d-flex gap-2">
         <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar suscripciones</a>
@@ -54,13 +64,13 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
         <form class="row g-2 align-items-end" method="get" action="<?= e(url('/dashboard')) ?>">
             <input type="hidden" name="estado" value="<?= e($selectedStatus ?? 'TODOS') ?>">
             <div class="col-12 col-md-8">
-                <label class="form-label fw-semibold" for="q">Buscar cliente o telefono</label>
+                <label class="form-label fw-semibold" for="q">Buscar por cliente o telefono</label>
                 <input
                     class="form-control form-control-lg"
                     type="text"
                     id="q"
                     name="q"
-                    placeholder="Ej. Juan Perez o 3001234567"
+                    placeholder="Ej: Juan Perez o 79625801"
                     value="<?= e($search ?? '') ?>"
                 >
             </div>
@@ -98,13 +108,13 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
                         <th>Cliente</th>
                         <th>Telefono</th>
                         <th>Servicio</th>
-                        <th>Tipo suscripcion</th>
-                        <th>Vence</th>
-                        <th>Precio</th>
+                        <th>Plan</th>
+                        <th>Vencimiento</th>
+                        <th>Precio (Bs)</th>
                         <th>Estado</th>
                         <th>WhatsApp</th>
                         <th>Renovar</th>
-                        <th>No renovo</th>
+                        <th>No renovado</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,6 +131,20 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
                         $status = (string) ($row['estado'] ?? 'ACTIVO');
                         $whatsType = (string) ($row['contact_type_sugerido'] ?? 'MENOS_2');
                         $flagNoRenovo = (int) ($row['flag_no_renovo'] ?? 0) === 1;
+                        $renewOptions = renewal_options($row);
+                        if ($dias < 0) {
+                            $diasLabel = 'Vencido hace ' . abs($dias) . ' dias';
+                            $diasClass = 'text-danger';
+                        } elseif ($dias === 0) {
+                            $diasLabel = 'Vence hoy';
+                            $diasClass = 'text-danger';
+                        } elseif ($dias === 1) {
+                            $diasLabel = 'Vence en 1 dia';
+                            $diasClass = 'text-warning';
+                        } else {
+                            $diasLabel = 'Vence en ' . $dias . ' dias';
+                            $diasClass = $dias <= 2 ? 'text-warning' : 'text-secondary';
+                        }
                         ?>
                         <tr>
                             <td>
@@ -134,22 +158,22 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
                                 <div>
                                     <span class="badge text-bg-light border"><?= e((string) ($row['plataforma_tipo_servicio'] ?? '')) ?></span>
                                     <?php if (!empty($row['usuario_proveedor'])): ?>
-                                        <span class="badge text-bg-secondary">Usuario: <?= e((string) $row['usuario_proveedor']) ?></span>
+                                        <span class="badge text-bg-secondary">Cuenta: <?= e((string) $row['usuario_proveedor']) ?></span>
                                     <?php endif; ?>
                                 </div>
                             </td>
                             <td><?= e(tipo_suscripcion_dashboard($row)) ?></td>
                             <td>
                                 <div><?= e($vencimiento) ?></div>
-                                <small class="<?= $dias < 0 ? 'text-danger' : 'text-secondary' ?>">
-                                    <?= e((string) $dias) ?> dias
+                                <small class="<?= e($diasClass) ?>">
+                                    <?= e($diasLabel) ?>
                                 </small>
                             </td>
-                            <td>$<?= e(number_format((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0), 2, '.', ',')) ?></td>
+                            <td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
                             <td>
                                 <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
                                 <?php if ($flagNoRenovo): ?>
-                                    <div><small class="text-danger fw-semibold">Marcado no renovo</small></div>
+                                    <div><small class="text-danger fw-semibold">Marcado como no renovado</small></div>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -164,7 +188,7 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
                             </td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
-                                    <?php foreach ([1, 3, 6] as $months): ?>
+                                    <?php foreach ($renewOptions as $months): ?>
                                         <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>">
                                             <input type="hidden" name="meses" value="<?= e((string) $months) ?>">
                                             <button type="submit" class="btn btn-primary btn-sm">+<?= e((string) $months) ?>M</button>
@@ -174,7 +198,7 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
                             </td>
                             <td>
                                 <form method="post" action="<?= e(url('/suscripciones/no-renovo/' . (int) $row['id'])) ?>">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">No renovo</button>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Marcar</button>
                                 </form>
                             </td>
                         </tr>
@@ -190,7 +214,7 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">CONTACTAR_2D</h2>
-                <p class="mb-0 text-secondary">Clientes a contactar con 2 dias de anticipacion.</p>
+                <p class="mb-0 text-secondary">Clientes que deben recibir recordatorio 2 dias antes del vencimiento.</p>
             </div>
         </div>
     </div>
@@ -198,7 +222,7 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">REENVIAR_1D</h2>
-                <p class="mb-0 text-secondary">Seguimiento un dia antes del vencimiento.</p>
+                <p class="mb-0 text-secondary">Clientes para seguimiento 1 dia antes del vencimiento.</p>
             </div>
         </div>
     </div>
@@ -206,7 +230,7 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">RECUP</h2>
-                <p class="mb-0 text-secondary">Clientes vencidos para recuperacion comercial.</p>
+                <p class="mb-0 text-secondary">Clientes vencidos para recuperar mediante nueva activacion.</p>
             </div>
         </div>
     </div>

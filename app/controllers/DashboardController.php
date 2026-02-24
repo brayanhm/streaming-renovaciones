@@ -88,15 +88,15 @@ class DashboardController extends Controller
     public function renovar(int $id): void
     {
         $months = (int) ($_POST['meses'] ?? 0);
-        if (!in_array($months, [1, 3, 6], true)) {
-            flash('danger', 'Periodo de renovacion invalido.');
+        if ($months <= 0) {
+            flash('danger', 'El periodo de renovacion no es valido.');
             $this->redirect('/dashboard');
         }
 
         try {
             $newDue = $this->suscripciones->renovar($id, $months);
             if ($newDue === null) {
-                flash('danger', 'No se pudo renovar la suscripcion seleccionada.');
+                flash('danger', 'No se pudo renovar la suscripcion. Verifica los meses permitidos para esa plataforma.');
                 $this->redirect('/dashboard');
             }
 
@@ -112,7 +112,7 @@ class DashboardController extends Controller
     {
         $ok = $this->suscripciones->markNoRenovo($id);
         if ($ok) {
-            flash('warning', 'Suscripcion marcada como "No renovo".');
+            flash('warning', 'Suscripcion marcada como no renovada.');
         } else {
             flash('danger', 'No se pudo actualizar el estado de renovacion.');
         }

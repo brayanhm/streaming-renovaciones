@@ -3,7 +3,7 @@ declare(strict_types=1);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">Editar cliente</h1>
-    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver</a>
+    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver a clientes</a>
 </div>
 
 <div class="card shadow-sm">

@@ -16,7 +16,7 @@ if (!function_exists('tipo_suscripcion_label')) {
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Suscripciones</h1>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al dashboard</a>
+    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
 </div>
 
 <div class="row g-3">
@@ -29,7 +29,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
-                            placeholder="Buscar por cliente, telefono, plataforma o tipo"
+                            placeholder="Busca por cliente, telefono, plataforma o plan"
                             value="<?= e($search ?? '') ?>"
                         >
                     </div>
@@ -52,17 +52,17 @@ if (!function_exists('tipo_suscripcion_label')) {
                             <tr>
                                 <th>Cliente</th>
                                 <th>Servicio</th>
-                                <th>Tipo suscripcion</th>
-                                <th>Precio venta</th>
-                                <th>Inicio</th>
-                                <th>Vence</th>
+                                <th>Plan</th>
+                                <th>Precio venta (Bs)</th>
+                                <th>Fecha inicio</th>
+                                <th>Fecha vencimiento</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="8" class="text-center text-secondary py-4">Sin registros.</td></tr>
+                                <tr><td colspan="8" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
@@ -75,19 +75,19 @@ if (!function_exists('tipo_suscripcion_label')) {
                                         <small class="text-secondary"><?= e((string) $item['nombre_modalidad']) ?></small>
                                     </td>
                                     <td><?= e(tipo_suscripcion_label($item)) ?></td>
-                                    <td>$<?= e(number_format((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0), 2, '.', ',')) ?></td>
+                                    <td><?= e(money((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0))) ?></td>
                                     <td><?= e((string) $item['fecha_inicio']) ?></td>
                                     <td><?= e((string) $item['fecha_vencimiento']) ?></td>
                                     <td>
                                         <span class="badge text-bg-secondary"><?= e((string) $item['estado']) ?></span>
                                         <?php if ((int) $item['flag_no_renovo'] === 1): ?>
-                                            <div><small class="text-danger">No renovo</small></div>
+                                            <div><small class="text-danger">No renovado</small></div>
                                         <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>">Editar</a>
-                                            <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar suscripcion?')">
+                                            <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta suscripcion?')">
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
                                             </form>
                                         </div>
@@ -137,7 +137,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="modalidad_id">Tipo de suscripcion</label>
+                        <label class="form-label" for="modalidad_id">Plan de suscripcion</label>
                         <select class="form-select js-modalidad" id="modalidad_id" name="modalidad_id" required>
                             <option value="">Seleccionar...</option>
                             <?php $oldMod = old('modalidad_id'); ?>
@@ -145,7 +145,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <option
                                     value="<?= e((string) $modalidad['id']) ?>"
                                     data-plataforma-id="<?= e((string) $modalidad['plataforma_id']) ?>"
-                                    data-precio="<?= e((string) $modalidad['precio']) ?>"
+                                    data-precio="<?= e((string) ((int) round((float) $modalidad['precio']))) ?>"
                                     <?= $oldMod === (string) $modalidad['id'] ? 'selected' : '' ?>
                                 >
                                     <?= e((string) $modalidad['plataforma_nombre']) ?>
@@ -153,18 +153,18 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <?= e((string) $modalidad['nombre_modalidad']) ?>
                                     (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
                                     <?= e((string) max(1, (int) ($modalidad['duracion_meses'] ?? 1))) ?> mes(es),
-                                    $<?= e(number_format((float) $modalidad['precio'], 2, '.', ',')) ?>)
+                                    <?= e(money((float) $modalidad['precio'])) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="precio_venta">Precio de venta (editable)</label>
+                        <label class="form-label" for="precio_venta">Precio final de venta (Bs)</label>
                         <input
                             type="number"
-                            step="0.01"
-                            min="0.01"
+                            step="1"
+                            min="1"
                             class="form-control js-precio-venta"
                             id="precio_venta"
                             name="precio_venta"
@@ -199,7 +199,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
 
                     <div class="mt-3 mb-3">
-                        <label class="form-label" for="estado">Estado inicial</label>
+                        <label class="form-label" for="estado">Estado inicial de la suscripcion</label>
                         <select class="form-select" id="estado" name="estado" required>
                             <?php $oldEstado = old('estado', 'ACTIVO'); ?>
                             <?php foreach ($estados as $status): ?>
@@ -209,14 +209,14 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
 
                     <div class="mb-3 js-usuario-wrap">
-                        <label class="form-label" for="usuario_proveedor">Usuario proveedor (solo renovable)</label>
+                        <label class="form-label" for="usuario_proveedor">Cuenta o usuario del proveedor (si aplica)</label>
                         <input type="text" class="form-control" id="usuario_proveedor" name="usuario_proveedor" value="<?= e(old('usuario_proveedor')) ?>">
                     </div>
 
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="flag_no_renovo" name="flag_no_renovo" <?= old('flag_no_renovo') === '1' ? 'checked' : '' ?>>
                         <label class="form-check-label" for="flag_no_renovo">
-                            Marcar no renovo
+                            Marcar como no renovado
                         </label>
                     </div>
 

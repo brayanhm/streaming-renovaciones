@@ -43,8 +43,16 @@ function run_schema_migrations(): void
         'ALTER TABLE suscripciones ADD COLUMN precio_venta DECIMAL(10,2) NULL AFTER modalidad_id'
     );
 
+    ensure_column(
+        $pdo,
+        'plataformas',
+        'duraciones_disponibles',
+        'ALTER TABLE plataformas ADD COLUMN duraciones_disponibles VARCHAR(100) NULL AFTER tipo_servicio'
+    );
+
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
+    $pdo->exec("UPDATE plataformas SET duraciones_disponibles = NULL WHERE TRIM(COALESCE(duraciones_disponibles, '')) = ''");
 }
 
 function ensure_column(\PDO $pdo, string $table, string $column, string $ddl): void

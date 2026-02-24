@@ -19,6 +19,7 @@ class Suscripcion extends BaseModel
                 c.telefono AS cliente_telefono,
                 p.nombre AS plataforma_nombre,
                 p.tipo_servicio AS plataforma_tipo_servicio,
+                p.duraciones_disponibles AS plataforma_duraciones_disponibles,
                 m.nombre_modalidad,
                 m.tipo_cuenta,
                 m.duracion_meses,
@@ -73,6 +74,7 @@ class Suscripcion extends BaseModel
                 c.telefono AS cliente_telefono,
                 p.nombre AS plataforma_nombre,
                 p.tipo_servicio AS plataforma_tipo_servicio,
+                p.duraciones_disponibles AS plataforma_duraciones_disponibles,
                 p.mensaje_menos_2,
                 p.mensaje_menos_1,
                 p.mensaje_rec_7,
@@ -228,7 +230,7 @@ class Suscripcion extends BaseModel
 
     public function renovar(int $id, int $months): ?string
     {
-        if (!in_array($months, [1, 3, 6], true)) {
+        if ($months <= 0) {
             return null;
         }
 
@@ -236,9 +238,14 @@ class Suscripcion extends BaseModel
             $this->db->beginTransaction();
 
             $stmt = $this->db->prepare(
-                'SELECT s.id, s.fecha_vencimiento, COALESCE(s.precio_venta, m.precio) AS precio_final
+                'SELECT
+                    s.id,
+                    s.fecha_vencimiento,
+                    COALESCE(s.precio_venta, m.precio) AS precio_final,
+                    p.duraciones_disponibles
                  FROM suscripciones s
                  INNER JOIN modalidades m ON m.id = s.modalidad_id
+                 INNER JOIN plataformas p ON p.id = s.plataforma_id
                  WHERE s.id = :id
                  FOR UPDATE'
             );
@@ -246,6 +253,13 @@ class Suscripcion extends BaseModel
             $row = $stmt->fetch();
 
             if (!$row) {
+                $this->db->rollBack();
+
+                return null;
+            }
+
+            $allowedMonths = Plataforma::parseDuracionesDisponibles((string) ($row['duraciones_disponibles'] ?? ''));
+            if ($allowedMonths !== [] && !in_array($months, $allowedMonths, true)) {
                 $this->db->rollBack();
 
                 return null;
@@ -391,7 +405,7 @@ class Suscripcion extends BaseModel
             $fechaVence = (new DateTimeImmutable((string) $subscription['fecha_vencimiento']))->format('d/m/Y');
         }
 
-        $price = number_format((float) ($subscription['precio_final'] ?? $subscription['modalidad_precio'] ?? 0), 2, '.', '');
+        $price = \money((float) ($subscription['precio_final'] ?? $subscription['modalidad_precio'] ?? 0));
 
         $replace = [
             '{NOMBRE}' => (string) ($subscription['cliente_nombre'] ?? ''),

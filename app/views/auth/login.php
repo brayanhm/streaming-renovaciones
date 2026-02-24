@@ -6,7 +6,7 @@ declare(strict_types=1);
         <div class="card border-0 shadow">
             <div class="card-body p-4 p-md-5">
                 <h1 class="h4 fw-bold mb-2">Acceso al sistema</h1>
-                <p class="text-secondary mb-4">Control de clientes, vencimientos y renovaciones.</p>
+                <p class="text-secondary mb-4">Gestion de clientes, vencimientos y renovaciones.</p>
 
                 <?php if (($hasUsers ?? false) === true): ?>
                     <form method="post" action="<?= e(url('/login')) ?>" class="needs-validation" novalidate>
@@ -29,7 +29,7 @@ declare(strict_types=1);
                     </form>
                 <?php else: ?>
                     <div class="alert alert-warning">
-                        No hay usuarios en la tabla <code>usuarios</code>. Crea el administrador inicial.
+                        Aun no hay usuarios registrados. Crea el administrador inicial para empezar.
                     </div>
                     <form method="post" action="<?= e(url('/login')) ?>">
                         <input type="hidden" name="_action" value="setup_admin">

@@ -5,6 +5,43 @@ namespace App\Models;
 
 class Plataforma extends BaseModel
 {
+    public static function parseDuracionesDisponibles(?string $csv): array
+    {
+        if ($csv === null) {
+            return [];
+        }
+
+        $parts = preg_split('/\s*,\s*/', trim($csv)) ?: [];
+        $values = [];
+
+        foreach ($parts as $part) {
+            if ($part === '' || !ctype_digit($part)) {
+                continue;
+            }
+
+            $months = (int) $part;
+            if ($months <= 0) {
+                continue;
+            }
+
+            $values[$months] = $months;
+        }
+
+        ksort($values);
+
+        return array_values($values);
+    }
+
+    public static function normalizeDuracionesDisponibles(?string $csv): ?string
+    {
+        $values = self::parseDuracionesDisponibles($csv);
+        if ($values === []) {
+            return null;
+        }
+
+        return implode(',', $values);
+    }
+
     public function all(string $search = ''): array
     {
         $sql = 'SELECT * FROM plataformas';
@@ -38,6 +75,7 @@ class Plataforma extends BaseModel
             'INSERT INTO plataformas (
                 nombre,
                 tipo_servicio,
+                duraciones_disponibles,
                 mensaje_menos_2,
                 mensaje_menos_1,
                 mensaje_rec_7,
@@ -45,6 +83,7 @@ class Plataforma extends BaseModel
             ) VALUES (
                 :nombre,
                 :tipo_servicio,
+                :duraciones_disponibles,
                 :mensaje_menos_2,
                 :mensaje_menos_1,
                 :mensaje_rec_7,
@@ -55,6 +94,7 @@ class Plataforma extends BaseModel
         $stmt->execute([
             'nombre' => $data['nombre'],
             'tipo_servicio' => $data['tipo_servicio'],
+            'duraciones_disponibles' => $data['duraciones_disponibles'],
             'mensaje_menos_2' => $data['mensaje_menos_2'] ?: null,
             'mensaje_menos_1' => $data['mensaje_menos_1'] ?: null,
             'mensaje_rec_7' => $data['mensaje_rec_7'] ?: null,
@@ -70,6 +110,7 @@ class Plataforma extends BaseModel
             'UPDATE plataformas SET
                 nombre = :nombre,
                 tipo_servicio = :tipo_servicio,
+                duraciones_disponibles = :duraciones_disponibles,
                 mensaje_menos_2 = :mensaje_menos_2,
                 mensaje_menos_1 = :mensaje_menos_1,
                 mensaje_rec_7 = :mensaje_rec_7,
@@ -81,6 +122,7 @@ class Plataforma extends BaseModel
             'id' => $id,
             'nombre' => $data['nombre'],
             'tipo_servicio' => $data['tipo_servicio'],
+            'duraciones_disponibles' => $data['duraciones_disponibles'],
             'mensaje_menos_2' => $data['mensaje_menos_2'] ?: null,
             'mensaje_menos_1' => $data['mensaje_menos_1'] ?: null,
             'mensaje_rec_7' => $data['mensaje_rec_7'] ?: null,

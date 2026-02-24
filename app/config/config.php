@@ -4,8 +4,13 @@ declare(strict_types=1);
 define('APP_NAME', 'Streaming Renovaciones');
 define('APP_ENV', 'development');
 define('APP_DEBUG', true);
-define('APP_TIMEZONE', 'America/Mexico_City');
+define('APP_TIMEZONE', 'America/La_Paz');
 define('RECUP_DAYS', 7);
+define('APP_CURRENCY_CODE', 'BOB');
+define('APP_CURRENCY_SYMBOL', 'Bs');
+define('APP_MONEY_DECIMALS', 0);
+define('APP_DECIMAL_SEPARATOR', ',');
+define('APP_THOUSANDS_SEPARATOR', '.');
 
 define('BASE_PATH', dirname(__DIR__, 2));
 define('APP_PATH', BASE_PATH . '/app');
@@ -98,6 +103,16 @@ function redirect(string $path): void
 function e(mixed $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function money(mixed $value): string
+{
+    return APP_CURRENCY_SYMBOL . ' ' . number_format(
+        (float) $value,
+        APP_MONEY_DECIMALS,
+        APP_DECIMAL_SEPARATOR,
+        APP_THOUSANDS_SEPARATOR
+    );
 }
 
 function flash(string $type, string $message): void

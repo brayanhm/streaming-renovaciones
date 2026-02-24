@@ -9,6 +9,9 @@ Aplicacion web completa para gestion de clientes, suscripciones, vencimientos y 
 - Bootstrap 5
 - MVC simple (sin frameworks)
 - Front Controller: `public/index.php`
+- Moneda del sistema: bolivianos (`Bs` / `BOB`)
+- Formato numerico: Bolivia sin decimales (`1.234`)
+- Zona horaria: Bolivia (`America/La_Paz`)
 
 ## Modulos incluidos
 
@@ -23,13 +26,15 @@ Aplicacion web completa para gestion de clientes, suscripciones, vencimientos y 
 - Recalculo automatico de estados al cargar dashboard
 - Acciones por suscripcion:
   - WhatsApp directo con plantillas por plataforma
-  - Renovar `+1`, `+3`, `+6` meses (inserta en `movimientos`)
+  - Renovar meses segun configuracion de la plataforma (fallback: `+1`, `+3`, `+6`)
   - Marcar "No renovo"
 - CRUD completo:
   - Clientes
   - Plataformas
   - Tipos de suscripcion
   - Suscripciones
+- Duraciones disponibles por plataforma (ej. `1,3,7`) para validar tipos permitidos
+- Alta de cliente con suscripcion inicial (plataforma + duracion) en un solo paso
 
 ## Base de datos usada
 
@@ -73,5 +78,8 @@ El modulo permite configurar por plataforma:
 - Duracion configurable en meses (1, 3, 6 o cualquier valor)
 - Cantidad de dispositivos (si aplica)
 - Precio base
+
+Opcionalmente, cada plataforma puede definir `duraciones_disponibles` (CSV, ejemplo `1,3,7`).
+Si esta configurado, el sistema solo permite duraciones incluidas en esa lista para esa plataforma.
 
 En cada suscripcion, el `precio_venta` es editable (puede diferir del precio base).

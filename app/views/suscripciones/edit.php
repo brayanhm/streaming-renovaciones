@@ -5,7 +5,7 @@ use App\Models\Modalidad;
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">Editar suscripcion</h1>
-    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary">Volver</a>
+    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary">Volver a suscripciones</a>
 </div>
 
 <div class="card shadow-sm">
@@ -39,13 +39,13 @@ use App\Models\Modalidad;
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label" for="modalidad_id">Tipo de suscripcion</label>
+                    <label class="form-label" for="modalidad_id">Plan de suscripcion</label>
                     <select class="form-select js-modalidad" id="modalidad_id" name="modalidad_id" required>
                         <?php foreach ($tiposSuscripcion as $modalidad): ?>
                             <option
                                 value="<?= e((string) $modalidad['id']) ?>"
                                 data-plataforma-id="<?= e((string) $modalidad['plataforma_id']) ?>"
-                                data-precio="<?= e((string) $modalidad['precio']) ?>"
+                                data-precio="<?= e((string) ((int) round((float) $modalidad['precio']))) ?>"
                                 <?= (int) $item['modalidad_id'] === (int) $modalidad['id'] ? 'selected' : '' ?>
                             >
                                 <?= e((string) $modalidad['plataforma_nombre']) ?>
@@ -53,22 +53,22 @@ use App\Models\Modalidad;
                                 <?= e((string) $modalidad['nombre_modalidad']) ?>
                                 (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
                                 <?= e((string) max(1, (int) ($modalidad['duracion_meses'] ?? 1))) ?> mes(es),
-                                $<?= e(number_format((float) $modalidad['precio'], 2, '.', ',')) ?>)
+                                <?= e(money((float) $modalidad['precio'])) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label" for="precio_venta">Precio de venta (editable)</label>
+                    <label class="form-label" for="precio_venta">Precio final de venta (Bs)</label>
                     <input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        step="1"
+                        min="1"
                         class="form-control js-precio-venta"
                         id="precio_venta"
                         name="precio_venta"
-                        value="<?= e((string) ($item['precio_venta'] ?? '')) ?>"
+                        value="<?= e((string) ((int) round((float) ($item['precio_venta'] ?? 0)))) ?>"
                         required
                     >
                 </div>
@@ -91,13 +91,13 @@ use App\Models\Modalidad;
                     </select>
                 </div>
                 <div class="col-md-4 js-usuario-wrap">
-                    <label class="form-label" for="usuario_proveedor">Usuario proveedor</label>
+                    <label class="form-label" for="usuario_proveedor">Cuenta o usuario del proveedor</label>
                     <input type="text" class="form-control" id="usuario_proveedor" name="usuario_proveedor" value="<?= e((string) ($item['usuario_proveedor'] ?? '')) ?>">
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="flag_no_renovo" name="flag_no_renovo" <?= (int) $item['flag_no_renovo'] === 1 ? 'checked' : '' ?>>
-                        <label class="form-check-label" for="flag_no_renovo">Marcar no renovo</label>
+                        <label class="form-check-label" for="flag_no_renovo">Marcar como no renovado</label>
                     </div>
                 </div>
 
