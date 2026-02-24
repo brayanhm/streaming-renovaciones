@@ -1,6 +1,6 @@
-# Streaming Renovaciones - PHP 8 MVC
+# Ghost Store - PHP 8 MVC
 
-Aplicacion web completa para gestion de clientes, suscripciones, vencimientos y renovaciones de servicios streaming/IPTV.
+Aplicacion web para la operacion de Ghost Store: gestion de clientes, membresias, vencimientos y renovaciones de servicios digitales.
 
 ## Stack
 
@@ -9,6 +9,7 @@ Aplicacion web completa para gestion de clientes, suscripciones, vencimientos y 
 - Bootstrap 5
 - MVC simple (sin frameworks)
 - Front Controller: `public/index.php`
+- Marca del sistema: `Ghost Store`
 - Moneda del sistema: bolivianos (`Bs` / `BOB`)
 - Formato numerico: Bolivia sin decimales (`1.234`)
 - Zona horaria: Bolivia (`America/La_Paz`)
@@ -34,6 +35,7 @@ Aplicacion web completa para gestion de clientes, suscripciones, vencimientos y 
   - Tipos de suscripcion
   - Suscripciones
 - Duraciones disponibles por plataforma (ej. `1,3,7`) para validar tipos permitidos
+- Dato de renovacion por plataforma renovable (`USUARIO` o `CORREO`) con validacion obligatoria en altas/ediciones de suscripcion
 - Alta de cliente con suscripcion inicial (plataforma + duracion) en un solo paso
 
 ## Base de datos usada
@@ -52,7 +54,7 @@ El codigo esta alineado a estas tablas existentes:
 1. Verifica credenciales en `app/config/config.php`.
 2. Apunta Apache a `public/` (o entra por `/public`).
 3. URL local recomendada:
-   - `http://localhost/streaming-renovaciones/public`
+   - `http://localhost/streaming-renovaciones/public` (o el alias local que uses para Ghost Store)
 
 ## Usuario inicial
 

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use App\Models\Modalidad;
+use App\Models\Plataforma;
 
 if (!function_exists('tipo_suscripcion_label')) {
     function tipo_suscripcion_label(array $item): string
@@ -18,6 +19,12 @@ if (!function_exists('tipo_suscripcion_label')) {
     <h1 class="h3 mb-0">Suscripciones</h1>
     <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
 </div>
+
+<?php if ((int) ($selectedClientId ?? 0) > 0): ?>
+    <div class="alert alert-info">
+        Cliente preseleccionado. Puedes cargar su vigencia de cuenta indicando fecha de inicio y fecha de vencimiento.
+    </div>
+<?php endif; ?>
 
 <div class="row g-3">
     <div class="col-xl-8">
@@ -73,6 +80,10 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <td>
                                         <div><?= e((string) $item['plataforma_nombre']) ?></div>
                                         <small class="text-secondary"><?= e((string) $item['nombre_modalidad']) ?></small>
+                                        <?php if (!empty($item['usuario_proveedor'])): ?>
+                                            <?php $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($item['plataforma_dato_renovacion'] ?? 'USUARIO')); ?>
+                                            <div><small class="text-secondary"><?= e($renovacionLabel) ?>: <?= e((string) $item['usuario_proveedor']) ?></small></div>
+                                        <?php endif; ?>
                                     </td>
                                     <td><?= e(tipo_suscripcion_label($item)) ?></td>
                                     <td><?= e(money((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0))) ?></td>
@@ -85,7 +96,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="d-flex gap-1 justify-content-end">
+                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta suscripcion?')">
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
@@ -102,15 +113,15 @@ if (!function_exists('tipo_suscripcion_label')) {
     </div>
 
     <div class="col-xl-4">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm" id="nueva-vigencia">
             <div class="card-body">
-                <h2 class="h5 mb-3">Nueva suscripcion</h2>
+                <h2 class="h5 mb-3">Nueva vigencia de cuenta</h2>
                 <form method="post" action="<?= e(url('/suscripciones')) ?>" id="create-subscription-form">
                     <div class="mb-3">
                         <label class="form-label" for="cliente_id">Cliente</label>
                         <select class="form-select" id="cliente_id" name="cliente_id" required>
                             <option value="">Seleccionar...</option>
-                            <?php $oldCliente = old('cliente_id'); ?>
+                            <?php $oldCliente = old('cliente_id', (int) ($selectedClientId ?? 0) > 0 ? (string) (int) $selectedClientId : ''); ?>
                             <?php foreach ($clientes as $cliente): ?>
                                 <option value="<?= e((string) $cliente['id']) ?>" <?= $oldCliente === (string) $cliente['id'] ? 'selected' : '' ?>>
                                     <?= e((string) $cliente['nombre']) ?> - <?= e((string) $cliente['telefono']) ?>
@@ -128,6 +139,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <option
                                     value="<?= e((string) $plataforma['id']) ?>"
                                     data-tipo="<?= e((string) $plataforma['tipo_servicio']) ?>"
+                                    data-dato-renovacion="<?= e((string) Plataforma::normalizeDatoRenovacion((string) ($plataforma['dato_renovacion'] ?? ''), (string) ($plataforma['tipo_servicio'] ?? ''))) ?>"
                                     <?= $oldPlat === (string) $plataforma['id'] ? 'selected' : '' ?>
                                 >
                                     <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
@@ -197,6 +209,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                             >
                         </div>
                     </div>
+                    <small class="text-secondary d-block mt-1">Define manualmente la vigencia de la cuenta para este cliente.</small>
 
                     <div class="mt-3 mb-3">
                         <label class="form-label" for="estado">Estado inicial de la suscripcion</label>
@@ -209,8 +222,16 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
 
                     <div class="mb-3 js-usuario-wrap">
-                        <label class="form-label" for="usuario_proveedor">Cuenta o usuario del proveedor (si aplica)</label>
-                        <input type="text" class="form-control" id="usuario_proveedor" name="usuario_proveedor" value="<?= e(old('usuario_proveedor')) ?>">
+                        <label class="form-label js-usuario-label" for="usuario_proveedor">Dato de la cuenta para renovar</label>
+                        <input
+                            type="text"
+                            class="form-control js-usuario-input"
+                            id="usuario_proveedor"
+                            name="usuario_proveedor"
+                            value="<?= e(old('usuario_proveedor')) ?>"
+                            placeholder="Ej: usuario123"
+                        >
+                        <small class="text-secondary js-usuario-help">Se pedira segun la configuracion de la plataforma.</small>
                     </div>
 
                     <div class="form-check mb-3">
@@ -235,12 +256,16 @@ if (!function_exists('tipo_suscripcion_label')) {
     const plataformaSelect = form.querySelector('.js-plataforma');
     const modalidadSelect = form.querySelector('.js-modalidad');
     const usuarioWrap = form.querySelector('.js-usuario-wrap');
+    const usuarioLabel = form.querySelector('.js-usuario-label');
+    const usuarioInput = form.querySelector('.js-usuario-input');
+    const usuarioHelp = form.querySelector('.js-usuario-help');
     const precioVentaInput = form.querySelector('.js-precio-venta');
 
     const applyFilters = () => {
         const plataformaId = plataformaSelect.value;
         const selectedPlatformOption = plataformaSelect.options[plataformaSelect.selectedIndex];
         const tipoServicio = selectedPlatformOption ? selectedPlatformOption.dataset.tipo : '';
+        const datoRenovacion = selectedPlatformOption ? selectedPlatformOption.dataset.datoRenovacion : 'NO_APLICA';
         let hasVisible = false;
 
         for (const option of modalidadSelect.options) {
@@ -266,8 +291,23 @@ if (!function_exists('tipo_suscripcion_label')) {
 
         if (tipoServicio === 'DESECHABLE') {
             usuarioWrap.classList.add('d-none');
+            usuarioInput.required = false;
+            usuarioInput.type = 'text';
+            usuarioInput.value = '';
         } else {
             usuarioWrap.classList.remove('d-none');
+            usuarioInput.required = true;
+            if (datoRenovacion === 'CORREO') {
+                usuarioLabel.textContent = 'Correo de la cuenta para renovar';
+                usuarioInput.type = 'email';
+                usuarioInput.placeholder = 'correo@dominio.com';
+                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usara para renovar.';
+            } else {
+                usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
+                usuarioInput.type = 'text';
+                usuarioInput.placeholder = 'Ej: usuario123';
+                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usara para renovar.';
+            }
         }
 
         const selectedModalidad = modalidadSelect.options[modalidadSelect.selectedIndex];

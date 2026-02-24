@@ -20,6 +20,7 @@ class Suscripcion extends BaseModel
                 p.nombre AS plataforma_nombre,
                 p.tipo_servicio AS plataforma_tipo_servicio,
                 p.duraciones_disponibles AS plataforma_duraciones_disponibles,
+                p.dato_renovacion AS plataforma_dato_renovacion,
                 m.nombre_modalidad,
                 m.tipo_cuenta,
                 m.duracion_meses,
@@ -75,6 +76,7 @@ class Suscripcion extends BaseModel
                 p.nombre AS plataforma_nombre,
                 p.tipo_servicio AS plataforma_tipo_servicio,
                 p.duraciones_disponibles AS plataforma_duraciones_disponibles,
+                p.dato_renovacion AS plataforma_dato_renovacion,
                 p.mensaje_menos_2,
                 p.mensaje_menos_1,
                 p.mensaje_rec_7,
@@ -183,16 +185,32 @@ class Suscripcion extends BaseModel
              FROM suscripciones'
         );
         $rows = $stmt->fetchAll();
-        $updateStmt = $this->db->prepare('UPDATE suscripciones SET estado = :estado WHERE id = :id');
+        $updateStmt = $this->db->prepare(
+            'UPDATE suscripciones
+             SET estado = :estado, flag_no_renovo = :flag_no_renovo
+             WHERE id = :id'
+        );
 
         foreach ($rows as $row) {
             $nextState = $this->resolveState($row, $recupDays);
             $current = (string) ($row['estado'] ?? '');
+            $currentFlagNoRenovo = (int) ($row['flag_no_renovo'] ?? 0);
+            $nextFlagNoRenovo = $currentFlagNoRenovo;
 
-            if ($nextState !== $current) {
+            $today = new DateTimeImmutable('today');
+            $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
+            $daysToDue = (int) $today->diff($dueDate)->format('%r%a');
+
+            // Cuando la vigencia ya paso, se marca automaticamente como no renovado.
+            if ($daysToDue < 0) {
+                $nextFlagNoRenovo = 1;
+            }
+
+            if ($nextState !== $current || $nextFlagNoRenovo !== $currentFlagNoRenovo) {
                 $updateStmt->execute([
                     'id' => (int) $row['id'],
                     'estado' => $nextState,
+                    'flag_no_renovo' => $nextFlagNoRenovo,
                 ]);
             }
         }
@@ -204,16 +222,44 @@ class Suscripcion extends BaseModel
             return false;
         }
 
-        $stmt = $this->db->prepare(
+        $findStmt = $this->db->prepare(
+            'SELECT id, fecha_vencimiento, flag_no_renovo
+             FROM suscripciones
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $findStmt->execute(['id' => $id]);
+        $row = $findStmt->fetch();
+
+        if (!$row) {
+            return false;
+        }
+
+        $contactedAt = new DateTimeImmutable('now');
+        $today = new DateTimeImmutable('today');
+        $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
+        $daysToDue = (int) $today->diff($dueDate)->format('%r%a');
+        $nextFlagNoRenovo = $daysToDue < 0 ? 1 : (int) ($row['flag_no_renovo'] ?? 0);
+
+        $nextState = $this->resolveState([
+            'fecha_vencimiento' => (string) $row['fecha_vencimiento'],
+            'flag_no_renovo' => (int) ($row['flag_no_renovo'] ?? 0),
+            'ultimo_contacto_fecha' => $contactedAt->format('Y-m-d H:i:s'),
+            'ultimo_contacto_tipo' => $contactType,
+        ], RECUP_DAYS);
+
+        $updateStmt = $this->db->prepare(
             'UPDATE suscripciones
-             SET ultimo_contacto_fecha = NOW(), ultimo_contacto_tipo = :tipo, estado = :estado
+             SET ultimo_contacto_fecha = :contacted_at, ultimo_contacto_tipo = :tipo, estado = :estado, flag_no_renovo = :flag_no_renovo
              WHERE id = :id'
         );
 
-        return $stmt->execute([
+        return $updateStmt->execute([
             'id' => $id,
+            'contacted_at' => $contactedAt->format('Y-m-d H:i:s'),
             'tipo' => $contactType,
-            'estado' => 'ESPERA',
+            'estado' => $nextState,
+            'flag_no_renovo' => $nextFlagNoRenovo,
         ]);
     }
 
@@ -258,8 +304,10 @@ class Suscripcion extends BaseModel
                 return null;
             }
 
-            $allowedMonths = Plataforma::parseDuracionesDisponibles((string) ($row['duraciones_disponibles'] ?? ''));
-            if ($allowedMonths !== [] && !in_array($months, $allowedMonths, true)) {
+            $allowedMonths = Plataforma::resolveRenewalMonths(
+                isset($row['duraciones_disponibles']) ? (string) $row['duraciones_disponibles'] : null
+            );
+            if (!in_array($months, $allowedMonths, true)) {
                 $this->db->rollBack();
 
                 return null;
@@ -333,10 +381,10 @@ class Suscripcion extends BaseModel
         if ($dias <= -15) {
             return 'REC_15';
         }
-        if ($dias <= -7) {
+        if ($dias <= 0) {
             return 'REC_7';
         }
-        if ($dias <= 1) {
+        if ($dias === 1) {
             return 'MENOS_1';
         }
 
@@ -370,15 +418,11 @@ class Suscripcion extends BaseModel
         $contactedMinus1 = $contactType === 'MENOS_1' && $contactDate === $minus1Date;
 
         if ($daysToDue === 1) {
-            if ($contactedMinus2 && !$contactedMinus1) {
-                return 'REENVIAR_1D';
-            }
-
-            if ($contactedMinus1 || $contactedMinus2) {
+            if ($contactedMinus1) {
                 return 'ESPERA';
             }
 
-            return 'CONTACTAR_2D';
+            return 'REENVIAR_1D';
         }
 
         if ($daysToDue === 2) {

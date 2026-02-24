@@ -28,12 +28,12 @@ if (is_active_menu($currentPath, '/clientes')) {
 }
 
 $sectionColors = [
-    'dashboard' => ['accent' => '#0f766e', 'soft' => '#ccfbf1', 'head_start' => '#0f766e', 'head_end' => '#115e59'],
-    'clientes' => ['accent' => '#1d4ed8', 'soft' => '#dbeafe', 'head_start' => '#1d4ed8', 'head_end' => '#1e3a8a'],
-    'plataformas' => ['accent' => '#b45309', 'soft' => '#fef3c7', 'head_start' => '#b45309', 'head_end' => '#92400e'],
-    'tipos' => ['accent' => '#166534', 'soft' => '#dcfce7', 'head_start' => '#166534', 'head_end' => '#14532d'],
-    'suscripciones' => ['accent' => '#0e7490', 'soft' => '#cffafe', 'head_start' => '#0e7490', 'head_end' => '#155e75'],
-    'auth' => ['accent' => '#334155', 'soft' => '#e2e8f0', 'head_start' => '#334155', 'head_end' => '#1e293b'],
+    'dashboard' => ['accent' => '#111827', 'soft' => '#e5e7eb', 'head_start' => '#111827', 'head_end' => '#1f2937'],
+    'clientes' => ['accent' => '#374151', 'soft' => '#f3f4f6', 'head_start' => '#374151', 'head_end' => '#4b5563'],
+    'plataformas' => ['accent' => '#0f766e', 'soft' => '#ccfbf1', 'head_start' => '#0f766e', 'head_end' => '#115e59'],
+    'tipos' => ['accent' => '#0369a1', 'soft' => '#e0f2fe', 'head_start' => '#0369a1', 'head_end' => '#075985'],
+    'suscripciones' => ['accent' => '#312e81', 'soft' => '#e0e7ff', 'head_start' => '#312e81', 'head_end' => '#3730a3'],
+    'auth' => ['accent' => '#1f2937', 'soft' => '#e5e7eb', 'head_start' => '#1f2937', 'head_end' => '#111827'],
 ];
 $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
 ?>
@@ -58,18 +58,20 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
         body.app-body {
             color: var(--app-ink);
             background:
-                radial-gradient(circle at 0 0, var(--section-soft) 0, transparent 28%),
-                linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
+                radial-gradient(circle at 0 0, var(--section-soft) 0, transparent 24%),
+                radial-gradient(circle at 100% 20%, #f3f4f6 0, transparent 30%),
+                linear-gradient(180deg, #f9fafb 0%, #eef2f7 100%);
             min-height: 100vh;
         }
 
         .navbar.app-navbar {
-            background: linear-gradient(125deg, #0f172a 0%, #1e293b 70%);
+            background: linear-gradient(125deg, #020617 0%, #111827 68%, #1f2937 100%);
             border-bottom: 3px solid var(--section-accent);
         }
 
         .app-navbar .navbar-brand {
-            letter-spacing: 0.2px;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
         }
 
         .app-navbar .nav-link {
@@ -107,7 +109,9 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
         .table-responsive {
             border: 1px solid var(--app-border);
             border-radius: 12px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
         }
 
         .table {
@@ -171,6 +175,18 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
             background-color: var(--section-accent);
             border-color: var(--section-accent);
         }
+
+        @media (max-width: 575.98px) {
+            .app-navbar .navbar-brand {
+                font-size: 0.95rem;
+            }
+
+            .btn.btn-lg {
+                font-size: 0.95rem;
+                padding-top: 0.6rem;
+                padding-bottom: 0.6rem;
+            }
+        }
     </style>
 </head>
 <body
@@ -194,23 +210,23 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
                     <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/dashboard') || $currentPath === '/' ? 'active' : '' ?>" href="<?= e(url('/dashboard')) ?>">Panel</a>
+                        <a class="nav-link <?= is_active_menu($currentPath, '/dashboard') || $currentPath === '/' ? 'active' : '' ?>" href="<?= e(url('/dashboard')) ?>">Ghost Panel</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link <?= is_active_menu($currentPath, '/clientes') ? 'active' : '' ?>" href="<?= e(url('/clientes')) ?>">Clientes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/plataformas') ? 'active' : '' ?>" href="<?= e(url('/plataformas')) ?>">Plataformas</a>
+                        <a class="nav-link <?= is_active_menu($currentPath, '/plataformas') ? 'active' : '' ?>" href="<?= e(url('/plataformas')) ?>">Catalogo</a>
                     </li>
                     <li class="nav-item">
                         <?php $tiposActive = is_active_menu($currentPath, '/tipos-suscripcion') || is_active_menu($currentPath, '/modalidades'); ?>
-                        <a class="nav-link <?= $tiposActive ? 'active' : '' ?>" href="<?= e(url('/tipos-suscripcion')) ?>">Tipos de suscripcion</a>
+                        <a class="nav-link <?= $tiposActive ? 'active' : '' ?>" href="<?= e(url('/tipos-suscripcion')) ?>">Planes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/suscripciones') ? 'active' : '' ?>" href="<?= e(url('/suscripciones')) ?>">Suscripciones</a>
+                        <a class="nav-link <?= is_active_menu($currentPath, '/suscripciones') ? 'active' : '' ?>" href="<?= e(url('/suscripciones')) ?>">Membresias</a>
                     </li>
                 </ul>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
                     <span class="badge text-bg-secondary px-3 py-2"><?= e((string) ($authUser['username'] ?? '')) ?></span>
                     <a class="btn btn-outline-light btn-sm" href="<?= e(url('/logout')) ?>">Salir</a>
                 </div>

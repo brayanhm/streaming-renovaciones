@@ -81,7 +81,7 @@ $returnQuery = $selectedPlatformId > 0
                                     <td><?= e((string) ($item['dispositivos'] ?? '-')) ?></td>
                                     <td><?= e(money((float) $item['precio'])) ?></td>
                                     <td>
-                                        <div class="d-flex gap-1 justify-content-end">
+                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar este tipo de suscripcion?')">
                                                 <?php if ($selectedPlatformId > 0): ?>

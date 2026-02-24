@@ -5,6 +5,9 @@ namespace App\Models;
 
 class Plataforma extends BaseModel
 {
+    public const DEFAULT_RENEWAL_MONTHS = [1, 3, 6];
+    public const DATOS_RENOVACION = ['USUARIO', 'CORREO', 'NO_APLICA'];
+
     public static function parseDuracionesDisponibles(?string $csv): array
     {
         if ($csv === null) {
@@ -42,6 +45,34 @@ class Plataforma extends BaseModel
         return implode(',', $values);
     }
 
+    public static function resolveRenewalMonths(?string $csv): array
+    {
+        $configured = self::parseDuracionesDisponibles($csv);
+
+        return $configured !== [] ? $configured : self::DEFAULT_RENEWAL_MONTHS;
+    }
+
+    public static function normalizeDatoRenovacion(?string $value, string $tipoServicio): string
+    {
+        $tipoServicio = strtoupper(trim($tipoServicio));
+        if ($tipoServicio !== 'RENOVABLE') {
+            return 'NO_APLICA';
+        }
+
+        $value = strtoupper(trim((string) $value));
+
+        return in_array($value, ['USUARIO', 'CORREO'], true) ? $value : 'USUARIO';
+    }
+
+    public static function datoRenovacionLabel(?string $value): string
+    {
+        return match (strtoupper(trim((string) $value))) {
+            'CORREO' => 'Correo',
+            'USUARIO' => 'Usuario',
+            default => 'No aplica',
+        };
+    }
+
     public function all(string $search = ''): array
     {
         $sql = 'SELECT * FROM plataformas';
@@ -76,6 +107,7 @@ class Plataforma extends BaseModel
                 nombre,
                 tipo_servicio,
                 duraciones_disponibles,
+                dato_renovacion,
                 mensaje_menos_2,
                 mensaje_menos_1,
                 mensaje_rec_7,
@@ -84,6 +116,7 @@ class Plataforma extends BaseModel
                 :nombre,
                 :tipo_servicio,
                 :duraciones_disponibles,
+                :dato_renovacion,
                 :mensaje_menos_2,
                 :mensaje_menos_1,
                 :mensaje_rec_7,
@@ -95,6 +128,7 @@ class Plataforma extends BaseModel
             'nombre' => $data['nombre'],
             'tipo_servicio' => $data['tipo_servicio'],
             'duraciones_disponibles' => $data['duraciones_disponibles'],
+            'dato_renovacion' => $data['dato_renovacion'],
             'mensaje_menos_2' => $data['mensaje_menos_2'] ?: null,
             'mensaje_menos_1' => $data['mensaje_menos_1'] ?: null,
             'mensaje_rec_7' => $data['mensaje_rec_7'] ?: null,
@@ -111,6 +145,7 @@ class Plataforma extends BaseModel
                 nombre = :nombre,
                 tipo_servicio = :tipo_servicio,
                 duraciones_disponibles = :duraciones_disponibles,
+                dato_renovacion = :dato_renovacion,
                 mensaje_menos_2 = :mensaje_menos_2,
                 mensaje_menos_1 = :mensaje_menos_1,
                 mensaje_rec_7 = :mensaje_rec_7,
@@ -123,6 +158,7 @@ class Plataforma extends BaseModel
             'nombre' => $data['nombre'],
             'tipo_servicio' => $data['tipo_servicio'],
             'duraciones_disponibles' => $data['duraciones_disponibles'],
+            'dato_renovacion' => $data['dato_renovacion'],
             'mensaje_menos_2' => $data['mensaje_menos_2'] ?: null,
             'mensaje_menos_1' => $data['mensaje_menos_1'] ?: null,
             'mensaje_rec_7' => $data['mensaje_rec_7'] ?: null,

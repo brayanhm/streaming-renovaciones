@@ -43,19 +43,19 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
 if (!function_exists('renewal_options')) {
     function renewal_options(array $row): array
     {
-        $configured = Plataforma::parseDuracionesDisponibles((string) ($row['plataforma_duraciones_disponibles'] ?? ''));
-
-        return $configured !== [] ? $configured : [1, 3, 6];
+        return Plataforma::resolveRenewalMonths(
+            isset($row['plataforma_duraciones_disponibles']) ? (string) $row['plataforma_duraciones_disponibles'] : null
+        );
     }
 }
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="h3 mb-1">Panel de renovaciones</h1>
-        <p class="text-secondary mb-0">Seguimiento diario de clientes, vencimientos y renovaciones.</p>
+        <h1 class="h3 mb-1">Panel operativo Ghost Store</h1>
+        <p class="text-secondary mb-0">Control diario de clientes, vencimientos y renovaciones de la tienda virtual.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar suscripciones</a>
+        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar membresias</a>
     </div>
 </div>
 
@@ -158,7 +158,8 @@ if (!function_exists('renewal_options')) {
                                 <div>
                                     <span class="badge text-bg-light border"><?= e((string) ($row['plataforma_tipo_servicio'] ?? '')) ?></span>
                                     <?php if (!empty($row['usuario_proveedor'])): ?>
-                                        <span class="badge text-bg-secondary">Cuenta: <?= e((string) $row['usuario_proveedor']) ?></span>
+                                        <?php $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($row['plataforma_dato_renovacion'] ?? 'USUARIO')); ?>
+                                        <span class="badge text-bg-secondary"><?= e($renovacionLabel) ?>: <?= e((string) $row['usuario_proveedor']) ?></span>
                                     <?php endif; ?>
                                 </div>
                             </td>

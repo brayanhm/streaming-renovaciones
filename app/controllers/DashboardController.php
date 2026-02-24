@@ -52,7 +52,7 @@ class DashboardController extends Controller
         }
 
         $this->render('dashboard/index', [
-            'pageTitle' => 'Dashboard',
+            'pageTitle' => 'Ghost Panel',
             'rows' => $rows,
             'counts' => $counts,
             'search' => $search,
@@ -129,9 +129,10 @@ class DashboardController extends Controller
         if ($days <= -15) {
             return 'REC_15';
         }
-        if ($days <= -7) {
+        if ($days <= 0) {
             return 'REC_7';
         }
-        return $days <= 1 ? 'MENOS_1' : 'MENOS_2';
+
+        return $days === 1 ? 'MENOS_1' : 'MENOS_2';
     }
 }

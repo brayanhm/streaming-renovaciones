@@ -8,7 +8,7 @@ $returnQuery = $returnPlatformId > 0
     ? '?' . http_build_query(['plataforma_id' => $returnPlatformId])
     : '';
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar tipo de suscripcion</h1>
     <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary">Volver a tipos</a>
 </div>
@@ -94,9 +94,9 @@ $returnQuery = $returnPlatformId > 0
                         required
                     >
                 </div>
-                <div class="col-12 d-flex gap-2">
-                    <button class="btn btn-primary btn-lg" type="submit">Guardar tipo</button>
-                    <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+                <div class="col-12 d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar tipo</button>
+                    <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
                 </div>
             </div>
         </form>

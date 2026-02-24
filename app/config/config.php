@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-define('APP_NAME', 'Streaming Renovaciones');
+define('APP_NAME', 'Ghost Store');
 define('APP_ENV', 'development');
 define('APP_DEBUG', true);
 define('APP_TIMEZONE', 'America/La_Paz');
@@ -26,15 +26,15 @@ define('DB_CHARSET', 'utf8mb4');
 
 define(
     'DEFAULT_TEMPLATE_MENOS_2',
-    'Hola {NOMBRE}, te recordamos que tu servicio {PLATAFORMA} ({PLAN}) vence el {FECHA_VENCE}. Valor de renovacion: {PRECIO}.'
+    'Hola {NOMBRE}, te recordamos que tu servicio {PLATAFORMA} ({PLAN}) vence el {FECHA_VENCE}. Valor de renovacion en Ghost Store: {PRECIO}.'
 );
 define(
     'DEFAULT_TEMPLATE_MENOS_1',
-    'Hola {NOMBRE}, tu servicio {PLATAFORMA} ({PLAN}) vence manana ({FECHA_VENCE}). Valor de renovacion: {PRECIO}.'
+    'Hola {NOMBRE}, tu servicio {PLATAFORMA} ({PLAN}) vence manana ({FECHA_VENCE}). Valor de renovacion en Ghost Store: {PRECIO}.'
 );
 define(
     'DEFAULT_TEMPLATE_RECUP',
-    'Hola {NOMBRE}, aun podemos reactivar tu servicio {PLATAFORMA} ({PLAN}). Valor: {PRECIO}.'
+    'Hola {NOMBRE}, aun podemos reactivar tu servicio {PLATAFORMA} ({PLAN}) en Ghost Store. Valor: {PRECIO}.'
 );
 
 date_default_timezone_set(APP_TIMEZONE);

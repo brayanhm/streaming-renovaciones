@@ -2,8 +2,9 @@
 declare(strict_types=1);
 
 use App\Models\Modalidad;
+use App\Models\Plataforma;
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar suscripcion</h1>
     <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary">Volver a suscripciones</a>
 </div>
@@ -30,6 +31,7 @@ use App\Models\Modalidad;
                             <option
                                 value="<?= e((string) $plataforma['id']) ?>"
                                 data-tipo="<?= e((string) $plataforma['tipo_servicio']) ?>"
+                                data-dato-renovacion="<?= e((string) Plataforma::normalizeDatoRenovacion((string) ($plataforma['dato_renovacion'] ?? ''), (string) ($plataforma['tipo_servicio'] ?? ''))) ?>"
                                 <?= (int) $item['plataforma_id'] === (int) $plataforma['id'] ? 'selected' : '' ?>
                             >
                                 <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
@@ -91,8 +93,15 @@ use App\Models\Modalidad;
                     </select>
                 </div>
                 <div class="col-md-4 js-usuario-wrap">
-                    <label class="form-label" for="usuario_proveedor">Cuenta o usuario del proveedor</label>
-                    <input type="text" class="form-control" id="usuario_proveedor" name="usuario_proveedor" value="<?= e((string) ($item['usuario_proveedor'] ?? '')) ?>">
+                    <label class="form-label js-usuario-label" for="usuario_proveedor">Dato de la cuenta para renovar</label>
+                    <input
+                        type="text"
+                        class="form-control js-usuario-input"
+                        id="usuario_proveedor"
+                        name="usuario_proveedor"
+                        value="<?= e((string) ($item['usuario_proveedor'] ?? '')) ?>"
+                    >
+                    <small class="text-secondary js-usuario-help">Se pedira segun la configuracion de la plataforma.</small>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
                     <div class="form-check">
@@ -101,9 +110,9 @@ use App\Models\Modalidad;
                     </div>
                 </div>
 
-                <div class="col-12 d-flex gap-2">
-                    <button class="btn btn-primary btn-lg" type="submit">Guardar cambios</button>
-                    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+                <div class="col-12 d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
+                    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
                 </div>
             </div>
         </form>
@@ -118,12 +127,16 @@ use App\Models\Modalidad;
     const plataformaSelect = form.querySelector('.js-plataforma');
     const modalidadSelect = form.querySelector('.js-modalidad');
     const usuarioWrap = form.querySelector('.js-usuario-wrap');
+    const usuarioLabel = form.querySelector('.js-usuario-label');
+    const usuarioInput = form.querySelector('.js-usuario-input');
+    const usuarioHelp = form.querySelector('.js-usuario-help');
     const precioVentaInput = form.querySelector('.js-precio-venta');
 
     const applyFilters = () => {
         const plataformaId = plataformaSelect.value;
         const selectedPlatformOption = plataformaSelect.options[plataformaSelect.selectedIndex];
         const tipoServicio = selectedPlatformOption ? selectedPlatformOption.dataset.tipo : '';
+        const datoRenovacion = selectedPlatformOption ? selectedPlatformOption.dataset.datoRenovacion : 'NO_APLICA';
 
         for (const option of modalidadSelect.options) {
             if (!option.value) {
@@ -142,8 +155,23 @@ use App\Models\Modalidad;
 
         if (tipoServicio === 'DESECHABLE') {
             usuarioWrap.classList.add('d-none');
+            usuarioInput.required = false;
+            usuarioInput.type = 'text';
+            usuarioInput.value = '';
         } else {
             usuarioWrap.classList.remove('d-none');
+            usuarioInput.required = true;
+            if (datoRenovacion === 'CORREO') {
+                usuarioLabel.textContent = 'Correo de la cuenta para renovar';
+                usuarioInput.type = 'email';
+                usuarioInput.placeholder = 'correo@dominio.com';
+                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usara para renovar.';
+            } else {
+                usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
+                usuarioInput.type = 'text';
+                usuarioInput.placeholder = 'Ej: usuario123';
+                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usara para renovar.';
+            }
         }
 
         const selectedModalidad = modalidadSelect.options[modalidadSelect.selectedIndex];

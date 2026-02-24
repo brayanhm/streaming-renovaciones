@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use App\Models\Modalidad;
+use App\Models\Plataforma;
 
 $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion ?? []);
 ?>
@@ -49,7 +50,8 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                     <td><?= e((string) $item['telefono']) ?></td>
                                     <td><?= e((string) ($item['notas'] ?? '')) ?></td>
                                     <td>
-                                        <div class="d-flex gap-1 justify-content-end">
+                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>">Asignar vigencia</a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar este cliente?')">
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
@@ -97,6 +99,8 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             <?php foreach (($plataformas ?? []) as $plataforma): ?>
                                 <option
                                     value="<?= e((string) $plataforma['id']) ?>"
+                                    data-tipo="<?= e((string) $plataforma['tipo_servicio']) ?>"
+                                    data-dato-renovacion="<?= e((string) Plataforma::normalizeDatoRenovacion((string) ($plataforma['dato_renovacion'] ?? ''), (string) ($plataforma['tipo_servicio'] ?? ''))) ?>"
                                     <?= $oldPlat === (string) $plataforma['id'] ? 'selected' : '' ?>
                                 >
                                     <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
@@ -123,6 +127,18 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </select>
                         <small class="text-secondary">La suscripcion inicia hoy y el vencimiento se calcula segun la duracion elegida.</small>
                     </div>
+                    <div class="mb-3 js-usuario-wrap">
+                        <label class="form-label js-usuario-label" for="usuario_proveedor">Dato de la cuenta para renovar</label>
+                        <input
+                            type="text"
+                            class="form-control js-usuario-input"
+                            id="usuario_proveedor"
+                            name="usuario_proveedor"
+                            value="<?= e(old('usuario_proveedor')) ?>"
+                            placeholder="Ej: usuario123"
+                        >
+                        <small class="text-secondary js-usuario-help">Se pedira segun la configuracion de la plataforma.</small>
+                    </div>
                     <button type="submit" class="btn btn-success w-100 btn-lg" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>>Guardar cliente</button>
                 </form>
             </div>
@@ -137,9 +153,16 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
 
     const plataformaSelect = form.querySelector('.js-plataforma');
     const modalidadSelect = form.querySelector('.js-modalidad');
+    const usuarioWrap = form.querySelector('.js-usuario-wrap');
+    const usuarioLabel = form.querySelector('.js-usuario-label');
+    const usuarioInput = form.querySelector('.js-usuario-input');
+    const usuarioHelp = form.querySelector('.js-usuario-help');
 
     const applyFilters = () => {
         const plataformaId = plataformaSelect.value;
+        const selectedPlatformOption = plataformaSelect.options[plataformaSelect.selectedIndex];
+        const tipoServicio = selectedPlatformOption ? selectedPlatformOption.dataset.tipo : '';
+        const datoRenovacion = selectedPlatformOption ? selectedPlatformOption.dataset.datoRenovacion : 'NO_APLICA';
         let hasVisible = false;
 
         for (const option of modalidadSelect.options) {
@@ -159,6 +182,28 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
 
         if (!hasVisible) {
             modalidadSelect.value = '';
+        }
+
+        if (tipoServicio === 'DESECHABLE' || plataformaId === '') {
+            usuarioWrap.classList.add('d-none');
+            usuarioInput.required = false;
+            usuarioInput.type = 'text';
+            usuarioInput.value = '';
+            return;
+        }
+
+        usuarioWrap.classList.remove('d-none');
+        usuarioInput.required = true;
+        if (datoRenovacion === 'CORREO') {
+            usuarioLabel.textContent = 'Correo de la cuenta para renovar';
+            usuarioInput.type = 'email';
+            usuarioInput.placeholder = 'correo@dominio.com';
+            usuarioHelp.textContent = 'Ingresa el correo de la cuenta para la primera renovacion.';
+        } else {
+            usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
+            usuarioInput.type = 'text';
+            usuarioInput.placeholder = 'Ej: usuario123';
+            usuarioHelp.textContent = 'Ingresa el usuario de la cuenta para la primera renovacion.';
         }
     };
 

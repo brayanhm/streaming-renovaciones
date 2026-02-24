@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar cliente</h1>
     <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver a clientes</a>
 </div>
@@ -22,9 +22,9 @@ declare(strict_types=1);
                     <label for="notas" class="form-label">Notas</label>
                     <textarea class="form-control" id="notas" name="notas" rows="4"><?= e((string) ($item['notas'] ?? '')) ?></textarea>
                 </div>
-                <div class="col-12 d-flex gap-2">
-                    <button class="btn btn-primary btn-lg" type="submit">Guardar cambios</button>
-                    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+                <div class="col-12 d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
+                    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
                 </div>
             </div>
         </form>

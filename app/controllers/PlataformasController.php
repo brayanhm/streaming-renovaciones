@@ -96,6 +96,7 @@ class PlataformasController extends Controller
             'nombre' => trim((string) ($_POST['nombre'] ?? '')),
             'tipo_servicio' => strtoupper(trim((string) ($_POST['tipo_servicio'] ?? ''))),
             'duraciones_disponibles' => trim((string) ($_POST['duraciones_disponibles'] ?? '')),
+            'dato_renovacion' => strtoupper(trim((string) ($_POST['dato_renovacion'] ?? 'NO_APLICA'))),
             'mensaje_menos_2' => trim((string) ($_POST['mensaje_menos_2'] ?? '')),
             'mensaje_menos_1' => trim((string) ($_POST['mensaje_menos_1'] ?? '')),
             'mensaje_rec_7' => trim((string) ($_POST['mensaje_rec_7'] ?? '')),
@@ -117,6 +118,21 @@ class PlataformasController extends Controller
             return null;
         }
         $payload['duraciones_disponibles'] = $normalizedDurations;
+
+        if (
+            $payload['tipo_servicio'] === 'RENOVABLE' &&
+            !in_array($payload['dato_renovacion'], ['USUARIO', 'CORREO'], true)
+        ) {
+            set_old($payload);
+            flash('danger', 'Para plataformas renovables debes definir si la renovacion se realiza por usuario o por correo.');
+
+            return null;
+        }
+
+        $payload['dato_renovacion'] = Plataforma::normalizeDatoRenovacion(
+            $payload['dato_renovacion'],
+            $payload['tipo_servicio']
+        );
 
         return $payload;
     }

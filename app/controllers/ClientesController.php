@@ -49,6 +49,7 @@ class ClientesController extends Controller
             'notas' => trim((string) ($_POST['notas'] ?? '')),
             'plataforma_id' => (int) ($_POST['plataforma_id'] ?? 0),
             'modalidad_id' => (int) ($_POST['modalidad_id'] ?? 0),
+            'usuario_proveedor' => trim((string) ($_POST['usuario_proveedor'] ?? '')),
         ];
 
         if (
@@ -76,6 +77,29 @@ class ClientesController extends Controller
             $this->redirect('/clientes');
         }
 
+        $tipoServicio = strtoupper((string) ($plataforma['tipo_servicio'] ?? ''));
+        $datoRenovacion = Plataforma::normalizeDatoRenovacion(
+            isset($plataforma['dato_renovacion']) ? (string) $plataforma['dato_renovacion'] : null,
+            $tipoServicio
+        );
+
+        if ($tipoServicio === 'RENOVABLE') {
+            if ($payload['usuario_proveedor'] === '') {
+                set_old($payload);
+                $fieldLabel = $datoRenovacion === 'CORREO' ? 'correo' : 'usuario';
+                flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para la suscripcion inicial.');
+                $this->redirect('/clientes');
+            }
+
+            if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
+                set_old($payload);
+                flash('danger', 'Debes ingresar un correo valido para la cuenta de la suscripcion inicial.');
+                $this->redirect('/clientes');
+            }
+        } else {
+            $payload['usuario_proveedor'] = '';
+        }
+
         $today = new DateTimeImmutable('today');
         $duracion = max(1, (int) ($modalidad['duracion_meses'] ?? 1));
         $fechaInicio = $today->format('Y-m-d');
@@ -93,7 +117,7 @@ class ClientesController extends Controller
             'fecha_inicio' => $fechaInicio,
             'fecha_vencimiento' => $fechaVencimiento,
             'estado' => 'ACTIVO',
-            'usuario_proveedor' => '',
+            'usuario_proveedor' => $payload['usuario_proveedor'],
             'flag_no_renovo' => 0,
         ];
 

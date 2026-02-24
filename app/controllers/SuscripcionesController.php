@@ -26,14 +26,20 @@ class SuscripcionesController extends Controller
 
     public function index(): void
     {
+        $this->suscripciones->recalculateStates(RECUP_DAYS);
+
         $search = trim((string) ($_GET['q'] ?? ''));
         $estado = strtoupper(trim((string) ($_GET['estado'] ?? '')));
+        $selectedClientId = (int) ($_GET['cliente_id'] ?? 0);
         if (!in_array($estado, Suscripcion::ESTADOS, true)) {
             $estado = '';
         }
 
         $rows = $this->suscripciones->all($search, $estado);
         $clientes = $this->clientes->all();
+        if ($selectedClientId > 0 && $this->clientes->find($selectedClientId) === null) {
+            $selectedClientId = 0;
+        }
         $plataformas = $this->plataformas->all();
         $tiposSuscripcion = $this->modalidades->all();
 
@@ -46,6 +52,7 @@ class SuscripcionesController extends Controller
             'search' => $search,
             'estado' => $estado,
             'estados' => Suscripcion::ESTADOS,
+            'selectedClientId' => $selectedClientId,
         ]);
     }
 
@@ -161,6 +168,39 @@ class SuscripcionesController extends Controller
             flash('danger', 'El plan seleccionado no corresponde a la plataforma elegida.');
 
             return null;
+        }
+
+        $plataforma = $this->plataformas->find($payload['plataforma_id']);
+        if ($plataforma === null) {
+            set_old($payload);
+            flash('danger', 'La plataforma seleccionada no existe.');
+
+            return null;
+        }
+
+        $tipoServicio = strtoupper((string) ($plataforma['tipo_servicio'] ?? ''));
+        $datoRenovacion = Plataforma::normalizeDatoRenovacion(
+            isset($plataforma['dato_renovacion']) ? (string) $plataforma['dato_renovacion'] : null,
+            $tipoServicio
+        );
+
+        if ($tipoServicio === 'RENOVABLE') {
+            if ($payload['usuario_proveedor'] === '') {
+                set_old($payload);
+                $fieldLabel = $datoRenovacion === 'CORREO' ? 'correo' : 'usuario';
+                flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para renovar esta plataforma.');
+
+                return null;
+            }
+
+            if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
+                set_old($payload);
+                flash('danger', 'Debes ingresar un correo valido para la cuenta de renovacion.');
+
+                return null;
+            }
+        } else {
+            $payload['usuario_proveedor'] = '';
         }
 
         if ($payload['precio_venta'] !== '' && !preg_match('/^\d+$/', $payload['precio_venta'])) {

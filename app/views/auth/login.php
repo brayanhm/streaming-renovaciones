@@ -5,8 +5,8 @@ declare(strict_types=1);
     <div class="col-lg-5 col-md-7">
         <div class="card border-0 shadow">
             <div class="card-body p-4 p-md-5">
-                <h1 class="h4 fw-bold mb-2">Acceso al sistema</h1>
-                <p class="text-secondary mb-4">Gestion de clientes, vencimientos y renovaciones.</p>
+                <h1 class="h4 fw-bold mb-2">Acceso a Ghost Store</h1>
+                <p class="text-secondary mb-4">Operacion de tienda virtual: clientes, renovaciones y seguimiento comercial.</p>
 
                 <?php if (($hasUsers ?? false) === true): ?>
                     <form method="post" action="<?= e(url('/login')) ?>" class="needs-validation" novalidate>

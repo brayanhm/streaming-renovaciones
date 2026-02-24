@@ -50,9 +50,33 @@ function run_schema_migrations(): void
         'ALTER TABLE plataformas ADD COLUMN duraciones_disponibles VARCHAR(100) NULL AFTER tipo_servicio'
     );
 
+    ensure_column(
+        $pdo,
+        'plataformas',
+        'dato_renovacion',
+        "ALTER TABLE plataformas ADD COLUMN dato_renovacion VARCHAR(20) NOT NULL DEFAULT 'NO_APLICA' AFTER duraciones_disponibles"
+    );
+
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
     $pdo->exec("UPDATE plataformas SET duraciones_disponibles = NULL WHERE TRIM(COALESCE(duraciones_disponibles, '')) = ''");
+    $pdo->exec(
+        "UPDATE plataformas
+         SET dato_renovacion = 'USUARIO'
+         WHERE tipo_servicio = 'RENOVABLE'
+           AND UPPER(TRIM(COALESCE(dato_renovacion, ''))) NOT IN ('USUARIO', 'CORREO')"
+    );
+    $pdo->exec(
+        "UPDATE plataformas
+         SET dato_renovacion = UPPER(TRIM(dato_renovacion))
+         WHERE tipo_servicio = 'RENOVABLE'
+           AND UPPER(TRIM(COALESCE(dato_renovacion, ''))) IN ('USUARIO', 'CORREO')"
+    );
+    $pdo->exec(
+        "UPDATE plataformas
+         SET dato_renovacion = 'NO_APLICA'
+         WHERE tipo_servicio <> 'RENOVABLE'"
+    );
 }
 
 function ensure_column(\PDO $pdo, string $table, string $column, string $ddl): void
