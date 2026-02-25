@@ -380,15 +380,18 @@ class Suscripcion extends BaseModel
             return null;
         }
 
-        $phone = \normalize_phone((string) ($subscription['cliente_telefono'] ?? ''));
-        if ($phone === '') {
+        $phone = \normalize_whatsapp_phone_bolivia((string) ($subscription['cliente_telefono'] ?? ''));
+        if ($phone === '' || !\is_valid_whatsapp_phone_bolivia($phone)) {
             return null;
         }
 
         $template = $this->resolveTemplate($subscription, $contactType);
         $message = $this->renderTemplate($template, $subscription);
+        $encodedMessage = rawurlencode($message);
+        // Preservar marcadores de formato para que WhatsApp procese *negritas*, _cursivas_ y ~tachado~.
+        $encodedMessage = str_replace(['%2A', '%5F', '%7E'], ['*', '_', '~'], $encodedMessage);
 
-        return 'https://wa.me/' . $phone . '?text=' . rawurlencode($message);
+        return 'https://wa.me/' . $phone . '?text=' . $encodedMessage;
     }
 
     public function inferContactType(array $subscription): string

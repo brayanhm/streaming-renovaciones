@@ -20,16 +20,26 @@ function db(): \PDO
         DB_CHARSET
     );
 
+    $options = [
+        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+        \PDO::ATTR_EMULATE_PREPARES => false,
+    ];
+
+    if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+        $setNames = 'SET NAMES ' . DB_CHARSET;
+        if (defined('DB_COLLATION') && DB_COLLATION !== '') {
+            $setNames .= ' COLLATE ' . DB_COLLATION;
+        }
+        $options[\PDO::MYSQL_ATTR_INIT_COMMAND] = $setNames;
+    }
+
     try {
         $pdo = new \PDO(
             $dsn,
             DB_USER,
             DB_PASS,
-            [
-                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-                \PDO::ATTR_EMULATE_PREPARES => false,
-            ]
+            $options
         );
     } catch (\PDOException $exception) {
         $logLine = sprintf(

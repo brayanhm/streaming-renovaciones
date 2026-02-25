@@ -85,6 +85,8 @@ function run_schema_migrations(): void
         "ALTER TABLE plataformas ADD COLUMN dato_renovacion VARCHAR(20) NOT NULL DEFAULT 'NO_APLICA' AFTER duraciones_disponibles"
     );
 
+    ensure_table_utf8mb4($pdo, 'plataformas');
+
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
     $pdo->exec('UPDATE modalidades SET costo = precio WHERE costo IS NULL OR costo <= 0');
@@ -133,4 +135,34 @@ function ensure_column(\PDO $pdo, string $table, string $column, string $ddl): v
     if ($total === 0) {
         $pdo->exec($ddl);
     }
+}
+
+function ensure_table_utf8mb4(\PDO $pdo, string $table): void
+{
+    $query = $pdo->prepare(
+        'SELECT TABLE_COLLATION
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = :schema
+           AND TABLE_NAME = :table
+         LIMIT 1'
+    );
+    $query->execute([
+        'schema' => DB_NAME,
+        'table' => $table,
+    ]);
+
+    $current = strtolower((string) ($query->fetch()['TABLE_COLLATION'] ?? ''));
+    if ($current !== '' && str_starts_with($current, 'utf8mb4_')) {
+        return;
+    }
+
+    $safeTable = str_replace('`', '``', $table);
+    $pdo->exec(
+        sprintf(
+            'ALTER TABLE `%s` CONVERT TO CHARACTER SET %s COLLATE %s',
+            $safeTable,
+            DB_CHARSET,
+            DB_COLLATION
+        )
+    );
 }

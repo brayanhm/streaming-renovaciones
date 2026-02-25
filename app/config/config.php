@@ -23,6 +23,7 @@ define('DB_NAME', 'streaming_renovaciones');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
+define('DB_COLLATION', 'utf8mb4_unicode_ci');
 
 define(
     'DEFAULT_TEMPLATE_MENOS_2',
@@ -46,6 +47,7 @@ if (APP_DEBUG) {
     error_reporting(0);
     ini_set('display_errors', '0');
 }
+ini_set('default_charset', 'UTF-8');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -171,4 +173,40 @@ function is_logged_in(): bool
 function normalize_phone(string $value): string
 {
     return preg_replace('/\D+/', '', $value) ?? '';
+}
+
+function normalize_whatsapp_phone_bolivia(string $value): string
+{
+    $digits = normalize_phone($value);
+    if ($digits === '') {
+        return '';
+    }
+
+    if (str_starts_with($digits, '00')) {
+        $digits = substr($digits, 2);
+    }
+
+    if (str_starts_with($digits, '591')) {
+        $local = ltrim(substr($digits, 3), '0');
+
+        return $local === '' ? '' : '591' . $local;
+    }
+
+    $local = ltrim($digits, '0');
+
+    return $local === '' ? '' : '591' . $local;
+}
+
+function is_valid_whatsapp_phone_bolivia(string $value): bool
+{
+    if (!str_starts_with($value, '591')) {
+        return false;
+    }
+
+    $local = substr($value, 3);
+    if (strlen($local) !== 8) {
+        return false;
+    }
+
+    return $local[0] === '6' || $local[0] === '7';
 }

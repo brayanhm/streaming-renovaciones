@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') {
+    header('Content-Type: text/html; charset=UTF-8');
+}
+
 require_once __DIR__ . '/../app/config/config.php';
 require_once APP_PATH . '/config/db.php';
 require_once APP_PATH . '/config/migrations.php';

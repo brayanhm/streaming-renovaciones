@@ -43,20 +43,28 @@ use App\Models\Plataforma;
                             <?php if (empty($rows)): ?>
                                 <tr><td colspan="6" class="text-center text-secondary py-4">No hay plataformas registradas.</td></tr>
                             <?php endif; ?>
+                            <?php
+                            $truncatePreview = static function (string $value, int $limit = 40): string {
+                                if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+                                    if (mb_strlen($value, 'UTF-8') <= $limit) {
+                                        return $value;
+                                    }
+
+                                    return mb_substr($value, 0, max(0, $limit - 3), 'UTF-8') . '...';
+                                }
+
+                                if (strlen($value) <= $limit) {
+                                    return $value;
+                                }
+
+                                return substr($value, 0, max(0, $limit - 3)) . '...';
+                            };
+                            ?>
                             <?php foreach ($rows as $item): ?>
                                 <?php
-                                $m2 = (string) ($item['mensaje_menos_2'] ?? '');
-                                $m1 = (string) ($item['mensaje_menos_1'] ?? '');
-                                $r3 = (string) ($item['mensaje_rec_7'] ?? '');
-                                if (strlen($m2) > 40) {
-                                    $m2 = substr($m2, 0, 37) . '...';
-                                }
-                                if (strlen($m1) > 40) {
-                                    $m1 = substr($m1, 0, 37) . '...';
-                                }
-                                if (strlen($r3) > 40) {
-                                    $r3 = substr($r3, 0, 37) . '...';
-                                }
+                                $m2 = $truncatePreview((string) ($item['mensaje_menos_2'] ?? ''));
+                                $m1 = $truncatePreview((string) ($item['mensaje_menos_1'] ?? ''));
+                                $r3 = $truncatePreview((string) ($item['mensaje_rec_7'] ?? ''));
                                 ?>
                                 <tr>
                                     <td class="fw-semibold"><?= e((string) $item['nombre']) ?></td>
@@ -98,7 +106,7 @@ use App\Models\Plataforma;
         <div class="card shadow-sm">
             <div class="card-body">
                 <h2 class="h5 mb-3">Nueva plataforma</h2>
-                <form method="post" action="<?= e(url('/plataformas')) ?>" id="create-platform-form">
+                <form method="post" action="<?= e(url('/plataformas')) ?>" id="create-platform-form" accept-charset="UTF-8">
                     <div class="mb-3">
                         <label class="form-label" for="nombre">Nombre</label>
                         <input type="text" class="form-control" id="nombre" name="nombre" value="<?= e(old('nombre')) ?>" required>

@@ -13,7 +13,7 @@ use App\Models\Plataforma;
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="post" action="<?= e(url('/plataformas/actualizar/' . (int) $item['id'])) ?>" id="edit-platform-form">
+        <form method="post" action="<?= e(url('/plataformas/actualizar/' . (int) $item['id'])) ?>" id="edit-platform-form" accept-charset="UTF-8">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label" for="nombre">Nombre</label>

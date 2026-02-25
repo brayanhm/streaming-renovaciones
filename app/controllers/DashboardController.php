@@ -27,15 +27,25 @@ class DashboardController extends Controller
         }
 
         $allRows = $this->suscripciones->all($search);
-        foreach ($allRows as &$row) {
+        $activeRows = [];
+        $noRenewRows = [];
+        foreach ($allRows as $row) {
             $row['contact_type_sugerido'] = $this->suscripciones->inferContactType($row);
-        }
-        unset($row);
 
-        $rows = $allRows;
+            if ((int) ($row['flag_no_renovo'] ?? 0) === 1) {
+                $noRenewRows[] = $row;
+                continue;
+            }
+
+            $activeRows[] = $row;
+        }
+        $this->sortRowsForMessaging($activeRows);
+        $this->sortNoRenewRows($noRenewRows);
+
+        $rows = $activeRows;
         if ($selectedStatus !== 'TODOS') {
             $rows = array_values(array_filter(
-                $allRows,
+                $activeRows,
                 static fn (array $item): bool => (string) ($item['estado'] ?? '') === $selectedStatus
             ));
         }
@@ -53,14 +63,19 @@ class DashboardController extends Controller
             $totals['ganancia'] += ($sale - $cost);
         }
 
-        $counts = ['TODOS' => count($allRows)];
+        $counts = ['TODOS' => count($activeRows)];
         foreach (Suscripcion::ESTADOS as $estado) {
             $counts[$estado] = 0;
         }
-        foreach ($allRows as $item) {
+        foreach ($activeRows as $item) {
             $state = (string) ($item['estado'] ?? '');
             if (isset($counts[$state])) {
                 $counts[$state]++;
+            }
+        }
+        foreach ($noRenewRows as $item) {
+            if ((string) ($item['estado'] ?? '') === 'VENCIDO') {
+                $counts['VENCIDO']++;
             }
         }
 
@@ -72,6 +87,8 @@ class DashboardController extends Controller
             'selectedStatus' => $selectedStatus,
             'totals' => $totals,
             'today' => new DateTimeImmutable('today'),
+            'noRenewRows' => $noRenewRows,
+            'noRenewCount' => count($noRenewRows),
         ]);
     }
 
@@ -90,7 +107,7 @@ class DashboardController extends Controller
 
         $link = $this->suscripciones->buildWhatsAppLink($id, $contactType);
         if ($link === null) {
-            flash('danger', 'No se pudo generar el enlace de WhatsApp. Verifica el telefono del cliente.');
+            flash('danger', 'No se pudo generar el enlace de WhatsApp. Verifica que el telefono sea celular de Bolivia (8 digitos, inicia con 6 o 7).');
             $this->redirect('/dashboard');
         }
 
@@ -151,5 +168,63 @@ class DashboardController extends Controller
         }
 
         return 'MENOS_2';
+    }
+
+    private function sortRowsForMessaging(array &$rows): void
+    {
+        $statePriority = [
+            'REENVIAR_1D' => 0,
+            'CONTACTAR_2D' => 1,
+            'VENCIDO' => 2,
+            'RECUP' => 3,
+            'ESPERA' => 4,
+            'ACTIVO' => 5,
+        ];
+
+        usort($rows, static function (array $left, array $right) use ($statePriority): int {
+            $leftState = (string) ($left['estado'] ?? 'ACTIVO');
+            $rightState = (string) ($right['estado'] ?? 'ACTIVO');
+            $leftPriority = $statePriority[$leftState] ?? 99;
+            $rightPriority = $statePriority[$rightState] ?? 99;
+
+            if ($leftPriority !== $rightPriority) {
+                return $leftPriority <=> $rightPriority;
+            }
+
+            $leftDays = (int) ($left['dias_para_vencer'] ?? 0);
+            $rightDays = (int) ($right['dias_para_vencer'] ?? 0);
+            $leftAbs = abs($leftDays);
+            $rightAbs = abs($rightDays);
+            if ($leftAbs !== $rightAbs) {
+                return $leftAbs <=> $rightAbs;
+            }
+
+            $leftPast = $leftDays < 0;
+            $rightPast = $rightDays < 0;
+            if ($leftPast !== $rightPast) {
+                return $leftPast ? -1 : 1;
+            }
+
+            $leftDue = (string) ($left['fecha_vencimiento'] ?? '');
+            $rightDue = (string) ($right['fecha_vencimiento'] ?? '');
+            if ($leftDue !== $rightDue) {
+                return strcmp($leftDue, $rightDue);
+            }
+
+            return (int) ($right['id'] ?? 0) <=> (int) ($left['id'] ?? 0);
+        });
+    }
+
+    private function sortNoRenewRows(array &$rows): void
+    {
+        usort($rows, static function (array $left, array $right): int {
+            $leftDue = (string) ($left['fecha_vencimiento'] ?? '');
+            $rightDue = (string) ($right['fecha_vencimiento'] ?? '');
+            if ($leftDue !== $rightDue) {
+                return strcmp($rightDue, $leftDue);
+            }
+
+            return (int) ($right['id'] ?? 0) <=> (int) ($left['id'] ?? 0);
+        });
     }
 }

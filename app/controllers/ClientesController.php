@@ -77,10 +77,10 @@ class ClientesController extends Controller
             $this->redirect('/clientes');
         }
 
-        $payload['telefono'] = normalize_phone($payload['telefono']);
-        if ($payload['telefono'] === '') {
+        $payload['telefono'] = normalize_whatsapp_phone_bolivia($payload['telefono']);
+        if ($payload['telefono'] === '' || !is_valid_whatsapp_phone_bolivia($payload['telefono'])) {
             set_old($payload);
-            flash('danger', 'Numero invalido: usa solo digitos.');
+            flash('danger', 'Numero invalido. Para Bolivia usa celular de 8 digitos (inicia con 6 o 7), con o sin +591.');
             $this->redirect('/clientes');
         }
 
@@ -190,9 +190,9 @@ class ClientesController extends Controller
             $this->redirect('/clientes/editar/' . $id);
         }
 
-        $payload['telefono'] = normalize_phone($payload['telefono']);
-        if ($payload['telefono'] === '') {
-            flash('danger', 'Numero invalido: usa solo digitos.');
+        $payload['telefono'] = normalize_whatsapp_phone_bolivia($payload['telefono']);
+        if ($payload['telefono'] === '' || !is_valid_whatsapp_phone_bolivia($payload['telefono'])) {
+            flash('danger', 'Numero invalido. Para Bolivia usa celular de 8 digitos (inicia con 6 o 7), con o sin +591.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
@@ -210,10 +210,10 @@ class ClientesController extends Controller
         }
 
         $contacto = trim((string) ($_POST['contacto'] ?? ''));
-        $numero = normalize_phone(trim((string) ($_POST['numero'] ?? '')));
+        $numero = normalize_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
 
-        if ($contacto === '' || $numero === '') {
-            flash('danger', 'Completa contacto y numero para guardar.');
+        if ($contacto === '' || $numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
+            flash('danger', 'Completa contacto y un numero celular valido de Bolivia (8 digitos, inicia con 6 o 7).');
             $this->redirect('/clientes/completar');
         }
 
