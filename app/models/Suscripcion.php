@@ -26,7 +26,10 @@ class Suscripcion extends BaseModel
                 m.duracion_meses,
                 m.dispositivos,
                 m.precio AS modalidad_precio,
+                m.costo AS modalidad_costo,
                 COALESCE(s.precio_venta, m.precio) AS precio_final,
+                COALESCE(s.costo_base, m.costo) AS costo_final,
+                (COALESCE(s.precio_venta, m.precio) - COALESCE(s.costo_base, m.costo)) AS ganancia_final,
                 DATEDIFF(s.fecha_vencimiento, CURDATE()) AS dias_para_vencer
             FROM suscripciones s
             INNER JOIN clientes c ON c.id = s.cliente_id
@@ -86,7 +89,10 @@ class Suscripcion extends BaseModel
                 m.duracion_meses,
                 m.dispositivos,
                 m.precio AS modalidad_precio,
-                COALESCE(s.precio_venta, m.precio) AS precio_final
+                m.costo AS modalidad_costo,
+                COALESCE(s.precio_venta, m.precio) AS precio_final,
+                COALESCE(s.costo_base, m.costo) AS costo_final,
+                (COALESCE(s.precio_venta, m.precio) - COALESCE(s.costo_base, m.costo)) AS ganancia_final
             FROM suscripciones s
             INNER JOIN clientes c ON c.id = s.cliente_id
             INNER JOIN plataformas p ON p.id = s.plataforma_id
@@ -108,6 +114,7 @@ class Suscripcion extends BaseModel
                 plataforma_id,
                 modalidad_id,
                 precio_venta,
+                costo_base,
                 fecha_inicio,
                 fecha_vencimiento,
                 estado,
@@ -118,6 +125,7 @@ class Suscripcion extends BaseModel
                 :plataforma_id,
                 :modalidad_id,
                 :precio_venta,
+                :costo_base,
                 :fecha_inicio,
                 :fecha_vencimiento,
                 :estado,
@@ -131,6 +139,7 @@ class Suscripcion extends BaseModel
             'plataforma_id' => $data['plataforma_id'],
             'modalidad_id' => $data['modalidad_id'],
             'precio_venta' => $data['precio_venta'],
+            'costo_base' => $data['costo_base'],
             'fecha_inicio' => $data['fecha_inicio'],
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $data['estado'],
@@ -149,6 +158,7 @@ class Suscripcion extends BaseModel
                 plataforma_id = :plataforma_id,
                 modalidad_id = :modalidad_id,
                 precio_venta = :precio_venta,
+                costo_base = :costo_base,
                 fecha_inicio = :fecha_inicio,
                 fecha_vencimiento = :fecha_vencimiento,
                 estado = :estado,
@@ -163,6 +173,7 @@ class Suscripcion extends BaseModel
             'plataforma_id' => $data['plataforma_id'],
             'modalidad_id' => $data['modalidad_id'],
             'precio_venta' => $data['precio_venta'],
+            'costo_base' => $data['costo_base'],
             'fecha_inicio' => $data['fecha_inicio'],
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $data['estado'],
@@ -288,6 +299,7 @@ class Suscripcion extends BaseModel
                     s.id,
                     s.fecha_vencimiento,
                     COALESCE(s.precio_venta, m.precio) AS precio_final,
+                    COALESCE(s.costo_base, m.costo) AS costo_final,
                     p.duraciones_disponibles
                  FROM suscripciones s
                  INNER JOIN modalidades m ON m.id = s.modalidad_id
@@ -335,14 +347,18 @@ class Suscripcion extends BaseModel
             ]);
 
             $movement = $this->db->prepare(
-                'INSERT INTO movimientos (suscripcion_id, tipo, meses, monto)
-                 VALUES (:suscripcion_id, :tipo, :meses, :monto)'
+                'INSERT INTO movimientos (suscripcion_id, tipo, meses, monto, costo, utilidad)
+                 VALUES (:suscripcion_id, :tipo, :meses, :monto, :costo, :utilidad)'
             );
+            $monto = $row['precio_final'] !== null ? (float) $row['precio_final'] : null;
+            $costo = $row['costo_final'] !== null ? (float) $row['costo_final'] : null;
             $movement->execute([
                 'suscripcion_id' => $id,
                 'tipo' => 'RENOVACION',
                 'meses' => $months,
-                'monto' => $row['precio_final'] !== null ? (float) $row['precio_final'] : null,
+                'monto' => $monto,
+                'costo' => $costo,
+                'utilidad' => ($monto !== null && $costo !== null) ? ($monto - $costo) : null,
             ]);
 
             $this->db->commit();
@@ -378,14 +394,14 @@ class Suscripcion extends BaseModel
     public function inferContactType(array $subscription): string
     {
         $dias = (int) ($subscription['dias_para_vencer'] ?? 0);
-        if ($dias <= -15) {
-            return 'REC_15';
-        }
-        if ($dias <= 0) {
+        if ($dias <= -RECUP_DAYS) {
             return 'REC_7';
         }
-        if ($dias === 1) {
+        if ($dias <= 0) {
             return 'MENOS_1';
+        }
+        if ($dias <= 3) {
+            return 'MENOS_2';
         }
 
         return 'MENOS_2';
@@ -397,7 +413,7 @@ class Suscripcion extends BaseModel
         $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
         $daysToDue = (int) $today->diff($dueDate)->format('%r%a');
 
-        if ($daysToDue <= 0) {
+        if ($daysToDue < 0) {
             if (abs($daysToDue) >= $recupDays) {
                 return 'RECUP';
             }
@@ -411,22 +427,26 @@ class Suscripcion extends BaseModel
         }
 
         $contactType = (string) ($row['ultimo_contacto_tipo'] ?? '');
-        $minus2Date = $dueDate->modify('-2 days')->format('Y-m-d');
-        $minus1Date = $dueDate->modify('-1 days')->format('Y-m-d');
+        $minus3Date = $dueDate->modify('-3 days')->format('Y-m-d');
+        $dueDayDate = $dueDate->format('Y-m-d');
 
-        $contactedMinus2 = $contactType === 'MENOS_2' && $contactDate === $minus2Date;
-        $contactedMinus1 = $contactType === 'MENOS_1' && $contactDate === $minus1Date;
+        $contactedMinus3 = $contactType === 'MENOS_2' && $contactDate === $minus3Date;
+        $contactedDueDay = $contactType === 'MENOS_1' && $contactDate === $dueDayDate;
 
-        if ($daysToDue === 1) {
-            if ($contactedMinus1) {
+        if ($daysToDue === 0) {
+            if ($contactedDueDay) {
                 return 'ESPERA';
             }
 
             return 'REENVIAR_1D';
         }
 
-        if ($daysToDue === 2) {
-            return $contactedMinus2 ? 'ESPERA' : 'CONTACTAR_2D';
+        if ($daysToDue === 3) {
+            return $contactedMinus3 ? 'ESPERA' : 'CONTACTAR_2D';
+        }
+
+        if ($daysToDue === 1 || $daysToDue === 2) {
+            return 'ESPERA';
         }
 
         return 'ACTIVO';
@@ -437,7 +457,7 @@ class Suscripcion extends BaseModel
         return match ($contactType) {
             'MENOS_1' => trim((string) ($subscription['mensaje_menos_1'] ?? '')) ?: DEFAULT_TEMPLATE_MENOS_1,
             'REC_7' => trim((string) ($subscription['mensaje_rec_7'] ?? '')) ?: DEFAULT_TEMPLATE_RECUP,
-            'REC_15' => trim((string) ($subscription['mensaje_rec_15'] ?? '')) ?: DEFAULT_TEMPLATE_RECUP,
+            'REC_15' => trim((string) ($subscription['mensaje_rec_7'] ?? '')) ?: DEFAULT_TEMPLATE_RECUP,
             default => trim((string) ($subscription['mensaje_menos_2'] ?? '')) ?: DEFAULT_TEMPLATE_MENOS_2,
         };
     }

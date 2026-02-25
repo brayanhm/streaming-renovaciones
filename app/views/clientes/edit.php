@@ -11,12 +11,12 @@ declare(strict_types=1);
         <form method="post" action="<?= e(url('/clientes/actualizar/' . (int) $item['id'])) ?>">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="nombre" class="form-label">Nombre</label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" value="<?= e((string) $item['nombre']) ?>" required>
+                    <label for="contacto" class="form-label">Contacto</label>
+                    <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e((string) $item['nombre']) ?>" required>
                 </div>
                 <div class="col-md-6">
-                    <label for="telefono" class="form-label">Telefono</label>
-                    <input type="text" class="form-control" id="telefono" name="telefono" value="<?= e((string) $item['telefono']) ?>" required>
+                    <label for="numero" class="form-label">Numero</label>
+                    <input type="text" class="form-control" id="numero" name="numero" value="<?= e((string) $item['telefono']) ?>" required>
                 </div>
                 <div class="col-12">
                     <label for="notas" class="form-label">Notas</label>

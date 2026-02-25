@@ -45,6 +45,34 @@ function run_schema_migrations(): void
 
     ensure_column(
         $pdo,
+        'modalidades',
+        'costo',
+        'ALTER TABLE modalidades ADD COLUMN costo DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER precio'
+    );
+
+    ensure_column(
+        $pdo,
+        'suscripciones',
+        'costo_base',
+        'ALTER TABLE suscripciones ADD COLUMN costo_base DECIMAL(10,2) NULL AFTER precio_venta'
+    );
+
+    ensure_column(
+        $pdo,
+        'movimientos',
+        'costo',
+        'ALTER TABLE movimientos ADD COLUMN costo DECIMAL(10,2) NULL AFTER monto'
+    );
+
+    ensure_column(
+        $pdo,
+        'movimientos',
+        'utilidad',
+        'ALTER TABLE movimientos ADD COLUMN utilidad DECIMAL(10,2) NULL AFTER costo'
+    );
+
+    ensure_column(
+        $pdo,
         'plataformas',
         'duraciones_disponibles',
         'ALTER TABLE plataformas ADD COLUMN duraciones_disponibles VARCHAR(100) NULL AFTER tipo_servicio'
@@ -59,6 +87,13 @@ function run_schema_migrations(): void
 
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
+    $pdo->exec('UPDATE modalidades SET costo = precio WHERE costo IS NULL OR costo <= 0');
+    $pdo->exec(
+        'UPDATE suscripciones s
+         INNER JOIN modalidades m ON m.id = s.modalidad_id
+         SET s.costo_base = m.costo
+         WHERE s.costo_base IS NULL'
+    );
     $pdo->exec("UPDATE plataformas SET duraciones_disponibles = NULL WHERE TRIM(COALESCE(duraciones_disponibles, '')) = ''");
     $pdo->exec(
         "UPDATE plataformas

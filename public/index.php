@@ -50,6 +50,8 @@ $routes = [
 
     ['GET', '#^/clientes$#', [ClientesController::class, 'index']],
     ['POST', '#^/clientes$#', [ClientesController::class, 'store']],
+    ['GET', '#^/clientes/completar$#', [ClientesController::class, 'completar']],
+    ['POST', '#^/clientes/completar/actualizar/(\d+)$#', [ClientesController::class, 'updateMissingContact']],
     ['GET', '#^/clientes/editar/(\d+)$#', [ClientesController::class, 'edit']],
     ['POST', '#^/clientes/actualizar/(\d+)$#', [ClientesController::class, 'update']],
     ['POST', '#^/clientes/eliminar/(\d+)$#', [ClientesController::class, 'destroy']],
@@ -62,6 +64,8 @@ $routes = [
 
     ['GET', '#^/tipos-suscripcion$#', [TiposSuscripcionController::class, 'index']],
     ['POST', '#^/tipos-suscripcion$#', [TiposSuscripcionController::class, 'store']],
+    ['GET', '#^/tipos-suscripcion/precios$#', [TiposSuscripcionController::class, 'precios']],
+    ['POST', '#^/tipos-suscripcion/precios$#', [TiposSuscripcionController::class, 'updatePrecios']],
     ['GET', '#^/tipos-suscripcion/editar/(\d+)$#', [TiposSuscripcionController::class, 'edit']],
     ['POST', '#^/tipos-suscripcion/actualizar/(\d+)$#', [TiposSuscripcionController::class, 'update']],
     ['POST', '#^/tipos-suscripcion/eliminar/(\d+)$#', [TiposSuscripcionController::class, 'destroy']],
@@ -69,6 +73,8 @@ $routes = [
     // Compatibilidad legacy
     ['GET', '#^/modalidades$#', [TiposSuscripcionController::class, 'index']],
     ['POST', '#^/modalidades$#', [TiposSuscripcionController::class, 'store']],
+    ['GET', '#^/modalidades/precios$#', [TiposSuscripcionController::class, 'precios']],
+    ['POST', '#^/modalidades/precios$#', [TiposSuscripcionController::class, 'updatePrecios']],
     ['GET', '#^/modalidades/editar/(\d+)$#', [TiposSuscripcionController::class, 'edit']],
     ['POST', '#^/modalidades/actualizar/(\d+)$#', [TiposSuscripcionController::class, 'update']],
     ['POST', '#^/modalidades/eliminar/(\d+)$#', [TiposSuscripcionController::class, 'destroy']],

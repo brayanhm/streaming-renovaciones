@@ -6,8 +6,8 @@ use App\Models\Plataforma;
 
 $states = [
     'TODOS' => ['label' => 'Todos', 'badge' => 'secondary'],
-    'CONTACTAR_2D' => ['label' => 'Contactar (-2 dias)', 'badge' => 'warning'],
-    'REENVIAR_1D' => ['label' => 'Reenviar (-1 dia)', 'badge' => 'info'],
+    'CONTACTAR_2D' => ['label' => 'Contactar (-3 dias)', 'badge' => 'warning'],
+    'REENVIAR_1D' => ['label' => 'Contactar (dia de vencimiento)', 'badge' => 'info'],
     'ESPERA' => ['label' => 'Espera', 'badge' => 'primary'],
     'ACTIVO' => ['label' => 'Al dia', 'badge' => 'success'],
     'VENCIDO' => ['label' => 'Vencidos', 'badge' => 'danger'],
@@ -99,6 +99,36 @@ if (!function_exists('renewal_options')) {
     <?php endforeach; ?>
 </ul>
 
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary mb-1">Costo total</h2>
+                <div class="h4 mb-0"><?= e(money((float) ($totals['costo'] ?? 0))) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary mb-1">Venta total</h2>
+                <div class="h4 mb-0"><?= e(money((float) ($totals['venta'] ?? 0))) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary mb-1">Ganancia estimada</h2>
+                <?php $gananciaTotal = (float) ($totals['ganancia'] ?? 0); ?>
+                <div class="h4 mb-0 <?= $gananciaTotal < 0 ? 'text-danger' : 'text-success' ?>">
+                    <?= e(money($gananciaTotal)) ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -110,7 +140,9 @@ if (!function_exists('renewal_options')) {
                         <th>Servicio</th>
                         <th>Plan</th>
                         <th>Vencimiento</th>
+                        <th>Costo (Bs)</th>
                         <th>Precio (Bs)</th>
+                        <th>Ganancia (Bs)</th>
                         <th>Estado</th>
                         <th>WhatsApp</th>
                         <th>Renovar</th>
@@ -120,7 +152,7 @@ if (!function_exists('renewal_options')) {
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="10" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
+                            <td colspan="12" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
                         </tr>
                     <?php endif; ?>
 
@@ -143,7 +175,7 @@ if (!function_exists('renewal_options')) {
                             $diasClass = 'text-warning';
                         } else {
                             $diasLabel = 'Vence en ' . $dias . ' dias';
-                            $diasClass = $dias <= 2 ? 'text-warning' : 'text-secondary';
+                            $diasClass = $dias <= 3 ? 'text-warning' : 'text-secondary';
                         }
                         ?>
                         <tr>
@@ -170,7 +202,11 @@ if (!function_exists('renewal_options')) {
                                     <?= e($diasLabel) ?>
                                 </small>
                             </td>
+                            <td><?= e(money((float) ($row['costo_final'] ?? $row['modalidad_costo'] ?? 0))) ?></td>
                             <td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
+                            <td class="<?= (float) (($row['ganancia_final'] ?? 0)) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
+                                <?= e(money((float) ($row['ganancia_final'] ?? 0))) ?>
+                            </td>
                             <td>
                                 <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
                                 <?php if ($flagNoRenovo): ?>
@@ -215,7 +251,7 @@ if (!function_exists('renewal_options')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">CONTACTAR_2D</h2>
-                <p class="mb-0 text-secondary">Clientes que deben recibir recordatorio 2 dias antes del vencimiento.</p>
+                <p class="mb-0 text-secondary">Clientes que deben recibir mensaje de renovacion 3 dias antes del vencimiento.</p>
             </div>
         </div>
     </div>
@@ -223,7 +259,7 @@ if (!function_exists('renewal_options')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">REENVIAR_1D</h2>
-                <p class="mb-0 text-secondary">Clientes para seguimiento 1 dia antes del vencimiento.</p>
+                <p class="mb-0 text-secondary">Clientes para mensaje el mismo dia de vencimiento si aun no renovaron.</p>
             </div>
         </div>
     </div>
@@ -231,7 +267,7 @@ if (!function_exists('renewal_options')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">RECUP</h2>
-                <p class="mb-0 text-secondary">Clientes vencidos para recuperar mediante nueva activacion.</p>
+                <p class="mb-0 text-secondary">Clientes con 3+ dias vencidos para mensaje de recuperacion.</p>
             </div>
         </div>
     </div>

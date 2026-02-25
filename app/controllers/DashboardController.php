@@ -40,6 +40,19 @@ class DashboardController extends Controller
             ));
         }
 
+        $totals = [
+            'costo' => 0.0,
+            'venta' => 0.0,
+            'ganancia' => 0.0,
+        ];
+        foreach ($rows as $item) {
+            $cost = (float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0);
+            $sale = (float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0);
+            $totals['costo'] += $cost;
+            $totals['venta'] += $sale;
+            $totals['ganancia'] += ($sale - $cost);
+        }
+
         $counts = ['TODOS' => count($allRows)];
         foreach (Suscripcion::ESTADOS as $estado) {
             $counts[$estado] = 0;
@@ -57,6 +70,7 @@ class DashboardController extends Controller
             'counts' => $counts,
             'search' => $search,
             'selectedStatus' => $selectedStatus,
+            'totals' => $totals,
             'today' => new DateTimeImmutable('today'),
         ]);
     }
@@ -126,13 +140,16 @@ class DashboardController extends Controller
         $due = new DateTimeImmutable($dueDate);
         $days = (int) $today->diff($due)->format('%r%a');
 
-        if ($days <= -15) {
-            return 'REC_15';
-        }
-        if ($days <= 0) {
+        if ($days <= -RECUP_DAYS) {
             return 'REC_7';
         }
+        if ($days <= 0) {
+            return 'MENOS_1';
+        }
+        if ($days <= 3) {
+            return 'MENOS_2';
+        }
 
-        return $days === 1 ? 'MENOS_1' : 'MENOS_2';
+        return 'MENOS_2';
     }
 }

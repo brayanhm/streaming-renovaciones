@@ -82,17 +82,38 @@ $returnQuery = $returnPlatformId > 0
                     >
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label" for="precio">Precio (Bs)</label>
+                    <label class="form-label" for="costo">Costo (Bs)</label>
                     <input
                         type="number"
                         step="1"
                         min="1"
-                        class="form-control"
+                        class="form-control js-costo"
+                        id="costo"
+                        name="costo"
+                        value="<?= e((string) ((int) round((float) ($item['costo'] ?? 0)))) ?>"
+                        required
+                    >
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="precio">Precio de venta (Bs)</label>
+                    <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        class="form-control js-precio"
                         id="precio"
                         name="precio"
                         value="<?= e((string) ((int) round((float) ($item['precio'] ?? 0)))) ?>"
                         required
                     >
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Ganancia por plan</label>
+                    <div class="form-control bg-light">
+                        <strong class="js-ganancia">
+                            <?= e(money((float) ((float) ($item['precio'] ?? 0) - (float) ($item['costo'] ?? 0)))) ?>
+                        </strong>
+                    </div>
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar tipo</button>
@@ -115,6 +136,9 @@ $returnQuery = $returnPlatformId > 0
     const duracionHelp = form.querySelector('.js-duracion-help');
     const dispositivosWrap = form.querySelector('.js-dispositivos-wrap');
     const dispositivos = form.querySelector('#dispositivos');
+    const costoInput = form.querySelector('.js-costo');
+    const precioInput = form.querySelector('.js-precio');
+    const gananciaEl = form.querySelector('.js-ganancia');
 
     const parseDuraciones = (csv) => {
         if (!csv) return [];
@@ -158,9 +182,23 @@ $returnQuery = $returnPlatformId > 0
         }
     };
 
+    const applyGanancia = () => {
+        const costo = Number.parseInt(costoInput.value || '0', 10);
+        const precio = Number.parseInt(precioInput.value || '0', 10);
+        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
+        const sign = ganancia < 0 ? '-' : '';
+        const abs = Math.abs(ganancia).toLocaleString('es-BO');
+        gananciaEl.textContent = 'Bs ' + sign + abs;
+        gananciaEl.classList.toggle('text-danger', ganancia < 0);
+        gananciaEl.classList.toggle('text-success', ganancia >= 0);
+    };
+
     plataforma.addEventListener('change', applyDuraciones);
     tipoCuenta.addEventListener('change', apply);
+    costoInput.addEventListener('input', applyGanancia);
+    precioInput.addEventListener('input', applyGanancia);
     applyDuraciones();
     apply();
+    applyGanancia();
 })();
 </script>

@@ -11,7 +11,15 @@ $returnQuery = $selectedPlatformId > 0
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Tipos de suscripcion</h1>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <div class="d-flex flex-wrap gap-2">
+        <a
+            href="<?= e(url('/tipos-suscripcion/precios' . ($selectedPlatformId > 0 ? ('?' . http_build_query(['plataforma_id' => $selectedPlatformId])) : ''))) ?>"
+            class="btn btn-outline-primary"
+        >
+            Editar costos/precios por plataforma
+        </a>
+        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    </div>
 </div>
 
 <?php if (!empty($selectedPlatform)): ?>
@@ -64,13 +72,15 @@ $returnQuery = $selectedPlatformId > 0
                                 <th>Tipo de cuenta</th>
                                 <th>Duracion</th>
                                 <th>Dispositivos</th>
-                                <th>Precio (Bs)</th>
+                                <th>Costo (Bs)</th>
+                                <th>Precio venta (Bs)</th>
+                                <th>Ganancia (Bs)</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="7" class="text-center text-secondary py-4">No hay tipos de suscripcion registrados.</td></tr>
+                                <tr><td colspan="9" class="text-center text-secondary py-4">No hay tipos de suscripcion registrados.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
@@ -79,7 +89,11 @@ $returnQuery = $selectedPlatformId > 0
                                     <td><?= e(Modalidad::tipoCuentaLabel((string) ($item['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($item['dispositivos']) ? (int) $item['dispositivos'] : null)) ?></td>
                                     <td><?= e((string) max(1, (int) ($item['duracion_meses'] ?? 1))) ?> mes(es)</td>
                                     <td><?= e((string) ($item['dispositivos'] ?? '-')) ?></td>
+                                    <td><?= e(money((float) ($item['costo'] ?? 0))) ?></td>
                                     <td><?= e(money((float) $item['precio'])) ?></td>
+                                    <td class="<?= (float) ($item['utilidad_plan'] ?? 0) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
+                                        <?= e(money((float) ($item['utilidad_plan'] ?? 0))) ?>
+                                    </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>">Editar</a>
@@ -158,8 +172,16 @@ $returnQuery = $selectedPlatformId > 0
                         <input type="number" min="1" class="form-control" id="dispositivos" name="dispositivos" value="<?= e(old('dispositivos')) ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="precio">Precio (Bs)</label>
-                        <input type="number" step="1" min="1" class="form-control" id="precio" name="precio" value="<?= e(old('precio')) ?>" required>
+                        <label class="form-label" for="costo">Costo (Bs)</label>
+                        <input type="number" step="1" min="1" class="form-control js-costo" id="costo" name="costo" value="<?= e(old('costo')) ?>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="precio">Precio de venta (Bs)</label>
+                        <input type="number" step="1" min="1" class="form-control js-precio" id="precio" name="precio" value="<?= e(old('precio')) ?>" required>
+                    </div>
+                    <div class="alert alert-light border py-2 mb-3">
+                        Ganancia estimada por plan:
+                        <strong class="js-ganancia"><?= e(money((float) 0)) ?></strong>
                     </div>
                     <button type="submit" class="btn btn-success w-100 btn-lg">Guardar tipo</button>
                 </form>
@@ -180,6 +202,9 @@ $returnQuery = $selectedPlatformId > 0
     const duracionHelp = form.querySelector('.js-duracion-help');
     const dispositivosWrap = form.querySelector('.js-dispositivos-wrap');
     const dispositivos = form.querySelector('#dispositivos');
+    const costoInput = form.querySelector('.js-costo');
+    const precioInput = form.querySelector('.js-precio');
+    const gananciaEl = form.querySelector('.js-ganancia');
 
     const parseDuraciones = (csv) => {
         if (!csv) return [];
@@ -223,9 +248,23 @@ $returnQuery = $selectedPlatformId > 0
         }
     };
 
+    const applyGanancia = () => {
+        const costo = Number.parseInt(costoInput.value || '0', 10);
+        const precio = Number.parseInt(precioInput.value || '0', 10);
+        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
+        const sign = ganancia < 0 ? '-' : '';
+        const abs = Math.abs(ganancia).toLocaleString('es-BO');
+        gananciaEl.textContent = 'Bs ' + sign + abs;
+        gananciaEl.classList.toggle('text-danger', ganancia < 0);
+        gananciaEl.classList.toggle('text-success', ganancia >= 0);
+    };
+
     plataforma.addEventListener('change', applyDuraciones);
     tipoCuenta.addEventListener('change', apply);
+    costoInput.addEventListener('input', applyGanancia);
+    precioInput.addEventListener('input', applyGanancia);
     applyDuraciones();
     apply();
+    applyGanancia();
 })();
 </script>

@@ -5,7 +5,7 @@ define('APP_NAME', 'Ghost Store');
 define('APP_ENV', 'development');
 define('APP_DEBUG', true);
 define('APP_TIMEZONE', 'America/La_Paz');
-define('RECUP_DAYS', 7);
+define('RECUP_DAYS', 3);
 define('APP_CURRENCY_CODE', 'BOB');
 define('APP_CURRENCY_SYMBOL', 'Bs');
 define('APP_MONEY_DECIMALS', 0);
@@ -26,15 +26,15 @@ define('DB_CHARSET', 'utf8mb4');
 
 define(
     'DEFAULT_TEMPLATE_MENOS_2',
-    'Hola {NOMBRE}, te recordamos que tu servicio {PLATAFORMA} ({PLAN}) vence el {FECHA_VENCE}. Valor de renovacion en Ghost Store: {PRECIO}.'
+    'Hola {NOMBRE}, tu servicio {PLATAFORMA} ({PLAN}) vence en 3 dias ({FECHA_VENCE}). Valor de renovacion en Ghost Store: {PRECIO}.'
 );
 define(
     'DEFAULT_TEMPLATE_MENOS_1',
-    'Hola {NOMBRE}, tu servicio {PLATAFORMA} ({PLAN}) vence manana ({FECHA_VENCE}). Valor de renovacion en Ghost Store: {PRECIO}.'
+    'Hola {NOMBRE}, hoy vence tu servicio {PLATAFORMA} ({PLAN}) ({FECHA_VENCE}). Si deseas renovar hoy, el valor es {PRECIO}.'
 );
 define(
     'DEFAULT_TEMPLATE_RECUP',
-    'Hola {NOMBRE}, aun podemos reactivar tu servicio {PLATAFORMA} ({PLAN}) en Ghost Store. Valor: {PRECIO}.'
+    'Hola {NOMBRE}, tu servicio {PLATAFORMA} ({PLAN}) vencio hace 3 dias. Aun podemos recuperarlo hoy por {PRECIO}.'
 );
 
 date_default_timezone_set(APP_TIMEZONE);

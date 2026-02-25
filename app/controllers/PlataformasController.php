@@ -4,15 +4,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Models\Modalidad;
 use App\Models\Plataforma;
 
 class PlataformasController extends Controller
 {
     private Plataforma $plataformas;
+    private Modalidad $modalidades;
 
     public function __construct()
     {
         $this->plataformas = new Plataforma();
+        $this->modalidades = new Modalidad();
     }
 
     public function index(): void
@@ -35,9 +38,14 @@ class PlataformasController extends Controller
         }
 
         try {
-            $this->plataformas->create($payload);
+            $platformId = $this->plataformas->create($payload);
+            $generated = $this->syncAutomaticPlans($platformId, (string) ($payload['duraciones_disponibles'] ?? ''));
             clear_old();
-            flash('success', 'Plataforma creada.');
+            if ($generated > 0) {
+                flash('success', 'Plataforma creada con ' . $generated . ' planes generados automaticamente.');
+            } else {
+                flash('success', 'Plataforma creada.');
+            }
         } catch (\Throwable $exception) {
             set_old($payload);
             flash('danger', 'No se pudo crear la plataforma: ' . $exception->getMessage());
@@ -69,7 +77,12 @@ class PlataformasController extends Controller
 
         try {
             $this->plataformas->update($id, $payload);
-            flash('success', 'Plataforma actualizada.');
+            $generated = $this->syncAutomaticPlans($id, (string) ($payload['duraciones_disponibles'] ?? ''));
+            if ($generated > 0) {
+                flash('success', 'Plataforma actualizada. Se generaron ' . $generated . ' planes faltantes.');
+            } else {
+                flash('success', 'Plataforma actualizada.');
+            }
             clear_old();
         } catch (\Throwable $exception) {
             flash('danger', 'No se pudo actualizar la plataforma: ' . $exception->getMessage());
@@ -100,7 +113,8 @@ class PlataformasController extends Controller
             'mensaje_menos_2' => trim((string) ($_POST['mensaje_menos_2'] ?? '')),
             'mensaje_menos_1' => trim((string) ($_POST['mensaje_menos_1'] ?? '')),
             'mensaje_rec_7' => trim((string) ($_POST['mensaje_rec_7'] ?? '')),
-            'mensaje_rec_15' => trim((string) ($_POST['mensaje_rec_15'] ?? '')),
+            // Se mantiene por compatibilidad con esquema anterior y se alinea al mensaje +3.
+            'mensaje_rec_15' => trim((string) ($_POST['mensaje_rec_15'] ?? $_POST['mensaje_rec_7'] ?? '')),
         ];
 
         if ($payload['nombre'] === '' || !in_array($payload['tipo_servicio'], ['RENOVABLE', 'DESECHABLE'], true)) {
@@ -135,5 +149,30 @@ class PlataformasController extends Controller
         );
 
         return $payload;
+    }
+
+    private function syncAutomaticPlans(int $platformId, string $duracionesCsv): int
+    {
+        $duraciones = Plataforma::parseDuracionesDisponibles($duracionesCsv);
+        if ($duraciones === []) {
+            return 0;
+        }
+
+        $existing = $this->modalidades->allByPlataforma($platformId);
+        if ($existing === []) {
+            $template = [
+                'plataforma_id' => $platformId,
+                'nombre_modalidad' => 'Cuenta completa',
+                'tipo_cuenta' => 'CUENTA_COMPLETA',
+                'duracion_meses' => (int) $duraciones[0],
+                'dispositivos' => null,
+                'precio' => '1',
+                'costo' => '1',
+            ];
+
+            return $this->modalidades->ensureTemplateDurations($template, $duraciones);
+        }
+
+        return $this->modalidades->ensurePlatformDurations($platformId, $duraciones);
     }
 }

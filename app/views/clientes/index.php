@@ -8,7 +8,14 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Clientes</h1>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <div class="d-flex gap-2">
+        <?php if ((int) ($missingContactCount ?? 0) > 0): ?>
+            <a href="<?= e(url('/clientes/completar')) ?>" class="btn btn-warning">
+                Completar faltantes (<?= (int) $missingContactCount ?>)
+            </a>
+        <?php endif; ?>
+        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    </div>
 </div>
 
 <div class="row g-3">
@@ -21,7 +28,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
-                            placeholder="Busca por nombre o telefono"
+                            placeholder="Busca por contacto o numero"
                             value="<?= e($search ?? '') ?>"
                         >
                     </div>
@@ -34,8 +41,8 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                     <table class="table table-striped align-middle">
                         <thead class="table-dark">
                             <tr>
-                                <th>Nombre</th>
-                                <th>Telefono</th>
+                                <th>Contacto</th>
+                                <th>Numero</th>
                                 <th>Notas</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -78,12 +85,26 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </div>
                     <?php endif; ?>
                     <div class="mb-3">
-                        <label class="form-label" for="nombre">Nombre</label>
-                        <input type="text" class="form-control" id="nombre" name="nombre" value="<?= e(old('nombre')) ?>" required>
+                        <label class="form-label" for="contacto">Contacto</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="contacto"
+                            name="contacto"
+                            value="<?= e(old('contacto', old('nombre'))) ?>"
+                            required
+                        >
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="telefono">Telefono</label>
-                        <input type="text" class="form-control" id="telefono" name="telefono" value="<?= e(old('telefono')) ?>" required>
+                        <label class="form-label" for="numero">Numero</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="numero"
+                            name="numero"
+                            value="<?= e(old('numero', old('telefono'))) ?>"
+                            required
+                        >
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="notas">Notas</label>

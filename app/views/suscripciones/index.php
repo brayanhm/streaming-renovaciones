@@ -60,7 +60,9 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <th>Cliente</th>
                                 <th>Servicio</th>
                                 <th>Plan</th>
+                                <th>Costo (Bs)</th>
                                 <th>Precio venta (Bs)</th>
+                                <th>Ganancia (Bs)</th>
                                 <th>Fecha inicio</th>
                                 <th>Fecha vencimiento</th>
                                 <th>Estado</th>
@@ -69,7 +71,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="8" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
+                                <tr><td colspan="10" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
@@ -86,7 +88,11 @@ if (!function_exists('tipo_suscripcion_label')) {
                                         <?php endif; ?>
                                     </td>
                                     <td><?= e(tipo_suscripcion_label($item)) ?></td>
+                                    <td><?= e(money((float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0))) ?></td>
                                     <td><?= e(money((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0))) ?></td>
+                                    <td class="<?= (float) ($item['ganancia_final'] ?? 0) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
+                                        <?= e(money((float) ($item['ganancia_final'] ?? 0))) ?>
+                                    </td>
                                     <td><?= e((string) $item['fecha_inicio']) ?></td>
                                     <td><?= e((string) $item['fecha_vencimiento']) ?></td>
                                     <td>
@@ -157,6 +163,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <option
                                     value="<?= e((string) $modalidad['id']) ?>"
                                     data-plataforma-id="<?= e((string) $modalidad['plataforma_id']) ?>"
+                                    data-costo="<?= e((string) ((int) round((float) ($modalidad['costo'] ?? 0)))) ?>"
                                     data-precio="<?= e((string) ((int) round((float) $modalidad['precio']))) ?>"
                                     <?= $oldMod === (string) $modalidad['id'] ? 'selected' : '' ?>
                                 >
@@ -165,10 +172,25 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <?= e((string) $modalidad['nombre_modalidad']) ?>
                                     (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
                                     <?= e((string) max(1, (int) ($modalidad['duracion_meses'] ?? 1))) ?> mes(es),
-                                    <?= e(money((float) $modalidad['precio'])) ?>)
+                                    Costo: <?= e(money((float) ($modalidad['costo'] ?? 0))) ?>,
+                                    Venta: <?= e(money((float) $modalidad['precio'])) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="costo_base">Costo de la cuenta (Bs)</label>
+                        <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            class="form-control js-costo-base"
+                            id="costo_base"
+                            name="costo_base"
+                            value="<?= e(old('costo_base')) ?>"
+                            required
+                        >
                     </div>
 
                     <div class="mb-3">
@@ -183,6 +205,10 @@ if (!function_exists('tipo_suscripcion_label')) {
                             value="<?= e(old('precio_venta')) ?>"
                             required
                         >
+                    </div>
+                    <div class="alert alert-light border py-2 mb-3">
+                        Ganancia estimada:
+                        <strong class="js-ganancia"><?= e(money((float) 0)) ?></strong>
                     </div>
 
                     <div class="row g-2">
@@ -259,7 +285,9 @@ if (!function_exists('tipo_suscripcion_label')) {
     const usuarioLabel = form.querySelector('.js-usuario-label');
     const usuarioInput = form.querySelector('.js-usuario-input');
     const usuarioHelp = form.querySelector('.js-usuario-help');
+    const costoBaseInput = form.querySelector('.js-costo-base');
     const precioVentaInput = form.querySelector('.js-precio-venta');
+    const gananciaEl = form.querySelector('.js-ganancia');
 
     const applyFilters = () => {
         const plataformaId = plataformaSelect.value;
@@ -311,13 +339,31 @@ if (!function_exists('tipo_suscripcion_label')) {
         }
 
         const selectedModalidad = modalidadSelect.options[modalidadSelect.selectedIndex];
+        if (selectedModalidad && selectedModalidad.dataset.costo) {
+            costoBaseInput.value = selectedModalidad.dataset.costo;
+        }
         if (selectedModalidad && selectedModalidad.dataset.precio) {
             precioVentaInput.value = selectedModalidad.dataset.precio;
         }
+        applyGanancia();
+    };
+
+    const applyGanancia = () => {
+        const costo = Number.parseInt(costoBaseInput.value || '0', 10);
+        const precio = Number.parseInt(precioVentaInput.value || '0', 10);
+        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
+        const sign = ganancia < 0 ? '-' : '';
+        const abs = Math.abs(ganancia).toLocaleString('es-BO');
+        gananciaEl.textContent = 'Bs ' + sign + abs;
+        gananciaEl.classList.toggle('text-danger', ganancia < 0);
+        gananciaEl.classList.toggle('text-success', ganancia >= 0);
     };
 
     plataformaSelect.addEventListener('change', applyFilters);
     modalidadSelect.addEventListener('change', applyFilters);
+    costoBaseInput.addEventListener('input', applyGanancia);
+    precioVentaInput.addEventListener('input', applyGanancia);
     applyFilters();
+    applyGanancia();
 })();
 </script>

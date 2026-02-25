@@ -133,6 +133,7 @@ class SuscripcionesController extends Controller
             'cliente_id' => (int) ($_POST['cliente_id'] ?? 0),
             'plataforma_id' => (int) ($_POST['plataforma_id'] ?? 0),
             'modalidad_id' => (int) ($_POST['modalidad_id'] ?? 0),
+            'costo_base' => trim((string) ($_POST['costo_base'] ?? '')),
             'precio_venta' => trim((string) ($_POST['precio_venta'] ?? '')),
             'fecha_inicio' => trim((string) ($_POST['fecha_inicio'] ?? '')),
             'fecha_vencimiento' => trim((string) ($_POST['fecha_vencimiento'] ?? '')),
@@ -210,9 +211,25 @@ class SuscripcionesController extends Controller
             return null;
         }
 
+        if ($payload['costo_base'] !== '' && !preg_match('/^\d+$/', $payload['costo_base'])) {
+            set_old($payload);
+            flash('danger', 'El costo debe ser un numero entero mayor a 0.');
+
+            return null;
+        }
+
+        $costValue = $payload['costo_base'] === ''
+            ? (int) round((float) ($modalidad['costo'] ?? 0))
+            : (int) $payload['costo_base'];
         $priceValue = $payload['precio_venta'] === ''
             ? (int) round((float) $modalidad['precio'])
             : (int) $payload['precio_venta'];
+        if ($costValue <= 0) {
+            set_old($payload);
+            flash('danger', 'El costo debe ser mayor a 0.');
+
+            return null;
+        }
         if ($priceValue <= 0) {
             set_old($payload);
             flash('danger', 'El precio de venta debe ser mayor a 0.');
@@ -220,6 +237,7 @@ class SuscripcionesController extends Controller
             return null;
         }
 
+        $payload['costo_base'] = (string) $costValue;
         $payload['precio_venta'] = (string) $priceValue;
 
         return $payload;

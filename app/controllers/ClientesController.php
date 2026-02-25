@@ -31,6 +31,7 @@ class ClientesController extends Controller
         $rows = $this->clientes->all($search);
         $plataformas = $this->plataformas->all();
         $tiposSuscripcion = $this->modalidades->all();
+        $missingContactCount = $this->clientes->countMissingContactData();
 
         $this->render('clientes/index', [
             'pageTitle' => 'Clientes',
@@ -38,14 +39,27 @@ class ClientesController extends Controller
             'search' => $search,
             'plataformas' => $plataformas,
             'tiposSuscripcion' => $tiposSuscripcion,
+            'missingContactCount' => $missingContactCount,
+        ]);
+    }
+
+    public function completar(): void
+    {
+        $search = trim((string) ($_GET['q'] ?? ''));
+        $rows = $this->clientes->missingContactData($search);
+
+        $this->render('clientes/completar', [
+            'pageTitle' => 'Completar contactos',
+            'rows' => $rows,
+            'search' => $search,
         ]);
     }
 
     public function store(): void
     {
         $payload = [
-            'nombre' => trim((string) ($_POST['nombre'] ?? '')),
-            'telefono' => trim((string) ($_POST['telefono'] ?? '')),
+            'nombre' => trim((string) ($_POST['contacto'] ?? $_POST['nombre'] ?? '')),
+            'telefono' => trim((string) ($_POST['numero'] ?? $_POST['telefono'] ?? '')),
             'notas' => trim((string) ($_POST['notas'] ?? '')),
             'plataforma_id' => (int) ($_POST['plataforma_id'] ?? 0),
             'modalidad_id' => (int) ($_POST['modalidad_id'] ?? 0),
@@ -59,7 +73,14 @@ class ClientesController extends Controller
             $payload['modalidad_id'] <= 0
         ) {
             set_old($payload);
-            flash('danger', 'Completa nombre, telefono, plataforma y plan de suscripcion.');
+            flash('danger', 'Completa contacto, numero, plataforma y plan de suscripcion.');
+            $this->redirect('/clientes');
+        }
+
+        $payload['telefono'] = normalize_phone($payload['telefono']);
+        if ($payload['telefono'] === '') {
+            set_old($payload);
+            flash('danger', 'Numero invalido: usa solo digitos.');
             $this->redirect('/clientes');
         }
 
@@ -113,6 +134,7 @@ class ClientesController extends Controller
         $suscripcionPayload = [
             'plataforma_id' => $payload['plataforma_id'],
             'modalidad_id' => $payload['modalidad_id'],
+            'costo_base' => (string) max(1, (int) round((float) ($modalidad['costo'] ?? 0))),
             'precio_venta' => (string) max(1, (int) round((float) ($modalidad['precio'] ?? 0))),
             'fecha_inicio' => $fechaInicio,
             'fecha_vencimiento' => $fechaVencimiento,
@@ -158,19 +180,56 @@ class ClientesController extends Controller
     public function update(int $id): void
     {
         $payload = [
-            'nombre' => trim((string) ($_POST['nombre'] ?? '')),
-            'telefono' => trim((string) ($_POST['telefono'] ?? '')),
+            'nombre' => trim((string) ($_POST['contacto'] ?? $_POST['nombre'] ?? '')),
+            'telefono' => trim((string) ($_POST['numero'] ?? $_POST['telefono'] ?? '')),
             'notas' => trim((string) ($_POST['notas'] ?? '')),
         ];
 
         if ($payload['nombre'] === '' || $payload['telefono'] === '') {
-            flash('danger', 'Nombre y telefono son obligatorios.');
+            flash('danger', 'Contacto y numero son obligatorios.');
+            $this->redirect('/clientes/editar/' . $id);
+        }
+
+        $payload['telefono'] = normalize_phone($payload['telefono']);
+        if ($payload['telefono'] === '') {
+            flash('danger', 'Numero invalido: usa solo digitos.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
         $this->clientes->update($id, $payload);
         flash('success', 'Cliente actualizado.');
         $this->redirect('/clientes');
+    }
+
+    public function updateMissingContact(int $id): void
+    {
+        $item = $this->clientes->find($id);
+        if ($item === null) {
+            flash('danger', 'Cliente no encontrado.');
+            $this->redirect('/clientes/completar');
+        }
+
+        $contacto = trim((string) ($_POST['contacto'] ?? ''));
+        $numero = normalize_phone(trim((string) ($_POST['numero'] ?? '')));
+
+        if ($contacto === '' || $numero === '') {
+            flash('danger', 'Completa contacto y numero para guardar.');
+            $this->redirect('/clientes/completar');
+        }
+
+        $ok = $this->clientes->update($id, [
+            'nombre' => $contacto,
+            'telefono' => $numero,
+            'notas' => (string) ($item['notas'] ?? ''),
+        ]);
+
+        if (!$ok) {
+            flash('danger', 'No se pudo actualizar el registro.');
+            $this->redirect('/clientes/completar');
+        }
+
+        flash('success', 'Contacto y numero actualizados.');
+        $this->redirect('/clientes/completar');
     }
 
     public function destroy(int $id): void

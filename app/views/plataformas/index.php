@@ -47,11 +47,15 @@ use App\Models\Plataforma;
                                 <?php
                                 $m2 = (string) ($item['mensaje_menos_2'] ?? '');
                                 $m1 = (string) ($item['mensaje_menos_1'] ?? '');
+                                $r3 = (string) ($item['mensaje_rec_7'] ?? '');
                                 if (strlen($m2) > 40) {
                                     $m2 = substr($m2, 0, 37) . '...';
                                 }
                                 if (strlen($m1) > 40) {
                                     $m1 = substr($m1, 0, 37) . '...';
+                                }
+                                if (strlen($r3) > 40) {
+                                    $r3 = substr($r3, 0, 37) . '...';
                                 }
                                 ?>
                                 <tr>
@@ -68,8 +72,9 @@ use App\Models\Plataforma;
                                         </span>
                                     </td>
                                     <td>
-                                        <small class="d-block text-secondary">-2: <?= e($m2) ?></small>
-                                        <small class="d-block text-secondary">-1: <?= e($m1) ?></small>
+                                        <small class="d-block text-secondary">-3: <?= e($m2) ?></small>
+                                        <small class="d-block text-secondary">0: <?= e($m1) ?></small>
+                                        <small class="d-block text-secondary">+3: <?= e($r3) ?></small>
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
@@ -129,20 +134,16 @@ use App\Models\Plataforma;
                         <small class="text-secondary">Opcional. Si lo defines, solo estas duraciones estaran permitidas en los tipos de esta plataforma.</small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_menos_2">Mensaje recordatorio (-2 dias)</label>
+                        <label class="form-label" for="mensaje_menos_2">Mensaje renovacion (3 dias antes)</label>
                         <textarea class="form-control" id="mensaje_menos_2" name="mensaje_menos_2" rows="3"><?= e(old('mensaje_menos_2')) ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_menos_1">Mensaje recordatorio (-1 dia)</label>
+                        <label class="form-label" for="mensaje_menos_1">Mensaje renovacion (dia de vencimiento)</label>
                         <textarea class="form-control" id="mensaje_menos_1" name="mensaje_menos_1" rows="3"><?= e(old('mensaje_menos_1')) ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_rec_7">Mensaje de recuperacion (7+ dias vencido)</label>
+                        <label class="form-label" for="mensaje_rec_7">Mensaje de recuperacion (3 dias despues)</label>
                         <textarea class="form-control" id="mensaje_rec_7" name="mensaje_rec_7" rows="2"><?= e(old('mensaje_rec_7')) ?></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="mensaje_rec_15">Mensaje de recuperacion (15+ dias vencido)</label>
-                        <textarea class="form-control" id="mensaje_rec_15" name="mensaje_rec_15" rows="2"><?= e(old('mensaje_rec_15')) ?></textarea>
                     </div>
                     <div class="alert alert-light border small">
                         Variables disponibles: <code>{NOMBRE}</code>, <code>{PLATAFORMA}</code>, <code>{PLAN}</code>, <code>{FECHA_VENCE}</code>, <code>{PRECIO}</code>.
