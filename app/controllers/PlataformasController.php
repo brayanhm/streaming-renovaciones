@@ -113,8 +113,7 @@ class PlataformasController extends Controller
             'mensaje_menos_2' => trim((string) ($_POST['mensaje_menos_2'] ?? '')),
             'mensaje_menos_1' => trim((string) ($_POST['mensaje_menos_1'] ?? '')),
             'mensaje_rec_7' => trim((string) ($_POST['mensaje_rec_7'] ?? '')),
-            // Se mantiene por compatibilidad con esquema anterior y se alinea al mensaje +3.
-            'mensaje_rec_15' => trim((string) ($_POST['mensaje_rec_15'] ?? $_POST['mensaje_rec_7'] ?? '')),
+            'mensaje_rec_15' => trim((string) ($_POST['mensaje_rec_15'] ?? '')),
         ];
 
         if ($payload['nombre'] === '' || !in_array($payload['tipo_servicio'], ['RENOVABLE', 'DESECHABLE'], true)) {

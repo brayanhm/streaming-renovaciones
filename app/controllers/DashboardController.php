@@ -74,8 +74,9 @@ class DashboardController extends Controller
             }
         }
         foreach ($noRenewRows as $item) {
-            if ((string) ($item['estado'] ?? '') === 'VENCIDO') {
-                $counts['VENCIDO']++;
+            $state = (string) ($item['estado'] ?? '');
+            if (isset($counts[$state])) {
+                $counts[$state]++;
             }
         }
 
@@ -157,6 +158,9 @@ class DashboardController extends Controller
         $due = new DateTimeImmutable($dueDate);
         $days = (int) $today->diff($due)->format('%r%a');
 
+        if ($days <= -15) {
+            return 'REC_15';
+        }
         if ($days <= -RECUP_DAYS) {
             return 'REC_7';
         }

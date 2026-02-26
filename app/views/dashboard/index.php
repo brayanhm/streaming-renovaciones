@@ -258,13 +258,14 @@ if (!function_exists('renewal_options')) {
                         <th>Plan</th>
                         <th>Vencimiento</th>
                         <th>Estado</th>
+                        <th>Renovar</th>
                         <th>WhatsApp</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($noRenewRows)): ?>
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-secondary">No hay suscripciones marcadas como no renovadas.</td>
+                            <td colspan="8" class="text-center py-4 text-secondary">No hay suscripciones marcadas como no renovadas.</td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach (($noRenewRows ?? []) as $row): ?>
@@ -272,6 +273,7 @@ if (!function_exists('renewal_options')) {
                         $vencimiento = (string) ($row['fecha_vencimiento'] ?? '');
                         $status = (string) ($row['estado'] ?? 'VENCIDO');
                         $whatsType = (string) ($row['contact_type_sugerido'] ?? 'REC_7');
+                        $renewOptions = renewal_options($row);
                         ?>
                         <tr>
                             <td class="fw-semibold"><?= e((string) ($row['cliente_nombre'] ?? '')) ?></td>
@@ -285,6 +287,16 @@ if (!function_exists('renewal_options')) {
                             <td>
                                 <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
                                 <div><small class="text-danger fw-semibold">Marcado como no renovado</small></div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <?php foreach ($renewOptions as $months): ?>
+                                        <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>">
+                                            <input type="hidden" name="meses" value="<?= e((string) $months) ?>">
+                                            <button type="submit" class="btn btn-primary btn-sm">+<?= e((string) $months) ?>M</button>
+                                        </form>
+                                    <?php endforeach; ?>
+                                </div>
                             </td>
                             <td>
                                 <a

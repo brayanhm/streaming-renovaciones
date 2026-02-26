@@ -60,6 +60,10 @@ use App\Models\Plataforma;
                     <label class="form-label" for="mensaje_rec_7">Mensaje de recuperacion (3 dias despues)</label>
                     <textarea class="form-control" id="mensaje_rec_7" name="mensaje_rec_7" rows="3"><?= e((string) ($item['mensaje_rec_7'] ?? '')) ?></textarea>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="mensaje_rec_15">Mensaje de recuperacion (15 dias despues)</label>
+                    <textarea class="form-control" id="mensaje_rec_15" name="mensaje_rec_15" rows="3"><?= e((string) ($item['mensaje_rec_15'] ?? '')) ?></textarea>
+                </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
                     <a href="<?= e(url('/plataformas')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>

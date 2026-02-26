@@ -234,7 +234,7 @@ class Suscripcion extends BaseModel
         }
 
         $findStmt = $this->db->prepare(
-            'SELECT id, fecha_vencimiento, flag_no_renovo
+            'SELECT id, fecha_vencimiento, estado, flag_no_renovo
              FROM suscripciones
              WHERE id = :id
              LIMIT 1'
@@ -254,6 +254,7 @@ class Suscripcion extends BaseModel
 
         $nextState = $this->resolveState([
             'fecha_vencimiento' => (string) $row['fecha_vencimiento'],
+            'estado' => (string) ($row['estado'] ?? ''),
             'flag_no_renovo' => (int) ($row['flag_no_renovo'] ?? 0),
             'ultimo_contacto_fecha' => $contactedAt->format('Y-m-d H:i:s'),
             'ultimo_contacto_tipo' => $contactType,
@@ -396,7 +397,23 @@ class Suscripcion extends BaseModel
 
     public function inferContactType(array $subscription): string
     {
+        $estado = (string) ($subscription['estado'] ?? '');
+        if ($estado === 'CONTACTAR_2D') {
+            return 'MENOS_2';
+        }
+        if ($estado === 'REENVIAR_1D') {
+            return 'MENOS_1';
+        }
+        if ($estado === 'RECUP') {
+            $dias = (int) ($subscription['dias_para_vencer'] ?? 0);
+
+            return $dias <= -15 ? 'REC_15' : 'REC_7';
+        }
+
         $dias = (int) ($subscription['dias_para_vencer'] ?? 0);
+        if ($dias <= -15) {
+            return 'REC_15';
+        }
         if ($dias <= -RECUP_DAYS) {
             return 'REC_7';
         }
@@ -424,32 +441,26 @@ class Suscripcion extends BaseModel
             return 'VENCIDO';
         }
 
-        $contactDate = null;
-        if (!empty($row['ultimo_contacto_fecha'])) {
-            $contactDate = (new DateTimeImmutable((string) $row['ultimo_contacto_fecha']))->format('Y-m-d');
-        }
-
+        $currentState = (string) ($row['estado'] ?? '');
         $contactType = (string) ($row['ultimo_contacto_tipo'] ?? '');
-        $minus3Date = $dueDate->modify('-3 days')->format('Y-m-d');
-        $dueDayDate = $dueDate->format('Y-m-d');
-
-        $contactedMinus3 = $contactType === 'MENOS_2' && $contactDate === $minus3Date;
-        $contactedDueDay = $contactType === 'MENOS_1' && $contactDate === $dueDayDate;
+        $contactedMinus3 = $contactType === 'MENOS_2';
+        $contactedDueDay = $contactType === 'MENOS_1';
 
         if ($daysToDue === 0) {
             if ($contactedDueDay) {
                 return 'ESPERA';
             }
 
+            // Si no se envio el primer mensaje, no avanzar automaticamente a otro estado pendiente.
+            if ($currentState === 'CONTACTAR_2D' && !$contactedMinus3) {
+                return 'CONTACTAR_2D';
+            }
+
             return 'REENVIAR_1D';
         }
 
-        if ($daysToDue === 3) {
-            return $contactedMinus3 ? 'ESPERA' : 'CONTACTAR_2D';
-        }
-
-        if ($daysToDue === 1 || $daysToDue === 2) {
-            return 'ESPERA';
+        if ($daysToDue > 0 && $daysToDue <= 3) {
+            return ($contactedMinus3 || $contactedDueDay) ? 'ESPERA' : 'CONTACTAR_2D';
         }
 
         return 'ACTIVO';
@@ -460,7 +471,7 @@ class Suscripcion extends BaseModel
         return match ($contactType) {
             'MENOS_1' => trim((string) ($subscription['mensaje_menos_1'] ?? '')) ?: DEFAULT_TEMPLATE_MENOS_1,
             'REC_7' => trim((string) ($subscription['mensaje_rec_7'] ?? '')) ?: DEFAULT_TEMPLATE_RECUP,
-            'REC_15' => trim((string) ($subscription['mensaje_rec_7'] ?? '')) ?: DEFAULT_TEMPLATE_RECUP,
+            'REC_15' => trim((string) ($subscription['mensaje_rec_15'] ?? '')) ?: DEFAULT_TEMPLATE_RECUP,
             default => trim((string) ($subscription['mensaje_menos_2'] ?? '')) ?: DEFAULT_TEMPLATE_MENOS_2,
         };
     }
