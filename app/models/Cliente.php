@@ -7,15 +7,24 @@ class Cliente extends BaseModel
 {
     public function all(string $search = ''): array
     {
-        $sql = 'SELECT * FROM clientes';
+        $sql = 'SELECT c.* FROM clientes c';
         $params = [];
 
         if ($search !== '') {
-            $sql .= ' WHERE nombre LIKE :term OR telefono LIKE :term';
+            $sql .= " WHERE (
+                c.nombre LIKE :term
+                OR c.telefono LIKE :term
+                OR EXISTS (
+                    SELECT 1
+                    FROM suscripciones s
+                    WHERE s.cliente_id = c.id
+                      AND s.usuario_proveedor LIKE :term
+                )
+            )";
             $params['term'] = '%' . $search . '%';
         }
 
-        $sql .= ' ORDER BY id DESC';
+        $sql .= ' ORDER BY c.id DESC';
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

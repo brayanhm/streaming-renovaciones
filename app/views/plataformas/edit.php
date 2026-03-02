@@ -34,7 +34,7 @@ use App\Models\Plataforma;
                         <option value="CORREO" <?= $datoRenovacion === 'CORREO' ? 'selected' : '' ?>>CORREO</option>
                         <option value="NO_APLICA" <?= $datoRenovacion === 'NO_APLICA' ? 'selected' : '' ?>>NO_APLICA</option>
                     </select>
-                    <small class="text-secondary js-dato-renovacion-help">Define si la renovacion se realizara por usuario o por correo.</small>
+                    <small class="text-secondary js-dato-renovacion-help">Define si la renovación se realizará por usuario o por correo.</small>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="duraciones_disponibles">Duraciones disponibles (meses)</label>
@@ -46,22 +46,22 @@ use App\Models\Plataforma;
                         value="<?= e((string) ($item['duraciones_disponibles'] ?? '')) ?>"
                         placeholder="Ej: 1,3,7"
                     >
-                    <small class="text-secondary">Opcional. Si lo defines, solo se permitiran estas duraciones en los tipos de esta plataforma.</small>
+                    <small class="text-secondary">Opcional. Si lo defines, solo se permitirán estas duraciones en los tipos de esta plataforma.</small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="mensaje_menos_2">Mensaje renovacion (3 dias antes)</label>
+                    <label class="form-label" for="mensaje_menos_2">Mensaje renovación (3 dias antes)</label>
                     <textarea class="form-control" id="mensaje_menos_2" name="mensaje_menos_2" rows="4"><?= e((string) ($item['mensaje_menos_2'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="mensaje_menos_1">Mensaje renovacion (dia de vencimiento)</label>
+                    <label class="form-label" for="mensaje_menos_1">Mensaje renovación (dia de vencimiento)</label>
                     <textarea class="form-control" id="mensaje_menos_1" name="mensaje_menos_1" rows="4"><?= e((string) ($item['mensaje_menos_1'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="mensaje_rec_7">Mensaje de recuperacion (3 dias despues)</label>
+                    <label class="form-label" for="mensaje_rec_7">Mensaje de recuperación (3 días después)</label>
                     <textarea class="form-control" id="mensaje_rec_7" name="mensaje_rec_7" rows="3"><?= e((string) ($item['mensaje_rec_7'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="mensaje_rec_15">Mensaje de recuperacion (15 dias despues)</label>
+                    <label class="form-label" for="mensaje_rec_15">Mensaje de recuperación (15 días después)</label>
                     <textarea class="form-control" id="mensaje_rec_15" name="mensaje_rec_15" rows="3"><?= e((string) ($item['mensaje_rec_15'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ use App\Models\Plataforma;
             if (datoSelect.value === 'NO_APLICA') {
                 datoSelect.value = 'USUARIO';
             }
-            datoHelp.textContent = 'Define si la renovacion se realiza usando usuario o correo.';
+            datoHelp.textContent = 'Define si la renovación se realiza usando usuario o correo.';
             return;
         }
 
@@ -103,3 +103,4 @@ use App\Models\Plataforma;
     apply();
 })();
 </script>
+

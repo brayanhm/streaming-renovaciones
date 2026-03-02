@@ -4,7 +4,7 @@ declare(strict_types=1);
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="h3 mb-0">Completar contactos faltantes</h1>
-        <small class="text-secondary">Actualiza contacto y numero para clientes incompletos.</small>
+        <small class="text-secondary">Actualiza contacto y número para clientes incompletos.</small>
     </div>
     <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver a clientes</a>
 </div>
@@ -17,7 +17,7 @@ declare(strict_types=1);
                     type="text"
                     class="form-control form-control-lg"
                     name="q"
-                    placeholder="Busca por contacto, numero o usuario"
+                    placeholder="Busca por contacto, número o usuario"
                     value="<?= e($search ?? '') ?>"
                 >
             </div>
@@ -35,7 +35,7 @@ declare(strict_types=1);
                         <th>Plataforma</th>
                         <th>Vence</th>
                         <th>Contacto</th>
-                        <th>Numero</th>
+                        <th>Número</th>
                         <th class="text-end">Guardar</th>
                     </tr>
                 </thead>
@@ -70,7 +70,7 @@ declare(strict_types=1);
                                             type="text"
                                             class="form-control"
                                             name="numero"
-                                            placeholder="Numero"
+                                            placeholder="Número"
                                             value="<?= e((string) ($item['telefono'] ?? '')) ?>"
                                             required
                                         >
@@ -87,3 +87,4 @@ declare(strict_types=1);
         </div>
     </div>
 </div>
+

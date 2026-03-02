@@ -42,7 +42,7 @@ class PlataformasController extends Controller
             $generated = $this->syncAutomaticPlans($platformId, (string) ($payload['duraciones_disponibles'] ?? ''));
             clear_old();
             if ($generated > 0) {
-                flash('success', 'Plataforma creada con ' . $generated . ' planes generados automaticamente.');
+                flash('success', 'Plataforma creada con ' . $generated . ' planes generados automáticamente.');
             } else {
                 flash('success', 'Plataforma creada.');
             }
@@ -126,7 +126,7 @@ class PlataformasController extends Controller
         $normalizedDurations = Plataforma::normalizeDuracionesDisponibles($payload['duraciones_disponibles']);
         if ($payload['duraciones_disponibles'] !== '' && $normalizedDurations === null) {
             set_old($payload);
-            flash('danger', 'Duraciones no validas. Usa meses positivos separados por comas, por ejemplo: 1,3,7.');
+            flash('danger', 'Duraciones no válidas. Usa meses positivos separados por comas, por ejemplo: 1,3,7.');
 
             return null;
         }
@@ -137,7 +137,7 @@ class PlataformasController extends Controller
             !in_array($payload['dato_renovacion'], ['USUARIO', 'CORREO'], true)
         ) {
             set_old($payload);
-            flash('danger', 'Para plataformas renovables debes definir si la renovacion se realiza por usuario o por correo.');
+            flash('danger', 'Para plataformas renovables debes definir si la renovación se realiza por usuario o por correo.');
 
             return null;
         }
@@ -175,3 +175,4 @@ class PlataformasController extends Controller
         return $this->modalidades->ensurePlatformDurations($platformId, $duraciones);
     }
 }
+

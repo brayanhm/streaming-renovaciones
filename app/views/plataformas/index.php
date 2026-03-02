@@ -33,7 +33,7 @@ use App\Models\Plataforma;
                             <tr>
                                 <th>Nombre</th>
                                 <th>Tipo de servicio</th>
-                                <th>Dato renovacion</th>
+                                <th>Dato renovación</th>
                                 <th>Duraciones</th>
                                 <th>Plantillas</th>
                                 <th class="text-end">Acciones</th>
@@ -129,7 +129,7 @@ use App\Models\Plataforma;
                             <option value="CORREO" <?= $oldDato === 'CORREO' ? 'selected' : '' ?>>CORREO</option>
                             <option value="NO_APLICA" <?= $oldDato === 'NO_APLICA' ? 'selected' : '' ?>>NO_APLICA</option>
                         </select>
-                        <small class="text-secondary js-dato-renovacion-help">Define el dato que se pedira para renovar esta plataforma.</small>
+                        <small class="text-secondary js-dato-renovacion-help">Define el dato que se pedirá para renovar esta plataforma.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="duraciones_disponibles">Duraciones disponibles (meses)</label>
@@ -141,22 +141,22 @@ use App\Models\Plataforma;
                             value="<?= e(old('duraciones_disponibles')) ?>"
                             placeholder="Ej: 1,3,7"
                         >
-                        <small class="text-secondary">Opcional. Si lo defines, solo estas duraciones estaran permitidas en los tipos de esta plataforma.</small>
+                        <small class="text-secondary">Opcional. Si lo defines, solo estas duraciones estarán permitidas en los tipos de esta plataforma.</small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_menos_2">Mensaje renovacion (3 dias antes)</label>
+                        <label class="form-label" for="mensaje_menos_2">Mensaje renovación (3 días antes)</label>
                         <textarea class="form-control" id="mensaje_menos_2" name="mensaje_menos_2" rows="3"><?= e(old('mensaje_menos_2')) ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_menos_1">Mensaje renovacion (dia de vencimiento)</label>
+                        <label class="form-label" for="mensaje_menos_1">Mensaje renovación (día de vencimiento)</label>
                         <textarea class="form-control" id="mensaje_menos_1" name="mensaje_menos_1" rows="3"><?= e(old('mensaje_menos_1')) ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_rec_7">Mensaje de recuperacion (3 dias despues)</label>
+                        <label class="form-label" for="mensaje_rec_7">Mensaje de recuperación (3 días después)</label>
                         <textarea class="form-control" id="mensaje_rec_7" name="mensaje_rec_7" rows="2"><?= e(old('mensaje_rec_7')) ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="mensaje_rec_15">Mensaje de recuperacion (15 dias despues)</label>
+                        <label class="form-label" for="mensaje_rec_15">Mensaje de recuperación (15 días después)</label>
                         <textarea class="form-control" id="mensaje_rec_15" name="mensaje_rec_15" rows="2"><?= e(old('mensaje_rec_15')) ?></textarea>
                     </div>
                     <div class="alert alert-light border small">
@@ -186,7 +186,7 @@ use App\Models\Plataforma;
             if (datoSelect.value === 'NO_APLICA') {
                 datoSelect.value = 'USUARIO';
             }
-            datoHelp.textContent = 'Define si la renovacion se realiza usando usuario o correo.';
+            datoHelp.textContent = 'Define si la renovación se realiza usando usuario o correo.';
             return;
         }
 
@@ -199,3 +199,4 @@ use App\Models\Plataforma;
     apply();
 })();
 </script>
+

@@ -28,7 +28,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
-                            placeholder="Busca por contacto o numero"
+                            placeholder="Busca por contacto, usuario o número"
                             value="<?= e($search ?? '') ?>"
                         >
                     </div>
@@ -42,7 +42,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         <thead class="table-dark">
                             <tr>
                                 <th>Contacto</th>
-                                <th>Numero</th>
+                                <th>Número</th>
                                 <th>Notas</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -81,7 +81,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                 <form method="post" action="<?= e(url('/clientes')) ?>" id="create-client-form">
                     <?php if (!$hasSubscriptionCatalog): ?>
                         <div class="alert alert-warning">
-                            Antes de crear clientes, registra al menos una plataforma y un tipo de suscripcion.
+                            Antes de crear clientes, registra al menos una plataforma y un tipo de suscripción.
                         </div>
                     <?php endif; ?>
                     <div class="mb-3">
@@ -96,7 +96,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         >
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="numero">Numero</label>
+                        <label class="form-label" for="numero">Número</label>
                         <input
                             type="text"
                             class="form-control"
@@ -111,7 +111,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         <textarea class="form-control" id="notas" name="notas" rows="3"><?= e(old('notas')) ?></textarea>
                     </div>
                     <hr>
-                    <h3 class="h6 mb-3">Suscripcion inicial del cliente</h3>
+                    <h3 class="h6 mb-3">Suscripción inicial del cliente</h3>
                     <div class="mb-3">
                         <label class="form-label" for="plataforma_id">Plataforma</label>
                         <select class="form-select js-plataforma" id="plataforma_id" name="plataforma_id" required>
@@ -130,7 +130,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="modalidad_id">Plan y duracion</label>
+                        <label class="form-label" for="modalidad_id">Plan y duración</label>
                         <select class="form-select js-modalidad" id="modalidad_id" name="modalidad_id" required>
                             <option value="">Seleccionar...</option>
                             <?php $oldMod = old('modalidad_id'); ?>
@@ -146,7 +146,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <small class="text-secondary">La suscripcion inicia hoy y el vencimiento se calcula segun la duracion elegida.</small>
+                        <small class="text-secondary">La suscripción inicia hoy y el vencimiento se calcula según la duración elegida.</small>
                     </div>
                     <div class="mb-3 js-usuario-wrap">
                         <label class="form-label js-usuario-label" for="usuario_proveedor">Dato de la cuenta para renovar</label>
@@ -158,7 +158,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             value="<?= e(old('usuario_proveedor')) ?>"
                             placeholder="Ej: usuario123"
                         >
-                        <small class="text-secondary js-usuario-help">Se pedira segun la configuracion de la plataforma.</small>
+                        <small class="text-secondary js-usuario-help">Se pedirá según la configuración de la plataforma.</small>
                     </div>
                     <button type="submit" class="btn btn-success w-100 btn-lg" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>>Guardar cliente</button>
                 </form>
@@ -219,12 +219,12 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
             usuarioLabel.textContent = 'Correo de la cuenta para renovar';
             usuarioInput.type = 'email';
             usuarioInput.placeholder = 'correo@dominio.com';
-            usuarioHelp.textContent = 'Ingresa el correo de la cuenta para la primera renovacion.';
+            usuarioHelp.textContent = 'Ingresa el correo de la cuenta para la primera renovación.';
         } else {
             usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
             usuarioInput.type = 'text';
             usuarioInput.placeholder = 'Ej: usuario123';
-            usuarioHelp.textContent = 'Ingresa el usuario de la cuenta para la primera renovacion.';
+            usuarioHelp.textContent = 'Ingresa el usuario de la cuenta para la primera renovación.';
         }
     };
 
@@ -232,3 +232,4 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
     applyFilters();
 })();
 </script>
+

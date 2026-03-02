@@ -73,14 +73,14 @@ class ClientesController extends Controller
             $payload['modalidad_id'] <= 0
         ) {
             set_old($payload);
-            flash('danger', 'Completa contacto, numero, plataforma y plan de suscripcion.');
+            flash('danger', 'Completa contacto, número, plataforma y plan de suscripción.');
             $this->redirect('/clientes');
         }
 
         $payload['telefono'] = normalize_whatsapp_phone_bolivia($payload['telefono']);
         if ($payload['telefono'] === '' || !is_valid_whatsapp_phone_bolivia($payload['telefono'])) {
             set_old($payload);
-            flash('danger', 'Numero invalido. Para Bolivia usa celular de 8 digitos (inicia con 6 o 7), con o sin +591.');
+            flash('danger', 'Número inválido. Para Bolivia usa celular de 8 dígitos (inicia con 6 o 7), con o sin +591.');
             $this->redirect('/clientes');
         }
 
@@ -108,13 +108,13 @@ class ClientesController extends Controller
             if ($payload['usuario_proveedor'] === '') {
                 set_old($payload);
                 $fieldLabel = $datoRenovacion === 'CORREO' ? 'correo' : 'usuario';
-                flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para la suscripcion inicial.');
+                flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para la suscripción inicial.');
                 $this->redirect('/clientes');
             }
 
             if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
                 set_old($payload);
-                flash('danger', 'Debes ingresar un correo valido para la cuenta de la suscripcion inicial.');
+                flash('danger', 'Debes ingresar un correo válido para la cuenta de la suscripción inicial.');
                 $this->redirect('/clientes');
             }
         } else {
@@ -151,13 +151,13 @@ class ClientesController extends Controller
             $this->suscripciones->create($suscripcionPayload);
             $pdo->commit();
             clear_old();
-            flash('success', 'Cliente y suscripcion inicial creados correctamente.');
+            flash('success', 'Cliente y suscripción inicial creados correctamente.');
         } catch (\Throwable $exception) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             set_old($payload);
-            flash('danger', 'No se pudo crear el cliente con su suscripcion inicial: ' . $exception->getMessage());
+            flash('danger', 'No se pudo crear el cliente con su suscripción inicial: ' . $exception->getMessage());
         }
 
         $this->redirect('/clientes');
@@ -186,13 +186,13 @@ class ClientesController extends Controller
         ];
 
         if ($payload['nombre'] === '' || $payload['telefono'] === '') {
-            flash('danger', 'Contacto y numero son obligatorios.');
+            flash('danger', 'Contacto y número son obligatorios.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
         $payload['telefono'] = normalize_whatsapp_phone_bolivia($payload['telefono']);
         if ($payload['telefono'] === '' || !is_valid_whatsapp_phone_bolivia($payload['telefono'])) {
-            flash('danger', 'Numero invalido. Para Bolivia usa celular de 8 digitos (inicia con 6 o 7), con o sin +591.');
+            flash('danger', 'Número inválido. Para Bolivia usa celular de 8 dígitos (inicia con 6 o 7), con o sin +591.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
@@ -213,7 +213,7 @@ class ClientesController extends Controller
         $numero = normalize_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
 
         if ($contacto === '' || $numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
-            flash('danger', 'Completa contacto y un numero celular valido de Bolivia (8 digitos, inicia con 6 o 7).');
+            flash('danger', 'Completa contacto y un número celular válido de Bolivia (8 dígitos, inicia con 6 o 7).');
             $this->redirect('/clientes/completar');
         }
 
@@ -228,7 +228,7 @@ class ClientesController extends Controller
             $this->redirect('/clientes/completar');
         }
 
-        flash('success', 'Contacto y numero actualizados.');
+        flash('success', 'Contacto y número actualizados.');
         $this->redirect('/clientes/completar');
     }
 
@@ -244,3 +244,4 @@ class ClientesController extends Controller
         $this->redirect('/clientes');
     }
 }
+

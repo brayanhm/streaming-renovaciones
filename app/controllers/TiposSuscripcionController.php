@@ -35,7 +35,7 @@ class TiposSuscripcionController extends Controller
         }
 
         $this->render('modalidades/index', [
-            'pageTitle' => 'Tipos de suscripcion',
+            'pageTitle' => 'Tipos de suscripción',
             'rows' => $rows,
             'platforms' => $platforms,
             'search' => $search,
@@ -62,13 +62,13 @@ class TiposSuscripcionController extends Controller
             $created = $this->tiposSuscripcion->ensureTemplateDurations($payload, $duraciones);
             clear_old();
             if ($created > 1) {
-                flash('success', 'Tipo de suscripcion creado con ' . $created . ' duraciones automaticamente.');
+                flash('success', 'Tipo de suscripción creado con ' . $created . ' duraciones automáticamente.');
             } else {
-                flash('success', 'Tipo de suscripcion creado.');
+                flash('success', 'Tipo de suscripción creado.');
             }
         } catch (\Throwable $exception) {
             set_old($payload);
-            flash('danger', 'No se pudo crear el tipo de suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo crear el tipo de suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));
@@ -78,7 +78,7 @@ class TiposSuscripcionController extends Controller
     {
         $item = $this->tiposSuscripcion->find($id);
         if ($item === null) {
-            flash('danger', 'Tipo de suscripcion no encontrado.');
+            flash('danger', 'Tipo de suscripción no encontrado.');
             $this->redirect('/tipos-suscripcion');
         }
 
@@ -86,7 +86,7 @@ class TiposSuscripcionController extends Controller
         $returnPlatformId = $this->resolvePlatformFilterId();
 
         $this->render('modalidades/edit', [
-            'pageTitle' => 'Editar tipo de suscripcion',
+            'pageTitle' => 'Editar tipo de suscripción',
             'item' => $item,
             'platforms' => $platforms,
             'returnPlatformId' => $returnPlatformId,
@@ -116,7 +116,7 @@ class TiposSuscripcionController extends Controller
             if ($duraciones !== []) {
                 $generated = $this->tiposSuscripcion->ensurePlatformDurations($selectedPlatformId, $duraciones);
                 if ($generated > 0) {
-                    flash('info', 'Se generaron ' . $generated . ' duraciones faltantes automaticamente.');
+                    flash('info', 'Se generaron ' . $generated . ' duraciones faltantes automáticamente.');
                 }
             }
         }
@@ -138,20 +138,20 @@ class TiposSuscripcionController extends Controller
     {
         $platformId = (int) ($_POST['plataforma_id'] ?? 0);
         if ($platformId <= 0 || $this->plataformas->find($platformId) === null) {
-            flash('danger', 'Selecciona una plataforma valida.');
+            flash('danger', 'Selecciona una plataforma válida.');
             $this->redirect('/tipos-suscripcion/precios');
         }
 
         $rows = $this->tiposSuscripcion->allByPlataforma($platformId);
         if ($rows === []) {
-            flash('warning', 'La plataforma no tiene tipos de suscripcion para actualizar.');
+            flash('warning', 'La plataforma no tiene tipos de suscripción para actualizar.');
             $this->redirect('/tipos-suscripcion/precios?' . http_build_query(['plataforma_id' => $platformId]));
         }
 
         $inputCostos = $_POST['costo'] ?? [];
         $inputPrecios = $_POST['precio'] ?? [];
         if (!is_array($inputCostos) || !is_array($inputPrecios)) {
-            flash('danger', 'Datos invalidos para actualizar precios.');
+            flash('danger', 'Datos inválidos para actualizar precios.');
             $this->redirect('/tipos-suscripcion/precios?' . http_build_query(['plataforma_id' => $platformId]));
         }
 
@@ -160,11 +160,11 @@ class TiposSuscripcionController extends Controller
             $costo = trim((string) ($inputCostos[$id] ?? ''));
             $precio = trim((string) ($inputPrecios[$id] ?? ''));
             if (!preg_match('/^\d+$/', $costo) || (int) $costo <= 0) {
-                flash('danger', 'Costo invalido en el plan ID ' . $id . '. Usa enteros mayores a 0.');
+                flash('danger', 'Costo inválido en el plan ID ' . $id . '. Usa enteros mayores a 0.');
                 $this->redirect('/tipos-suscripcion/precios?' . http_build_query(['plataforma_id' => $platformId]));
             }
             if (!preg_match('/^\d+$/', $precio) || (int) $precio <= 0) {
-                flash('danger', 'Precio invalido en el plan ID ' . $id . '. Usa enteros mayores a 0.');
+                flash('danger', 'Precio inválido en el plan ID ' . $id . '. Usa enteros mayores a 0.');
                 $this->redirect('/tipos-suscripcion/precios?' . http_build_query(['plataforma_id' => $platformId]));
             }
         }
@@ -210,9 +210,9 @@ class TiposSuscripcionController extends Controller
         try {
             $this->tiposSuscripcion->update($id, $payload);
             clear_old();
-            flash('success', 'Tipo de suscripcion actualizado.');
+            flash('success', 'Tipo de suscripción actualizado.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo actualizar el tipo de suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo actualizar el tipo de suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));
@@ -224,9 +224,9 @@ class TiposSuscripcionController extends Controller
 
         try {
             $this->tiposSuscripcion->delete($id);
-            flash('success', 'Tipo de suscripcion eliminado.');
+            flash('success', 'Tipo de suscripción eliminado.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo eliminar el tipo de suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo eliminar el tipo de suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));
@@ -246,14 +246,14 @@ class TiposSuscripcionController extends Controller
 
         if (!preg_match('/^\d+$/', $payload['costo'])) {
             set_old($payload);
-            flash('danger', 'El costo debe ser un numero entero mayor a 0.');
+            flash('danger', 'El costo debe ser un número entero mayor a 0.');
 
             return null;
         }
 
         if (!preg_match('/^\d+$/', $payload['precio'])) {
             set_old($payload);
-            flash('danger', 'El precio de venta debe ser un numero entero mayor a 0.');
+            flash('danger', 'El precio de venta debe ser un número entero mayor a 0.');
 
             return null;
         }
@@ -270,7 +270,7 @@ class TiposSuscripcionController extends Controller
             set_old($payload);
             flash(
                 'danger',
-                'Completa todos los campos obligatorios. Costo, precio de venta y duracion deben ser enteros mayores a 0.'
+                'Completa todos los campos obligatorios. Costo, precio de venta y duración deben ser enteros mayores a 0.'
             );
 
             return null;
@@ -304,7 +304,7 @@ class TiposSuscripcionController extends Controller
             set_old($payload);
             flash(
                 'danger',
-                'La duracion no esta permitida para esta plataforma. Valores permitidos: ' . implode(', ', $allowedDurations) . '.'
+                'La duración no está permitida para esta plataforma. Valores permitidos: ' . implode(', ', $allowedDurations) . '.'
             );
 
             return null;
@@ -355,3 +355,5 @@ class TiposSuscripcionController extends Controller
         return '/tipos-suscripcion/editar/' . $id . '?' . http_build_query(['plataforma_id' => $platformId]);
     }
 }
+
+

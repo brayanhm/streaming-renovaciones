@@ -9,7 +9,7 @@ $returnQuery = $returnPlatformId > 0
     : '';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Editar tipo de suscripcion</h1>
+    <h1 class="h3 mb-0">Editar tipo de suscripción</h1>
     <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary">Volver a tipos</a>
 </div>
 
@@ -35,7 +35,7 @@ $returnQuery = $returnPlatformId > 0
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="nombre_modalidad">Nombre del tipo de suscripcion</label>
+                    <label class="form-label" for="nombre_modalidad">Nombre del tipo de suscripción</label>
                     <input
                         type="text"
                         class="form-control"
@@ -56,7 +56,7 @@ $returnQuery = $returnPlatformId > 0
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label" for="duracion_meses">Duracion (meses)</label>
+                    <label class="form-label" for="duracion_meses">Duración (meses)</label>
                     <input
                         type="number"
                         min="1"
@@ -202,3 +202,4 @@ $returnQuery = $returnPlatformId > 0
     applyGanancia();
 })();
 </script>
+

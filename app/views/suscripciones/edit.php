@@ -5,7 +5,7 @@ use App\Models\Modalidad;
 use App\Models\Plataforma;
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Editar suscripcion</h1>
+    <h1 class="h3 mb-0">Editar suscripción</h1>
     <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary">Volver a suscripciones</a>
 </div>
 
@@ -41,7 +41,7 @@ use App\Models\Plataforma;
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label" for="modalidad_id">Plan de suscripcion</label>
+                    <label class="form-label" for="modalidad_id">Plan de suscripción</label>
                     <select class="form-select js-modalidad" id="modalidad_id" name="modalidad_id" required>
                         <?php foreach ($tiposSuscripcion as $modalidad): ?>
                             <option
@@ -126,7 +126,7 @@ use App\Models\Plataforma;
                         name="usuario_proveedor"
                         value="<?= e((string) ($item['usuario_proveedor'] ?? '')) ?>"
                     >
-                    <small class="text-secondary js-usuario-help">Se pedira segun la configuracion de la plataforma.</small>
+                    <small class="text-secondary js-usuario-help">Se pedirá según la configuración de la plataforma.</small>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
                     <div class="form-check">
@@ -192,12 +192,12 @@ use App\Models\Plataforma;
                 usuarioLabel.textContent = 'Correo de la cuenta para renovar';
                 usuarioInput.type = 'email';
                 usuarioInput.placeholder = 'correo@dominio.com';
-                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usara para renovar.';
+                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usará para renovar.';
             } else {
                 usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
                 usuarioInput.type = 'text';
                 usuarioInput.placeholder = 'Ej: usuario123';
-                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usara para renovar.';
+                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usará para renovar.';
             }
         }
 
@@ -230,3 +230,4 @@ use App\Models\Plataforma;
     applyGanancia();
 })();
 </script>
+

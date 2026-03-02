@@ -66,10 +66,10 @@ class SuscripcionesController extends Controller
         try {
             $this->suscripciones->create($payload);
             clear_old();
-            flash('success', 'Suscripcion creada.');
+            flash('success', 'Suscripción creada.');
         } catch (\Throwable $exception) {
             set_old($payload);
-            flash('danger', 'No se pudo crear la suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo crear la suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect('/suscripciones');
@@ -79,7 +79,7 @@ class SuscripcionesController extends Controller
     {
         $item = $this->suscripciones->find($id);
         if ($item === null) {
-            flash('danger', 'Suscripcion no encontrada.');
+            flash('danger', 'Suscripción no encontrada.');
             $this->redirect('/suscripciones');
         }
 
@@ -88,7 +88,7 @@ class SuscripcionesController extends Controller
         $tiposSuscripcion = $this->modalidades->all();
 
         $this->render('suscripciones/edit', [
-            'pageTitle' => 'Editar suscripcion',
+            'pageTitle' => 'Editar suscripción',
             'item' => $item,
             'clientes' => $clientes,
             'plataformas' => $plataformas,
@@ -107,9 +107,9 @@ class SuscripcionesController extends Controller
         try {
             $this->suscripciones->update($id, $payload);
             clear_old();
-            flash('success', 'Suscripcion actualizada.');
+            flash('success', 'Suscripción actualizada.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo actualizar la suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo actualizar la suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect('/suscripciones');
@@ -119,9 +119,9 @@ class SuscripcionesController extends Controller
     {
         try {
             $this->suscripciones->delete($id);
-            flash('success', 'Suscripcion eliminada.');
+            flash('success', 'Suscripción eliminada.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo eliminar la suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo eliminar la suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect('/suscripciones');
@@ -151,7 +151,7 @@ class SuscripcionesController extends Controller
             !in_array($payload['estado'], Suscripcion::ESTADOS, true)
         ) {
             set_old($payload);
-            flash('danger', 'Completa todos los campos obligatorios de la suscripcion.');
+            flash('danger', 'Completa todos los campos obligatorios de la suscripción.');
 
             return null;
         }
@@ -196,7 +196,7 @@ class SuscripcionesController extends Controller
 
             if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
                 set_old($payload);
-                flash('danger', 'Debes ingresar un correo valido para la cuenta de renovacion.');
+                flash('danger', 'Debes ingresar un correo válido para la cuenta de renovación.');
 
                 return null;
             }
@@ -206,14 +206,14 @@ class SuscripcionesController extends Controller
 
         if ($payload['precio_venta'] !== '' && !preg_match('/^\d+$/', $payload['precio_venta'])) {
             set_old($payload);
-            flash('danger', 'El precio de venta debe ser un numero entero mayor a 0.');
+            flash('danger', 'El precio de venta debe ser un número entero mayor a 0.');
 
             return null;
         }
 
         if ($payload['costo_base'] !== '' && !preg_match('/^\d+$/', $payload['costo_base'])) {
             set_old($payload);
-            flash('danger', 'El costo debe ser un numero entero mayor a 0.');
+            flash('danger', 'El costo debe ser un número entero mayor a 0.');
 
             return null;
         }
@@ -243,3 +243,4 @@ class SuscripcionesController extends Controller
         return $payload;
     }
 }
+

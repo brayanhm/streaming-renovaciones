@@ -36,7 +36,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
-                            placeholder="Busca por cliente, telefono, plataforma o plan"
+                            placeholder="Busca por contacto, usuario, teléfono, plataforma o plan"
                             value="<?= e($search ?? '') ?>"
                         >
                     </div>
@@ -104,7 +104,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>">Editar</a>
-                                            <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta suscripcion?')">
+                                            <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar esta suscripción?')">
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
                                             </form>
                                         </div>
@@ -155,7 +155,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="modalidad_id">Plan de suscripcion</label>
+                        <label class="form-label" for="modalidad_id">Plan de suscripción</label>
                         <select class="form-select js-modalidad" id="modalidad_id" name="modalidad_id" required>
                             <option value="">Seleccionar...</option>
                             <?php $oldMod = old('modalidad_id'); ?>
@@ -238,7 +238,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     <small class="text-secondary d-block mt-1">Define manualmente la vigencia de la cuenta para este cliente.</small>
 
                     <div class="mt-3 mb-3">
-                        <label class="form-label" for="estado">Estado inicial de la suscripcion</label>
+                        <label class="form-label" for="estado">Estado inicial de la suscripción</label>
                         <select class="form-select" id="estado" name="estado" required>
                             <?php $oldEstado = old('estado', 'ACTIVO'); ?>
                             <?php foreach ($estados as $status): ?>
@@ -257,7 +257,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                             value="<?= e(old('usuario_proveedor')) ?>"
                             placeholder="Ej: usuario123"
                         >
-                        <small class="text-secondary js-usuario-help">Se pedira segun la configuracion de la plataforma.</small>
+                        <small class="text-secondary js-usuario-help">Se pedirá según la configuración de la plataforma.</small>
                     </div>
 
                     <div class="form-check mb-3">
@@ -267,7 +267,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </label>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Guardar suscripcion</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg">Guardar suscripción</button>
                 </form>
             </div>
         </div>
@@ -329,12 +329,12 @@ if (!function_exists('tipo_suscripcion_label')) {
                 usuarioLabel.textContent = 'Correo de la cuenta para renovar';
                 usuarioInput.type = 'email';
                 usuarioInput.placeholder = 'correo@dominio.com';
-                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usara para renovar.';
+                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usará para renovar.';
             } else {
                 usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
                 usuarioInput.type = 'text';
                 usuarioInput.placeholder = 'Ej: usuario123';
-                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usara para renovar.';
+                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usará para renovar.';
             }
         }
 
@@ -367,3 +367,4 @@ if (!function_exists('tipo_suscripcion_label')) {
     applyGanancia();
 })();
 </script>
+

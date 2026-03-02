@@ -6,10 +6,10 @@ use App\Models\Plataforma;
 
 $states = [
     'TODOS' => ['label' => 'Todos', 'badge' => 'secondary'],
-    'CONTACTAR_2D' => ['label' => 'Contactar (-3 dias)', 'badge' => 'warning'],
-    'REENVIAR_1D' => ['label' => 'Contactar (dia de vencimiento)', 'badge' => 'info'],
+    'CONTACTAR_2D' => ['label' => 'Contactar (-3 días)', 'badge' => 'warning'],
+    'REENVIAR_1D' => ['label' => 'Contactar (día de vencimiento)', 'badge' => 'info'],
     'ESPERA' => ['label' => 'Espera', 'badge' => 'primary'],
-    'ACTIVO' => ['label' => 'Al dia', 'badge' => 'success'],
+    'ACTIVO' => ['label' => 'Al día', 'badge' => 'success'],
     'VENCIDO' => ['label' => 'Vencidos', 'badge' => 'danger'],
     'RECUP' => ['label' => 'Recuperar', 'badge' => 'dark'],
 ];
@@ -55,7 +55,7 @@ if (!function_exists('renewal_options')) {
         <p class="text-secondary mb-0">Control diario de clientes, vencimientos y renovaciones de la tienda virtual.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar membresias</a>
+        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar membresías</a>
     </div>
 </div>
 
@@ -63,18 +63,40 @@ if (!function_exists('renewal_options')) {
     <div class="card-body">
         <form class="row g-2 align-items-end" method="get" action="<?= e(url('/dashboard')) ?>">
             <input type="hidden" name="estado" value="<?= e($selectedStatus ?? 'TODOS') ?>">
-            <div class="col-12 col-md-8">
-                <label class="form-label fw-semibold" for="q">Buscar por cliente o telefono</label>
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-semibold" for="contacto">Contacto</label>
                 <input
                     class="form-control form-control-lg"
                     type="text"
-                    id="q"
-                    name="q"
-                    placeholder="Ej: Juan Perez o 79625801"
-                    value="<?= e($search ?? '') ?>"
+                    id="contacto"
+                    name="contacto"
+                    placeholder="Ej: Juan Pérez"
+                    value="<?= e($contacto ?? '') ?>"
                 >
             </div>
-            <div class="col-12 col-md-4 d-grid">
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-semibold" for="usuario">Usuario</label>
+                <input
+                    class="form-control form-control-lg"
+                    type="text"
+                    id="usuario"
+                    name="usuario"
+                    placeholder="Ej: usuario123"
+                    value="<?= e($usuario ?? '') ?>"
+                >
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-semibold" for="telefono">Teléfono</label>
+                <input
+                    class="form-control form-control-lg"
+                    type="text"
+                    id="telefono"
+                    name="telefono"
+                    placeholder="Ej: 79625801"
+                    value="<?= e($telefono ?? '') ?>"
+                >
+            </div>
+            <div class="col-12 col-md-3 d-grid">
                 <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
             </div>
         </form>
@@ -87,7 +109,9 @@ if (!function_exists('renewal_options')) {
         $isActive = ($selectedStatus ?? 'TODOS') === $key;
         $query = http_build_query([
             'estado' => $key,
-            'q' => $search ?? '',
+            'contacto' => $contacto ?? '',
+            'usuario' => $usuario ?? '',
+            'telefono' => $telefono ?? '',
         ]);
         ?>
         <li class="nav-item me-2">
@@ -136,7 +160,7 @@ if (!function_exists('renewal_options')) {
                 <thead class="table-dark">
                     <tr>
                         <th>Cliente</th>
-                        <th>Telefono</th>
+                        <th>Teléfono</th>
                         <th>Servicio</th>
                         <th>Plan</th>
                         <th>Vencimiento</th>
@@ -164,16 +188,16 @@ if (!function_exists('renewal_options')) {
                         $whatsType = (string) ($row['contact_type_sugerido'] ?? 'MENOS_2');
                         $renewOptions = renewal_options($row);
                         if ($dias < 0) {
-                            $diasLabel = 'Vencido hace ' . abs($dias) . ' dias';
+                            $diasLabel = 'Vencido hace ' . abs($dias) . ' días';
                             $diasClass = 'text-danger';
                         } elseif ($dias === 0) {
                             $diasLabel = 'Vence hoy';
                             $diasClass = 'text-danger';
                         } elseif ($dias === 1) {
-                            $diasLabel = 'Vence en 1 dia';
+                            $diasLabel = 'Vence en 1 día';
                             $diasClass = 'text-warning';
                         } else {
-                            $diasLabel = 'Vence en ' . $dias . ' dias';
+                            $diasLabel = 'Vence en ' . $dias . ' días';
                             $diasClass = $dias <= 3 ? 'text-warning' : 'text-secondary';
                         }
                         ?>
@@ -253,7 +277,7 @@ if (!function_exists('renewal_options')) {
                 <thead class="table-dark">
                     <tr>
                         <th>Cliente</th>
-                        <th>Telefono</th>
+                        <th>Teléfono</th>
                         <th>Servicio</th>
                         <th>Plan</th>
                         <th>Vencimiento</th>
@@ -321,7 +345,7 @@ if (!function_exists('renewal_options')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">CONTACTAR_2D</h2>
-                <p class="mb-0 text-secondary">Clientes que deben recibir mensaje de renovacion 3 dias antes del vencimiento.</p>
+                <p class="mb-0 text-secondary">Clientes que deben recibir mensaje de renovación 3 días antes del vencimiento.</p>
             </div>
         </div>
     </div>
@@ -329,7 +353,7 @@ if (!function_exists('renewal_options')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">REENVIAR_1D</h2>
-                <p class="mb-0 text-secondary">Clientes para mensaje el mismo dia de vencimiento si aun no renovaron.</p>
+                <p class="mb-0 text-secondary">Clientes para mensaje el mismo día de vencimiento si aún no renovaron.</p>
             </div>
         </div>
     </div>
@@ -337,8 +361,10 @@ if (!function_exists('renewal_options')) {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6">RECUP</h2>
-                <p class="mb-0 text-secondary">Clientes con 3+ dias vencidos para mensaje de recuperacion.</p>
+                <p class="mb-0 text-secondary">Clientes con 3+ días vencidos para mensaje de recuperación.</p>
             </div>
         </div>
     </div>
 </div>
+
+

@@ -10,8 +10,16 @@ class Suscripcion extends BaseModel
 {
     public const ESTADOS = ['CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO', 'RECUP'];
     public const CONTACTOS = ['MENOS_2', 'MENOS_1', 'REC_7', 'REC_15'];
+    public const FILTROS_BUSQUEDA = ['TODOS', 'CONTACTO', 'USUARIO', 'TELEFONO'];
 
-    public function all(string $search = '', string $estado = ''): array
+    public function all(
+        string $search = '',
+        string $estado = '',
+        string $searchField = 'TODOS',
+        string $contacto = '',
+        string $usuario = '',
+        string $telefono = ''
+    ): array
     {
         $sql = 'SELECT
                 s.*,
@@ -38,8 +46,38 @@ class Suscripcion extends BaseModel
         $conditions = [];
         $params = [];
 
-        if ($search !== '') {
-            $conditions[] = '(c.nombre LIKE :term OR c.telefono LIKE :term OR p.nombre LIKE :term OR m.nombre_modalidad LIKE :term)';
+        $searchField = strtoupper(trim($searchField));
+        if (!in_array($searchField, self::FILTROS_BUSQUEDA, true)) {
+            $searchField = 'TODOS';
+        }
+
+        $contacto = trim($contacto);
+        $usuario = trim($usuario);
+        $telefono = trim($telefono);
+
+        if ($contacto !== '' || $usuario !== '' || $telefono !== '') {
+            if ($contacto !== '') {
+                $conditions[] = 'c.nombre LIKE :contacto_term';
+                $params['contacto_term'] = '%' . $contacto . '%';
+            }
+            if ($usuario !== '') {
+                $conditions[] = 's.usuario_proveedor LIKE :usuario_term';
+                $params['usuario_term'] = '%' . $usuario . '%';
+            }
+            if ($telefono !== '') {
+                $conditions[] = 'c.telefono LIKE :telefono_term';
+                $params['telefono_term'] = '%' . $telefono . '%';
+            }
+        } elseif ($search !== '') {
+            if ($searchField === 'CONTACTO') {
+                $conditions[] = 'c.nombre LIKE :term';
+            } elseif ($searchField === 'USUARIO') {
+                $conditions[] = 's.usuario_proveedor LIKE :term';
+            } elseif ($searchField === 'TELEFONO') {
+                $conditions[] = 'c.telefono LIKE :term';
+            } else {
+                $conditions[] = '(c.nombre LIKE :term OR c.telefono LIKE :term OR s.usuario_proveedor LIKE :term OR p.nombre LIKE :term OR m.nombre_modalidad LIKE :term)';
+            }
             $params['term'] = '%' . $search . '%';
         }
 
@@ -328,8 +366,11 @@ class Suscripcion extends BaseModel
 
             $today = new DateTimeImmutable('today');
             $currentDue = new DateTimeImmutable((string) $row['fecha_vencimiento']);
-            $base = $currentDue < $today ? $today : $currentDue;
-            $newDue = $base->modify('+' . $months . ' months');
+
+            // Si aun no vencio, renovar sobre el vencimiento actual.
+            // Si ya vencio, renovar sobre la fecha de hoy.
+            $base = $currentDue >= $today ? $currentDue : $today;
+            $newDue = $this->addMonthsClamped($base, $months);
             $newDueStr = $newDue->format('Y-m-d');
 
             $update = $this->db->prepare(
@@ -507,5 +548,21 @@ class Suscripcion extends BaseModel
         $mesesLabel = $duracion . ' ' . ($duracion === 1 ? 'mes' : 'meses');
 
         return trim($nombre . ' - ' . $tipoCuentaLabel . ' - ' . $mesesLabel);
+    }
+
+    private function addMonthsClamped(DateTimeImmutable $baseDate, int $months): DateTimeImmutable
+    {
+        $day = (int) $baseDate->format('d');
+        $year = (int) $baseDate->format('Y');
+        $month = (int) $baseDate->format('m');
+
+        $firstOfMonth = $baseDate->setDate($year, $month, 1);
+        $targetFirst = $firstOfMonth->modify('+' . $months . ' months');
+        $targetYear = (int) $targetFirst->format('Y');
+        $targetMonth = (int) $targetFirst->format('m');
+        $targetLastDay = (int) $targetFirst->format('t');
+        $targetDay = min($day, $targetLastDay);
+
+        return $targetFirst->setDate($targetYear, $targetMonth, $targetDay);
     }
 }

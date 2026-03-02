@@ -15,7 +15,7 @@ declare(strict_types=1);
                     <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e((string) $item['nombre']) ?>" required>
                 </div>
                 <div class="col-md-6">
-                    <label for="numero" class="form-label">Numero</label>
+                    <label for="numero" class="form-label">Número</label>
                     <input type="text" class="form-control" id="numero" name="numero" value="<?= e((string) $item['telefono']) ?>" required>
                 </div>
                 <div class="col-12">
@@ -30,3 +30,4 @@ declare(strict_types=1);
         </form>
     </div>
 </div>
+

@@ -204,7 +204,7 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
             <?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?>
         </a>
         <?php if ($isLoggedIn): ?>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Mostrar navegacion">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Mostrar navegación">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
@@ -216,14 +216,14 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
                         <a class="nav-link <?= is_active_menu($currentPath, '/clientes') ? 'active' : '' ?>" href="<?= e(url('/clientes')) ?>">Clientes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/plataformas') ? 'active' : '' ?>" href="<?= e(url('/plataformas')) ?>">Catalogo</a>
+                        <a class="nav-link <?= is_active_menu($currentPath, '/plataformas') ? 'active' : '' ?>" href="<?= e(url('/plataformas')) ?>">Catálogo</a>
                     </li>
                     <li class="nav-item">
                         <?php $tiposActive = is_active_menu($currentPath, '/tipos-suscripcion') || is_active_menu($currentPath, '/modalidades'); ?>
                         <a class="nav-link <?= $tiposActive ? 'active' : '' ?>" href="<?= e(url('/tipos-suscripcion')) ?>">Planes</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/suscripciones') ? 'active' : '' ?>" href="<?= e(url('/suscripciones')) ?>">Membresias</a>
+                        <a class="nav-link <?= is_active_menu($currentPath, '/suscripciones') ? 'active' : '' ?>" href="<?= e(url('/suscripciones')) ?>">Membresías</a>
                     </li>
                 </ul>
                 <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
@@ -242,3 +242,4 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
     <?php endforeach; ?>
+

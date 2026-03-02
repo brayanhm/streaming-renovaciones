@@ -6,7 +6,7 @@ declare(strict_types=1);
         <div class="card border-0 shadow">
             <div class="card-body p-4 p-md-5">
                 <h1 class="h4 fw-bold mb-2">Acceso a Ghost Store</h1>
-                <p class="text-secondary mb-4">Operacion de tienda virtual: clientes, renovaciones y seguimiento comercial.</p>
+                <p class="text-secondary mb-4">Operación de tienda virtual: clientes, renovaciones y seguimiento comercial.</p>
 
                 <?php if (($hasUsers ?? false) === true): ?>
                     <form method="post" action="<?= e(url('/login')) ?>" class="needs-validation" novalidate>
@@ -22,14 +22,14 @@ declare(strict_types=1);
                             >
                         </div>
                         <div class="mb-4">
-                            <label for="password" class="form-label">Contrasena</label>
+                            <label for="password" class="form-label">Contraseña</label>
                             <input type="password" class="form-control form-control-lg" id="password" name="password" required>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-lg w-100">Iniciar sesion</button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">Iniciar sesión</button>
                     </form>
                 <?php else: ?>
                     <div class="alert alert-warning">
-                        Aun no hay usuarios registrados. Crea el administrador inicial para empezar.
+                        Aún no hay usuarios registrados. Crea el administrador inicial para empezar.
                     </div>
                     <form method="post" action="<?= e(url('/login')) ?>">
                         <input type="hidden" name="_action" value="setup_admin">
@@ -45,11 +45,11 @@ declare(strict_types=1);
                             >
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Contrasena</label>
+                            <label for="password" class="form-label">Contraseña</label>
                             <input type="password" class="form-control form-control-lg" id="password" name="password" required>
                         </div>
                         <div class="mb-4">
-                            <label for="password_confirm" class="form-label">Confirmar contrasena</label>
+                            <label for="password_confirm" class="form-label">Confirmar contraseña</label>
                             <input type="password" class="form-control form-control-lg" id="password_confirm" name="password_confirm" required>
                         </div>
                         <button type="submit" class="btn btn-success btn-lg w-100">Crear admin inicial</button>
@@ -59,3 +59,4 @@ declare(strict_types=1);
         </div>
     </div>
 </div>
+

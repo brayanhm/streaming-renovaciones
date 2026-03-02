@@ -20,7 +20,7 @@ class AuthController extends Controller
         $hasUsers = $this->users->countAll() > 0;
 
         $this->render('auth/login', [
-            'pageTitle' => 'Iniciar sesion',
+            'pageTitle' => 'Iniciar sesión',
             'hasUsers' => $hasUsers,
         ]);
     }
@@ -37,14 +37,14 @@ class AuthController extends Controller
 
         if ($username === '' || $password === '') {
             set_old(['username' => $username]);
-            flash('danger', 'Ingresa tu usuario y contrasena.');
+            flash('danger', 'Ingresa tu usuario y contraseña.');
             $this->redirect('/login');
         }
 
         $user = $this->users->authenticate($username, $password);
         if ($user === null) {
             set_old(['username' => $username]);
-            flash('danger', 'Usuario o contrasena incorrectos.');
+            flash('danger', 'Usuario o contraseña incorrectos.');
             $this->redirect('/login');
         }
 
@@ -55,14 +55,14 @@ class AuthController extends Controller
         ];
 
         clear_old();
-        flash('success', 'Sesion iniciada correctamente.');
+        flash('success', 'Sesión iniciada correctamente.');
         $this->redirect('/dashboard');
     }
 
     private function handleSetupAdmin(): void
     {
         if ($this->users->countAll() > 0) {
-            flash('warning', 'El usuario inicial ya existe. Inicia sesion.');
+            flash('warning', 'El usuario inicial ya existe. Inicia sesión.');
             $this->redirect('/login');
         }
 
@@ -72,14 +72,14 @@ class AuthController extends Controller
 
         if ($username === '' || strlen($password) < 6 || $password !== $confirm) {
             set_old(['username' => $username]);
-            flash('danger', 'Datos no validos. La contrasena debe tener al menos 6 caracteres y coincidir con la confirmacion.');
+            flash('danger', 'Datos no válidos. La contraseña debe tener al menos 6 caracteres y coincidir con la confirmación.');
             $this->redirect('/login');
         }
 
         try {
             $this->users->create($username, $password, 'admin');
             clear_old();
-            flash('success', 'Usuario administrador inicial creado. Ahora inicia sesion.');
+            flash('success', 'Usuario administrador inicial creado. Ahora inicia sesión.');
         } catch (\Throwable $exception) {
             set_old(['username' => $username]);
             flash('danger', 'No se pudo crear el usuario inicial: ' . $exception->getMessage());
@@ -92,7 +92,8 @@ class AuthController extends Controller
     {
         unset($_SESSION['auth']);
         session_regenerate_id(true);
-        flash('success', 'Sesion cerrada.');
+        flash('success', 'Sesión cerrada.');
         $this->redirect('/login');
     }
 }
+

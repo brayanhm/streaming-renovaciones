@@ -10,7 +10,7 @@ $returnQuery = $selectedPlatformId > 0
     : '';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Tipos de suscripcion</h1>
+    <h1 class="h3 mb-0">Tipos de suscripción</h1>
     <div class="d-flex flex-wrap gap-2">
         <a
             href="<?= e(url('/tipos-suscripcion/precios' . ($selectedPlatformId > 0 ? ('?' . http_build_query(['plataforma_id' => $selectedPlatformId])) : ''))) ?>"
@@ -68,9 +68,9 @@ $returnQuery = $selectedPlatformId > 0
                         <thead class="table-dark">
                             <tr>
                                 <th>Plataforma</th>
-                                <th>Tipo de suscripcion</th>
+                                <th>Tipo de suscripción</th>
                                 <th>Tipo de cuenta</th>
-                                <th>Duracion</th>
+                                <th>Duración</th>
                                 <th>Dispositivos</th>
                                 <th>Costo (Bs)</th>
                                 <th>Precio venta (Bs)</th>
@@ -80,7 +80,7 @@ $returnQuery = $selectedPlatformId > 0
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="9" class="text-center text-secondary py-4">No hay tipos de suscripcion registrados.</td></tr>
+                                <tr><td colspan="9" class="text-center text-secondary py-4">No hay tipos de suscripción registrados.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
@@ -97,7 +97,7 @@ $returnQuery = $selectedPlatformId > 0
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>">Editar</a>
-                                            <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar este tipo de suscripcion?')">
+                                            <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar este tipo de suscripción?')">
                                                 <?php if ($selectedPlatformId > 0): ?>
                                                     <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
                                                 <?php endif; ?>
@@ -117,7 +117,7 @@ $returnQuery = $selectedPlatformId > 0
     <div class="col-lg-4">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h2 class="h5 mb-3">Nuevo tipo de suscripcion</h2>
+                <h2 class="h5 mb-3">Nuevo tipo de suscripción</h2>
                 <form method="post" action="<?= e(url('/tipos-suscripcion')) ?>" id="create-plan-form">
                     <?php if ($selectedPlatformId > 0): ?>
                         <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
@@ -138,7 +138,7 @@ $returnQuery = $selectedPlatformId > 0
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="nombre_modalidad">Nombre del tipo de suscripcion</label>
+                        <label class="form-label" for="nombre_modalidad">Nombre del tipo de suscripción</label>
                         <input type="text" class="form-control" id="nombre_modalidad" name="nombre_modalidad" value="<?= e(old('nombre_modalidad')) ?>" required>
                     </div>
                     <div class="mb-3">
@@ -153,7 +153,7 @@ $returnQuery = $selectedPlatformId > 0
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="duracion_meses">Duracion del plan (meses)</label>
+                        <label class="form-label" for="duracion_meses">Duración del plan (meses)</label>
                         <input
                             type="number"
                             min="1"
@@ -268,3 +268,5 @@ $returnQuery = $selectedPlatformId > 0
     applyGanancia();
 })();
 </script>
+
+

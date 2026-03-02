@@ -21,12 +21,19 @@ class DashboardController extends Controller
         $this->suscripciones->recalculateStates(RECUP_DAYS);
 
         $search = trim((string) ($_GET['q'] ?? ''));
+        $searchField = strtoupper(trim((string) ($_GET['filtro'] ?? 'TODOS')));
+        if (!in_array($searchField, Suscripcion::FILTROS_BUSQUEDA, true)) {
+            $searchField = 'TODOS';
+        }
+        $contacto = trim((string) ($_GET['contacto'] ?? ''));
+        $usuario = trim((string) ($_GET['usuario'] ?? ''));
+        $telefono = trim((string) ($_GET['telefono'] ?? ''));
         $selectedStatus = strtoupper(trim((string) ($_GET['estado'] ?? 'TODOS')));
         if ($selectedStatus !== 'TODOS' && !in_array($selectedStatus, Suscripcion::ESTADOS, true)) {
             $selectedStatus = 'TODOS';
         }
 
-        $allRows = $this->suscripciones->all($search);
+        $allRows = $this->suscripciones->all($search, '', $searchField, $contacto, $usuario, $telefono);
         $activeRows = [];
         $noRenewRows = [];
         foreach ($allRows as $row) {
@@ -85,6 +92,10 @@ class DashboardController extends Controller
             'rows' => $rows,
             'counts' => $counts,
             'search' => $search,
+            'searchField' => $searchField,
+            'contacto' => $contacto,
+            'usuario' => $usuario,
+            'telefono' => $telefono,
             'selectedStatus' => $selectedStatus,
             'totals' => $totals,
             'today' => new DateTimeImmutable('today'),
@@ -97,7 +108,7 @@ class DashboardController extends Controller
     {
         $subscription = $this->suscripciones->findWithRelations($id);
         if ($subscription === null) {
-            flash('danger', 'Suscripcion no encontrada.');
+            flash('danger', 'Suscripción no encontrada.');
             $this->redirect('/dashboard');
         }
 
@@ -108,7 +119,7 @@ class DashboardController extends Controller
 
         $link = $this->suscripciones->buildWhatsAppLink($id, $contactType);
         if ($link === null) {
-            flash('danger', 'No se pudo generar el enlace de WhatsApp. Verifica que el telefono sea celular de Bolivia (8 digitos, inicia con 6 o 7).');
+            flash('danger', 'No se pudo generar el enlace de WhatsApp. Verifica que el teléfono sea celular de Bolivia (8 dígitos, inicia con 6 o 7).');
             $this->redirect('/dashboard');
         }
 
@@ -121,18 +132,18 @@ class DashboardController extends Controller
     {
         $months = (int) ($_POST['meses'] ?? 0);
         if ($months <= 0) {
-            flash('danger', 'El periodo de renovacion no es valido.');
+            flash('danger', 'El período de renovación no es válido.');
             $this->redirect('/dashboard');
         }
 
         try {
             $newDue = $this->suscripciones->renovar($id, $months);
             if ($newDue === null) {
-                flash('danger', 'No se pudo renovar la suscripcion. Verifica los meses permitidos para esa plataforma.');
+                flash('danger', 'No se pudo renovar la suscripción. Verifica los meses permitidos para esa plataforma.');
                 $this->redirect('/dashboard');
             }
 
-            flash('success', 'Renovacion aplicada. Nueva fecha de vencimiento: ' . $newDue);
+            flash('success', 'Renovación aplicada. Nueva fecha de vencimiento: ' . $newDue);
         } catch (\Throwable $exception) {
             flash('danger', 'Error al renovar: ' . $exception->getMessage());
         }
@@ -144,9 +155,9 @@ class DashboardController extends Controller
     {
         $ok = $this->suscripciones->markNoRenovo($id);
         if ($ok) {
-            flash('warning', 'Suscripcion marcada como no renovada.');
+            flash('warning', 'Suscripción marcada como no renovada.');
         } else {
-            flash('danger', 'No se pudo actualizar el estado de renovacion.');
+            flash('danger', 'No se pudo actualizar el estado de renovación.');
         }
 
         $this->redirect('/dashboard');
@@ -232,3 +243,4 @@ class DashboardController extends Controller
         });
     }
 }
+
