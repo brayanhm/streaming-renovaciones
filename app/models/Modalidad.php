@@ -24,8 +24,11 @@ class Modalidad extends BaseModel
         }
 
         if ($search !== '') {
-            $conditions[] = '(m.nombre_modalidad LIKE :term OR p.nombre LIKE :term OR m.tipo_cuenta LIKE :term)';
-            $params['term'] = '%' . $search . '%';
+            $conditions[] = '(m.nombre_modalidad LIKE :term_modalidad OR p.nombre LIKE :term_plataforma OR m.tipo_cuenta LIKE :term_tipo_cuenta)';
+            $like = '%' . $search . '%';
+            $params['term_modalidad'] = $like;
+            $params['term_plataforma'] = $like;
+            $params['term_tipo_cuenta'] = $like;
         }
 
         if ($conditions !== []) {

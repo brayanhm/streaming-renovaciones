@@ -211,10 +211,15 @@ if (!function_exists('renewal_options')) {
                                 <div class="fw-semibold"><?= e((string) ($row['plataforma_nombre'] ?? '')) ?></div>
                                 <small class="text-secondary"><?= e((string) ($row['nombre_modalidad'] ?? '')) ?></small>
                                 <div>
+                                    <?php
+                                    $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($row['plataforma_dato_renovacion'] ?? 'USUARIO'));
+                                    $renewalValue = trim((string) ($row['usuario_proveedor'] ?? ''));
+                                    ?>
                                     <span class="badge text-bg-light border"><?= e((string) ($row['plataforma_tipo_servicio'] ?? '')) ?></span>
-                                    <?php if (!empty($row['usuario_proveedor'])): ?>
-                                        <?php $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($row['plataforma_dato_renovacion'] ?? 'USUARIO')); ?>
-                                        <span class="badge text-bg-secondary"><?= e($renovacionLabel) ?>: <?= e((string) $row['usuario_proveedor']) ?></span>
+                                    <?php if ($renewalValue !== ''): ?>
+                                        <span class="badge text-bg-secondary"><?= e($renovacionLabel) ?>: <?= e($renewalValue) ?></span>
+                                    <?php else: ?>
+                                        <span class="badge text-bg-light border text-secondary"><?= e($renovacionLabel) ?>: sin dato</span>
                                     <?php endif; ?>
                                 </div>
                             </td>
@@ -305,6 +310,18 @@ if (!function_exists('renewal_options')) {
                             <td>
                                 <div class="fw-semibold"><?= e((string) ($row['plataforma_nombre'] ?? '')) ?></div>
                                 <small class="text-secondary"><?= e((string) ($row['nombre_modalidad'] ?? '')) ?></small>
+                                <div>
+                                    <?php
+                                    $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($row['plataforma_dato_renovacion'] ?? 'USUARIO'));
+                                    $renewalValue = trim((string) ($row['usuario_proveedor'] ?? ''));
+                                    ?>
+                                    <span class="badge text-bg-light border"><?= e((string) ($row['plataforma_tipo_servicio'] ?? '')) ?></span>
+                                    <?php if ($renewalValue !== ''): ?>
+                                        <span class="badge text-bg-secondary"><?= e($renovacionLabel) ?>: <?= e($renewalValue) ?></span>
+                                    <?php else: ?>
+                                        <span class="badge text-bg-light border text-secondary"><?= e($renovacionLabel) ?>: sin dato</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td><?= e(tipo_suscripcion_dashboard($row)) ?></td>
                             <td><?= e($vencimiento) ?></td>

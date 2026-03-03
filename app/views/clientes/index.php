@@ -43,18 +43,20 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             <tr>
                                 <th>Contacto</th>
                                 <th>Número</th>
+                                <th>Usuario</th>
                                 <th>Notas</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="4" class="text-center text-secondary py-4">No hay clientes registrados.</td></tr>
+                                <tr><td colspan="5" class="text-center text-secondary py-4">No hay clientes registrados.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
                                     <td class="fw-semibold"><?= e((string) $item['nombre']) ?></td>
                                     <td><?= e((string) $item['telefono']) ?></td>
+                                    <td><?= e((string) ($item['usuario_proveedor'] ?? '')) ?></td>
                                     <td><?= e((string) ($item['notas'] ?? '')) ?></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">

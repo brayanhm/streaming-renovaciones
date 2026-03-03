@@ -76,9 +76,17 @@ class Suscripcion extends BaseModel
             } elseif ($searchField === 'TELEFONO') {
                 $conditions[] = 'c.telefono LIKE :term';
             } else {
-                $conditions[] = '(c.nombre LIKE :term OR c.telefono LIKE :term OR s.usuario_proveedor LIKE :term OR p.nombre LIKE :term OR m.nombre_modalidad LIKE :term)';
+                $conditions[] = '(c.nombre LIKE :term_contacto OR c.telefono LIKE :term_telefono OR s.usuario_proveedor LIKE :term_usuario OR p.nombre LIKE :term_plataforma OR m.nombre_modalidad LIKE :term_modalidad)';
+                $like = '%' . $search . '%';
+                $params['term_contacto'] = $like;
+                $params['term_telefono'] = $like;
+                $params['term_usuario'] = $like;
+                $params['term_plataforma'] = $like;
+                $params['term_modalidad'] = $like;
             }
-            $params['term'] = '%' . $search . '%';
+            if ($searchField !== 'TODOS') {
+                $params['term'] = '%' . $search . '%';
+            }
         }
 
         if ($estado !== '' && in_array($estado, self::ESTADOS, true)) {
@@ -428,12 +436,14 @@ class Suscripcion extends BaseModel
         }
 
         $template = $this->resolveTemplate($subscription, $contactType);
-        $message = $this->renderTemplate($template, $subscription);
+        $message = $this->sanitizeWhatsAppMessage(
+            $this->renderTemplate($template, $subscription)
+        );
         $encodedMessage = rawurlencode($message);
         // Preservar marcadores de formato para que WhatsApp procese *negritas*, _cursivas_ y ~tachado~.
         $encodedMessage = str_replace(['%2A', '%5F', '%7E'], ['*', '_', '~'], $encodedMessage);
 
-        return 'https://wa.me/' . $phone . '?text=' . $encodedMessage;
+        return 'https://api.whatsapp.com/send/?phone=' . $phone . '&text=' . $encodedMessage . '&type=phone_number&app_absent=0';
     }
 
     public function inferContactType(array $subscription): string
@@ -535,6 +545,19 @@ class Suscripcion extends BaseModel
         ];
 
         return strtr($template, $replace);
+    }
+
+    private function sanitizeWhatsAppMessage(string $message): string
+    {
+        $message = str_replace(["\r\n", "\r"], "\n", $message);
+        // Elimina solo caracteres inválidos o de control, manteniendo emojis/símbolos.
+        $message = str_replace("\u{FFFD}", '', $message);
+        $message = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $message) ?? $message;
+
+        $message = preg_replace('/[ \t]+\n/u', "\n", $message) ?? $message;
+        $message = preg_replace('/\n{3,}/u', "\n\n", $message) ?? $message;
+
+        return trim($message);
     }
 
     private function buildPlanLabel(array $subscription): string

@@ -79,8 +79,10 @@ class Plataforma extends BaseModel
         $params = [];
 
         if ($search !== '') {
-            $sql .= ' WHERE nombre LIKE :term OR tipo_servicio LIKE :term';
-            $params['term'] = '%' . $search . '%';
+            $sql .= ' WHERE nombre LIKE :term_nombre OR tipo_servicio LIKE :term_tipo_servicio';
+            $like = '%' . $search . '%';
+            $params['term_nombre'] = $like;
+            $params['term_tipo_servicio'] = $like;
         }
 
         $sql .= ' ORDER BY nombre ASC';

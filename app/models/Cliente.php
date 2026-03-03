@@ -7,21 +7,34 @@ class Cliente extends BaseModel
 {
     public function all(string $search = ''): array
     {
-        $sql = 'SELECT c.* FROM clientes c';
+        $sql = 'SELECT
+                c.*,
+                s.usuario_proveedor
+            FROM clientes c
+            LEFT JOIN suscripciones s ON s.id = (
+                SELECT s2.id
+                FROM suscripciones s2
+                WHERE s2.cliente_id = c.id
+                ORDER BY s2.fecha_vencimiento DESC, s2.id DESC
+                LIMIT 1
+            )';
         $params = [];
 
         if ($search !== '') {
             $sql .= " WHERE (
-                c.nombre LIKE :term
-                OR c.telefono LIKE :term
+                c.nombre LIKE :term_nombre
+                OR c.telefono LIKE :term_telefono
                 OR EXISTS (
                     SELECT 1
-                    FROM suscripciones s
-                    WHERE s.cliente_id = c.id
-                      AND s.usuario_proveedor LIKE :term
+                    FROM suscripciones s_busqueda
+                    WHERE s_busqueda.cliente_id = c.id
+                      AND s_busqueda.usuario_proveedor LIKE :term_usuario
                 )
             )";
-            $params['term'] = '%' . $search . '%';
+            $like = '%' . $search . '%';
+            $params['term_nombre'] = $like;
+            $params['term_telefono'] = $like;
+            $params['term_usuario'] = $like;
         }
 
         $sql .= ' ORDER BY c.id DESC';
@@ -69,8 +82,11 @@ class Cliente extends BaseModel
         $params = [];
 
         if ($search !== '') {
-            $sql .= ' AND (c.nombre LIKE :term OR c.telefono LIKE :term OR s.usuario_proveedor LIKE :term)';
-            $params['term'] = '%' . $search . '%';
+            $sql .= ' AND (c.nombre LIKE :term_nombre OR c.telefono LIKE :term_telefono OR s.usuario_proveedor LIKE :term_usuario)';
+            $like = '%' . $search . '%';
+            $params['term_nombre'] = $like;
+            $params['term_telefono'] = $like;
+            $params['term_usuario'] = $like;
         }
 
         $sql .= ' ORDER BY c.id ASC';
