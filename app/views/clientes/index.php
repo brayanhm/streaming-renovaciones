@@ -166,6 +166,75 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                 </form>
             </div>
         </div>
+
+        <div class="card shadow-sm mt-3">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Agregar cliente antiguo</h2>
+                <form method="post" action="<?= e(url('/clientes/antiguo')) ?>">
+                    <?php if (!$hasSubscriptionCatalog): ?>
+                        <div class="alert alert-warning">
+                            Debes tener plataformas y planes creados para registrar clientes antiguos.
+                        </div>
+                    <?php endif; ?>
+                    <div class="mb-3">
+                        <label class="form-label" for="contacto_antiguo">Contacto</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="contacto_antiguo"
+                            name="contacto_antiguo"
+                            value="<?= e(old('contacto_antiguo')) ?>"
+                            required
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="numero_antiguo">Numero</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="numero_antiguo"
+                            name="numero_antiguo"
+                            value="<?= e(old('numero_antiguo')) ?>"
+                            required
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="plataforma_id_antiguo">Plataforma</label>
+                        <select class="form-select" id="plataforma_id_antiguo" name="plataforma_id_antiguo" required>
+                            <option value="">Seleccionar...</option>
+                            <?php $oldPlatAntiguo = old('plataforma_id_antiguo'); ?>
+                            <?php foreach (($plataformas ?? []) as $plataforma): ?>
+                                <option
+                                    value="<?= e((string) $plataforma['id']) ?>"
+                                    <?= $oldPlatAntiguo === (string) $plataforma['id'] ? 'selected' : '' ?>
+                                >
+                                    <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-secondary">Se usara automaticamente el primer plan disponible de la plataforma.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="fecha_finalizacion">Fecha de finalizacion</label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="fecha_finalizacion"
+                            name="fecha_finalizacion"
+                            value="<?= e(old('fecha_finalizacion')) ?>"
+                            required
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="notas_antiguo">Notas</label>
+                        <textarea class="form-control" id="notas_antiguo" name="notas_antiguo" rows="2"><?= e(old('notas_antiguo')) ?></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>>
+                        Guardar cliente antiguo
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 

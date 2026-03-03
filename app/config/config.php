@@ -1,29 +1,133 @@
 <?php
 declare(strict_types=1);
 
-define('APP_NAME', 'Ghost Store');
-define('APP_ENV', 'development');
-define('APP_DEBUG', true);
-define('APP_TIMEZONE', 'America/La_Paz');
-define('RECUP_DAYS', 3);
-define('APP_CURRENCY_CODE', 'BOB');
-define('APP_CURRENCY_SYMBOL', 'Bs');
-define('APP_MONEY_DECIMALS', 0);
-define('APP_DECIMAL_SEPARATOR', ',');
-define('APP_THOUSANDS_SEPARATOR', '.');
+if (!function_exists('app_load_env_file')) {
+    function app_load_env_file(string $path): void
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            return;
+        }
 
-define('BASE_PATH', dirname(__DIR__, 2));
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!is_array($lines)) {
+            return;
+        }
+
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line === '' || str_starts_with($line, '#')) {
+                continue;
+            }
+
+            $delimiterPos = strpos($line, '=');
+            if ($delimiterPos === false) {
+                continue;
+            }
+
+            $name = trim(substr($line, 0, $delimiterPos));
+            if ($name === '') {
+                continue;
+            }
+
+            // Variables del entorno del servidor tienen prioridad sobre el archivo .env
+            if (getenv($name) !== false) {
+                continue;
+            }
+
+            $value = trim(substr($line, $delimiterPos + 1));
+            if ($value !== '' && strlen($value) >= 2) {
+                $first = $value[0];
+                $last = $value[strlen($value) - 1];
+                if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
+                    $value = substr($value, 1, -1);
+                }
+            }
+
+            putenv($name . '=' . $value);
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
+        }
+    }
+}
+
+if (!function_exists('app_env')) {
+    function app_env(string $key, ?string $default = null): ?string
+    {
+        if (array_key_exists($key, $_ENV)) {
+            return (string) $_ENV[$key];
+        }
+        if (array_key_exists($key, $_SERVER)) {
+            return (string) $_SERVER[$key];
+        }
+
+        $value = getenv($key);
+        if ($value === false) {
+            return $default;
+        }
+
+        return (string) $value;
+    }
+}
+
+if (!function_exists('app_env_bool')) {
+    function app_env_bool(string $key, bool $default): bool
+    {
+        $value = app_env($key);
+        if ($value === null) {
+            return $default;
+        }
+
+        $normalized = strtolower(trim($value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+            return true;
+        }
+        if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+            return false;
+        }
+
+        return $default;
+    }
+}
+
+if (!function_exists('app_env_int')) {
+    function app_env_int(string $key, int $default): int
+    {
+        $value = app_env($key);
+        if ($value === null || !is_numeric($value)) {
+            return $default;
+        }
+
+        return (int) $value;
+    }
+}
+
+$appBasePath = dirname(__DIR__, 2);
+app_load_env_file($appBasePath . '/.env');
+
+define('APP_NAME', app_env('APP_NAME', 'Ghost Store'));
+define('APP_ENV', app_env('APP_ENV', 'development'));
+define('APP_DEBUG', app_env_bool('APP_DEBUG', APP_ENV !== 'production'));
+define('APP_TIMEZONE', app_env('APP_TIMEZONE', 'America/La_Paz'));
+define('RECUP_DAYS', app_env_int('RECUP_DAYS', 3));
+define('APP_CURRENCY_CODE', app_env('APP_CURRENCY_CODE', 'BOB'));
+define('APP_CURRENCY_SYMBOL', app_env('APP_CURRENCY_SYMBOL', 'Bs'));
+define('APP_MONEY_DECIMALS', app_env_int('APP_MONEY_DECIMALS', 0));
+define('APP_DECIMAL_SEPARATOR', app_env('APP_DECIMAL_SEPARATOR', ','));
+define('APP_THOUSANDS_SEPARATOR', app_env('APP_THOUSANDS_SEPARATOR', '.'));
+
+define('BASE_PATH', $appBasePath);
 define('APP_PATH', BASE_PATH . '/app');
 define('PUBLIC_PATH', BASE_PATH . '/public');
 define('STORAGE_PATH', BASE_PATH . '/storage');
 
-define('DB_HOST', '127.0.0.1');
-define('DB_PORT', 3306);
-define('DB_NAME', 'streaming_renovaciones');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_CHARSET', 'utf8mb4');
-define('DB_COLLATION', 'utf8mb4_unicode_ci');
+define('DB_HOST', app_env('DB_HOST', '127.0.0.1'));
+define('DB_PORT', app_env_int('DB_PORT', 3306));
+define('DB_NAME', app_env('DB_NAME', 'streaming_renovaciones'));
+define('DB_USER', app_env('DB_USER', 'root'));
+define('DB_PASS', app_env('DB_PASS', ''));
+define('DB_CHARSET', app_env('DB_CHARSET', 'utf8mb4'));
+define('DB_COLLATION', app_env('DB_COLLATION', 'utf8mb4_unicode_ci'));
+define('APP_RUN_MIGRATIONS', app_env_bool('APP_RUN_MIGRATIONS', APP_ENV !== 'production'));
 
 define(
     'DEFAULT_TEMPLATE_MENOS_2',

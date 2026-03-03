@@ -51,10 +51,33 @@ El codigo esta alineado a estas tablas existentes:
 
 ## Configuracion
 
-1. Verifica credenciales en `app/config/config.php`.
-2. Apunta Apache a `public/` (o entra por `/public`).
-3. URL local recomendada:
+1. Copia `.env.example` a `.env`.
+2. Configura credenciales DB y valores de app en `.env`.
+3. Para local, URL recomendada:
    - `http://localhost/streaming-renovaciones/public` (o el alias local que uses para Ghost Store)
+
+Variables clave:
+
+- `APP_ENV` (`development` o `production`)
+- `APP_DEBUG` (`true`/`false`)
+- `APP_RUN_MIGRATIONS` (`true`/`false`)
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`
+
+## Despliegue en Hostinger
+
+1. En `public_html`, sube el proyecto completo.
+2. Crea `.env` en la raiz del proyecto (puedes partir de `.env.example`) y coloca credenciales reales de Hostinger.
+3. Importa la base de datos desde uno de los `.sql`.
+4. Usa estos valores recomendados en produccion:
+   - `APP_ENV=production`
+   - `APP_DEBUG=false`
+   - `APP_RUN_MIGRATIONS=false`
+5. El proyecto ya incluye:
+   - `index.php` en raiz que carga `public/index.php`
+   - `.htaccess` en raiz para enrutar y proteger carpetas sensibles
+   - `public/.htaccess` para el front controller interno
+
+Nota: si tu plan te permite definir document root del dominio en `public/`, tambien es valido y mas limpio.
 
 ## Usuario inicial
 

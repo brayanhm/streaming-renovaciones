@@ -9,7 +9,9 @@ require_once __DIR__ . '/../app/config/config.php';
 require_once APP_PATH . '/config/db.php';
 require_once APP_PATH . '/config/migrations.php';
 
-run_schema_migrations();
+if (APP_RUN_MIGRATIONS) {
+    run_schema_migrations();
+}
 
 spl_autoload_register(static function (string $className): void {
     $prefix = 'App\\';
@@ -54,6 +56,7 @@ $routes = [
 
     ['GET', '#^/clientes$#', [ClientesController::class, 'index']],
     ['POST', '#^/clientes$#', [ClientesController::class, 'store']],
+    ['POST', '#^/clientes/antiguo$#', [ClientesController::class, 'storeAntiguo']],
     ['GET', '#^/clientes/completar$#', [ClientesController::class, 'completar']],
     ['POST', '#^/clientes/completar/actualizar/(\d+)$#', [ClientesController::class, 'updateMissingContact']],
     ['GET', '#^/clientes/editar/(\d+)$#', [ClientesController::class, 'edit']],

@@ -74,6 +74,10 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <tr><td colspan="10" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
+                                <?php
+                                $isNoRenew = (int) ($item['flag_no_renovo'] ?? 0) === 1;
+                                $statusLabel = $isNoRenew ? 'VENCIDO' : (string) ($item['estado'] ?? '');
+                                ?>
                                 <tr>
                                     <td>
                                         <div class="fw-semibold"><?= e((string) $item['cliente_nombre']) ?></div>
@@ -96,8 +100,8 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <td><?= e((string) $item['fecha_inicio']) ?></td>
                                     <td><?= e((string) $item['fecha_vencimiento']) ?></td>
                                     <td>
-                                        <span class="badge text-bg-secondary"><?= e((string) $item['estado']) ?></span>
-                                        <?php if ((int) $item['flag_no_renovo'] === 1): ?>
+                                        <span class="badge text-bg-secondary"><?= e($statusLabel) ?></span>
+                                        <?php if ($isNoRenew): ?>
                                             <div><small class="text-danger">No renovado</small></div>
                                         <?php endif; ?>
                                     </td>

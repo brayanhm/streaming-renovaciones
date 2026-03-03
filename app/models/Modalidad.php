@@ -53,6 +53,21 @@ class Modalidad extends BaseModel
         return $stmt->fetchAll();
     }
 
+    public function firstByPlataforma(int $plataformaId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT *
+             FROM modalidades
+             WHERE plataforma_id = :plataforma_id
+             ORDER BY duracion_meses ASC, id ASC
+             LIMIT 1'
+        );
+        $stmt->execute(['plataforma_id' => $plataformaId]);
+        $result = $stmt->fetch();
+
+        return $result ?: null;
+    }
+
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM modalidades WHERE id = :id LIMIT 1');

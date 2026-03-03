@@ -42,6 +42,11 @@ function db(): \PDO
             $options
         );
     } catch (\PDOException $exception) {
+        $logDir = STORAGE_PATH . '/logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0775, true);
+        }
+
         $logLine = sprintf(
             "[%s] Error DB: %s%s",
             date('Y-m-d H:i:s'),
@@ -49,7 +54,7 @@ function db(): \PDO
             PHP_EOL
         );
 
-        @file_put_contents(STORAGE_PATH . '/logs/app.log', $logLine, FILE_APPEND);
+        @file_put_contents($logDir . '/app.log', $logLine, FILE_APPEND);
 
         http_response_code(500);
 

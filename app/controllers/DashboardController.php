@@ -19,6 +19,7 @@ class DashboardController extends Controller
     public function index(): void
     {
         $this->suscripciones->recalculateStates(RECUP_DAYS);
+        $dashboardStates = ['TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
 
         $search = trim((string) ($_GET['q'] ?? ''));
         $searchField = strtoupper(trim((string) ($_GET['filtro'] ?? 'TODOS')));
@@ -29,7 +30,7 @@ class DashboardController extends Controller
         $usuario = trim((string) ($_GET['usuario'] ?? ''));
         $telefono = trim((string) ($_GET['telefono'] ?? ''));
         $selectedStatus = strtoupper(trim((string) ($_GET['estado'] ?? 'TODOS')));
-        if ($selectedStatus !== 'TODOS' && !in_array($selectedStatus, Suscripcion::ESTADOS, true)) {
+        if (!in_array($selectedStatus, $dashboardStates, true)) {
             $selectedStatus = 'TODOS';
         }
 
@@ -51,10 +52,17 @@ class DashboardController extends Controller
 
         $rows = $activeRows;
         if ($selectedStatus !== 'TODOS') {
-            $rows = array_values(array_filter(
-                $activeRows,
-                static fn (array $item): bool => (string) ($item['estado'] ?? '') === $selectedStatus
-            ));
+            if ($selectedStatus === 'VENCIDO') {
+                $rows = array_values(array_filter(
+                    $activeRows,
+                    static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
+                ));
+            } else {
+                $rows = array_values(array_filter(
+                    $activeRows,
+                    static fn (array $item): bool => (string) ($item['estado'] ?? '') === $selectedStatus
+                ));
+            }
         }
 
         $totals = [
@@ -70,18 +78,30 @@ class DashboardController extends Controller
             $totals['ganancia'] += ($sale - $cost);
         }
 
-        $counts = ['TODOS' => count($activeRows)];
-        foreach (Suscripcion::ESTADOS as $estado) {
-            $counts[$estado] = 0;
-        }
+        $counts = [
+            'TODOS' => count($activeRows),
+            'CONTACTAR_2D' => 0,
+            'REENVIAR_1D' => 0,
+            'ESPERA' => 0,
+            'ACTIVO' => 0,
+            'VENCIDO' => 0,
+        ];
         foreach ($activeRows as $item) {
             $state = (string) ($item['estado'] ?? '');
+            if ($state === 'RECUP') {
+                $counts['VENCIDO']++;
+                continue;
+            }
             if (isset($counts[$state])) {
                 $counts[$state]++;
             }
         }
         foreach ($noRenewRows as $item) {
             $state = (string) ($item['estado'] ?? '');
+            if ($state === 'RECUP') {
+                $counts['VENCIDO']++;
+                continue;
+            }
             if (isset($counts[$state])) {
                 $counts[$state]++;
             }

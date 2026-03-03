@@ -154,6 +154,8 @@ class Suscripcion extends BaseModel
 
     public function create(array $data): int
     {
+        $estado = ((int) ($data['flag_no_renovo'] ?? 0) === 1) ? 'VENCIDO' : (string) $data['estado'];
+
         $stmt = $this->db->prepare(
             'INSERT INTO suscripciones (
                 cliente_id,
@@ -188,7 +190,7 @@ class Suscripcion extends BaseModel
             'costo_base' => $data['costo_base'],
             'fecha_inicio' => $data['fecha_inicio'],
             'fecha_vencimiento' => $data['fecha_vencimiento'],
-            'estado' => $data['estado'],
+            'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
             'flag_no_renovo' => $data['flag_no_renovo'],
         ]);
@@ -198,6 +200,8 @@ class Suscripcion extends BaseModel
 
     public function update(int $id, array $data): bool
     {
+        $estado = ((int) ($data['flag_no_renovo'] ?? 0) === 1) ? 'VENCIDO' : (string) $data['estado'];
+
         $stmt = $this->db->prepare(
             'UPDATE suscripciones SET
                 cliente_id = :cliente_id,
@@ -222,7 +226,7 @@ class Suscripcion extends BaseModel
             'costo_base' => $data['costo_base'],
             'fecha_inicio' => $data['fecha_inicio'],
             'fecha_vencimiento' => $data['fecha_vencimiento'],
-            'estado' => $data['estado'],
+            'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
             'flag_no_renovo' => $data['flag_no_renovo'],
         ]);
@@ -325,11 +329,15 @@ class Suscripcion extends BaseModel
     {
         $stmt = $this->db->prepare(
             'UPDATE suscripciones
-             SET flag_no_renovo = 1
+             SET flag_no_renovo = 1,
+                 estado = :estado
              WHERE id = :id'
         );
 
-        return $stmt->execute(['id' => $id]);
+        return $stmt->execute([
+            'id' => $id,
+            'estado' => 'VENCIDO',
+        ]);
     }
 
     public function renovar(int $id, int $months): ?string
@@ -480,6 +488,10 @@ class Suscripcion extends BaseModel
 
     private function resolveState(array $row, int $recupDays): string
     {
+        if ((int) ($row['flag_no_renovo'] ?? 0) === 1) {
+            return 'VENCIDO';
+        }
+
         $today = new DateTimeImmutable('today');
         $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
         $daysToDue = (int) $today->diff($dueDate)->format('%r%a');

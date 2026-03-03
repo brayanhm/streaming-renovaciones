@@ -67,6 +67,9 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
         .navbar.app-navbar {
             background: linear-gradient(125deg, #020617 0%, #111827 68%, #1f2937 100%);
             border-bottom: 3px solid var(--section-accent);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
         }
 
         .app-navbar .navbar-brand {

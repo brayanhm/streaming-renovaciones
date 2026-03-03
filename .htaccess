@@ -1,0 +1,19 @@
+RewriteEngine On
+
+# Bloquea acceso web a rutas/archivos sensibles del proyecto.
+RewriteRule ^(?:app|storage|\.git|\.vscode)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:streaming_renovaciones.*\.sql)$ - [F,L,NC]
+RewriteRule ^(?:README\.md|AGENTS\.md)$ - [F,L,NC]
+RewriteRule ^\.(?!well-known/) - [F,L,NC]
+
+# Si el recurso real existe en /public, servirlo desde ahi.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Front controller en raiz (carga public/index.php).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

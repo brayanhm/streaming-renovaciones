@@ -163,6 +163,99 @@ class ClientesController extends Controller
         $this->redirect('/clientes');
     }
 
+    public function storeAntiguo(): void
+    {
+        $payload = [
+            'contacto_antiguo' => trim((string) ($_POST['contacto_antiguo'] ?? $_POST['nombre_antiguo'] ?? '')),
+            'numero_antiguo' => trim((string) ($_POST['numero_antiguo'] ?? $_POST['telefono_antiguo'] ?? '')),
+            'notas_antiguo' => trim((string) ($_POST['notas_antiguo'] ?? '')),
+            'plataforma_id_antiguo' => (int) ($_POST['plataforma_id_antiguo'] ?? 0),
+            'fecha_finalizacion' => trim((string) ($_POST['fecha_finalizacion'] ?? '')),
+        ];
+
+        if (
+            $payload['contacto_antiguo'] === '' ||
+            $payload['numero_antiguo'] === '' ||
+            $payload['plataforma_id_antiguo'] <= 0 ||
+            $payload['fecha_finalizacion'] === ''
+        ) {
+            set_old($payload);
+            flash('danger', 'Completa contacto, numero, plataforma y fecha de finalizacion.');
+            $this->redirect('/clientes');
+        }
+
+        $payload['numero_antiguo'] = normalize_whatsapp_phone_bolivia($payload['numero_antiguo']);
+        if ($payload['numero_antiguo'] === '' || !is_valid_whatsapp_phone_bolivia($payload['numero_antiguo'])) {
+            set_old($payload);
+            flash('danger', 'Numero invalido. Para Bolivia usa celular de 8 digitos (inicia con 6 o 7), con o sin +591.');
+            $this->redirect('/clientes');
+        }
+
+        try {
+            $fechaVencimiento = new DateTimeImmutable($payload['fecha_finalizacion']);
+        } catch (\Throwable) {
+            set_old($payload);
+            flash('danger', 'La fecha de finalizacion no es valida.');
+            $this->redirect('/clientes');
+        }
+
+        $plataforma = $this->plataformas->find($payload['plataforma_id_antiguo']);
+        if ($plataforma === null) {
+            set_old($payload);
+            flash('danger', 'La plataforma seleccionada no existe.');
+            $this->redirect('/clientes');
+        }
+
+        $modalidad = $this->modalidades->firstByPlataforma($payload['plataforma_id_antiguo']);
+        if ($modalidad === null) {
+            set_old($payload);
+            flash('danger', 'La plataforma no tiene planes para crear la suscripcion.');
+            $this->redirect('/clientes');
+        }
+
+        $duracion = max(1, (int) ($modalidad['duracion_meses'] ?? 1));
+        $fechaInicio = $fechaVencimiento->modify('-' . $duracion . ' months')->format('Y-m-d');
+        $fechaVencimientoStr = $fechaVencimiento->format('Y-m-d');
+        $today = new DateTimeImmutable('today');
+        $isExpired = $fechaVencimiento < $today;
+
+        $clientePayload = [
+            'nombre' => $payload['contacto_antiguo'],
+            'telefono' => $payload['numero_antiguo'],
+            'notas' => $payload['notas_antiguo'],
+        ];
+        $suscripcionPayload = [
+            'plataforma_id' => $payload['plataforma_id_antiguo'],
+            'modalidad_id' => (int) $modalidad['id'],
+            'costo_base' => (string) max(1, (int) round((float) ($modalidad['costo'] ?? 0))),
+            'precio_venta' => (string) max(1, (int) round((float) ($modalidad['precio'] ?? 0))),
+            'fecha_inicio' => $fechaInicio,
+            'fecha_vencimiento' => $fechaVencimientoStr,
+            'estado' => $isExpired ? 'VENCIDO' : 'ACTIVO',
+            'usuario_proveedor' => '',
+            'flag_no_renovo' => $isExpired ? 1 : 0,
+        ];
+
+        $pdo = db();
+        try {
+            $pdo->beginTransaction();
+            $clienteId = $this->clientes->create($clientePayload);
+            $suscripcionPayload['cliente_id'] = $clienteId;
+            $this->suscripciones->create($suscripcionPayload);
+            $pdo->commit();
+            clear_old();
+            flash('success', 'Cliente antiguo creado con fecha de finalizacion ' . $fechaVencimientoStr . '.');
+        } catch (\Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            set_old($payload);
+            flash('danger', 'No se pudo crear el cliente antiguo: ' . $exception->getMessage());
+        }
+
+        $this->redirect('/clientes');
+    }
+
     public function edit(int $id): void
     {
         $item = $this->clientes->find($id);

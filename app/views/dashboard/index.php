@@ -11,7 +11,6 @@ $states = [
     'ESPERA' => ['label' => 'Espera', 'badge' => 'primary'],
     'ACTIVO' => ['label' => 'Al día', 'badge' => 'success'],
     'VENCIDO' => ['label' => 'Vencidos', 'badge' => 'danger'],
-    'RECUP' => ['label' => 'Recuperar', 'badge' => 'dark'],
 ];
 
 if (!function_exists('status_badge_class')) {
@@ -63,6 +62,11 @@ if (!function_exists('renewal_options')) {
     <div class="card-body">
         <form class="row g-2 align-items-end" method="get" action="<?= e(url('/dashboard')) ?>">
             <input type="hidden" name="estado" value="<?= e($selectedStatus ?? 'TODOS') ?>">
+            <?php
+            $clearFiltersQuery = http_build_query([
+                'estado' => $selectedStatus ?? 'TODOS',
+            ]);
+            ?>
             <div class="col-12 col-md-3">
                 <label class="form-label fw-semibold" for="contacto">Contacto</label>
                 <input
@@ -96,8 +100,11 @@ if (!function_exists('renewal_options')) {
                     value="<?= e($telefono ?? '') ?>"
                 >
             </div>
-            <div class="col-12 col-md-3 d-grid">
-                <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+            <div class="col-12 col-md-3">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+                    <a class="btn btn-outline-secondary" href="<?= e(url('/dashboard?' . $clearFiltersQuery)) ?>">Limpiar filtros</a>
+                </div>
             </div>
         </form>
     </div>
@@ -186,6 +193,8 @@ if (!function_exists('renewal_options')) {
                         $dias = (int) ($row['dias_para_vencer'] ?? 0);
                         $status = (string) ($row['estado'] ?? 'ACTIVO');
                         $whatsType = (string) ($row['contact_type_sugerido'] ?? 'MENOS_2');
+                        $recupType = $dias <= -15 ? 'REC_15' : 'REC_7';
+                        $showRecoveryOption = ($selectedStatus ?? 'TODOS') === 'VENCIDO';
                         $renewOptions = renewal_options($row);
                         if ($dias < 0) {
                             $diasLabel = 'Vencido hace ' . abs($dias) . ' días';
@@ -247,6 +256,16 @@ if (!function_exists('renewal_options')) {
                                 >
                                     WhatsApp
                                 </a>
+                                <?php if ($showRecoveryOption): ?>
+                                    <a
+                                        class="btn btn-outline-dark btn-sm px-2 mt-1"
+                                        href="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'] . '?tipo=' . $recupType)) ?>"
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        Recuperacion
+                                    </a>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
@@ -300,7 +319,9 @@ if (!function_exists('renewal_options')) {
                     <?php foreach (($noRenewRows ?? []) as $row): ?>
                         <?php
                         $vencimiento = (string) ($row['fecha_vencimiento'] ?? '');
-                        $status = (string) ($row['estado'] ?? 'VENCIDO');
+                        $status = (int) ($row['flag_no_renovo'] ?? 0) === 1
+                            ? 'VENCIDO'
+                            : (string) ($row['estado'] ?? 'VENCIDO');
                         $whatsType = (string) ($row['contact_type_sugerido'] ?? 'REC_7');
                         $renewOptions = renewal_options($row);
                         ?>
@@ -377,8 +398,8 @@ if (!function_exists('renewal_options')) {
     <div class="col-12 col-md-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
-                <h2 class="h6">RECUP</h2>
-                <p class="mb-0 text-secondary">Clientes con 3+ días vencidos para mensaje de recuperación.</p>
+                <h2 class="h6">VENCIDO (con recuperacion)</h2>
+                <p class="mb-0 text-secondary">En VENCIDOS tambien se incluyen casos de recuperacion para enviar su mensaje por WhatsApp.</p>
             </div>
         </div>
     </div>
