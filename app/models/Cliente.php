@@ -5,11 +5,14 @@ namespace App\Models;
 
 class Cliente extends BaseModel
 {
-    public function all(string $search = ''): array
+    public function all(string $search = '', int $limit = 0, int $offset = 0): array
     {
         $sql = 'SELECT
                 c.*,
-                s.usuario_proveedor
+                s.usuario_proveedor,
+                s.fecha_vencimiento,
+                s.estado,
+                p.nombre AS plataforma_nombre
             FROM clientes c
             LEFT JOIN suscripciones s ON s.id = (
                 SELECT s2.id
@@ -17,7 +20,8 @@ class Cliente extends BaseModel
                 WHERE s2.cliente_id = c.id
                 ORDER BY s2.fecha_vencimiento DESC, s2.id DESC
                 LIMIT 1
-            )';
+            )
+            LEFT JOIN plataformas p ON p.id = s.plataforma_id';
         $params = [];
 
         if ($search !== '') {
@@ -39,10 +43,42 @@ class Cliente extends BaseModel
 
         $sql .= ' ORDER BY c.id DESC';
 
+        if ($limit > 0) {
+            $sql .= ' LIMIT ' . $limit . ' OFFSET ' . $offset;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll();
+    }
+
+    public function count(string $search = ''): int
+    {
+        $sql = 'SELECT COUNT(*) AS total FROM clientes c';
+        $params = [];
+
+        if ($search !== '') {
+            $sql .= " WHERE (
+                c.nombre LIKE :term_nombre
+                OR c.telefono LIKE :term_telefono
+                OR EXISTS (
+                    SELECT 1
+                    FROM suscripciones s_busqueda
+                    WHERE s_busqueda.cliente_id = c.id
+                      AND s_busqueda.usuario_proveedor LIKE :term_usuario
+                )
+            )";
+            $like = '%' . $search . '%';
+            $params['term_nombre'] = $like;
+            $params['term_telefono'] = $like;
+            $params['term_usuario'] = $like;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) ($stmt->fetch()['total'] ?? 0);
     }
 
     public function find(int $id): ?array
@@ -56,7 +92,7 @@ class Cliente extends BaseModel
 
     public function countMissingContactData(): int
     {
-        $stmt = $this->db->query("SELECT COUNT(*) AS total FROM clientes WHERE nombre = '' OR telefono = ''");
+        $stmt = $this->db->query("SELECT COUNT(*) AS total FROM clientes WHERE telefono = ''");
         $row = $stmt->fetch();
 
         return (int) ($row['total'] ?? 0);
@@ -78,7 +114,7 @@ class Cliente extends BaseModel
                 LIMIT 1
             )
             LEFT JOIN plataformas p ON p.id = s.plataforma_id
-            WHERE (c.nombre = '' OR c.telefono = '')";
+            WHERE c.telefono = ''";
         $params = [];
 
         if ($search !== '') {

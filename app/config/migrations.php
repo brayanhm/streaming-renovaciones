@@ -87,6 +87,13 @@ function run_schema_migrations(): void
 
     ensure_table_utf8mb4($pdo, 'plataformas');
 
+    ensure_column(
+        $pdo,
+        'suscripciones',
+        'notas',
+        'ALTER TABLE suscripciones ADD COLUMN notas TEXT NULL AFTER usuario_proveedor'
+    );
+
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
     $pdo->exec('UPDATE modalidades SET costo = precio WHERE costo IS NULL OR costo <= 0');

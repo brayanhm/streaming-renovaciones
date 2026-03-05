@@ -43,6 +43,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             <tr>
                                 <th>Contacto</th>
                                 <th>Número</th>
+                                <th>Plataforma</th>
                                 <th>Usuario</th>
                                 <th>Notas</th>
                                 <th class="text-end">Acciones</th>
@@ -50,14 +51,17 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="5" class="text-center text-secondary py-4">No hay clientes registrados.</td></tr>
+                                <tr><td colspan="6" class="text-center text-secondary py-4">No hay clientes registrados.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
-                                    <td class="fw-semibold"><?= e((string) $item['nombre']) ?></td>
+                                    <td class="fw-semibold">
+                                        <a href="<?= e(url('/clientes/' . (int) $item['id'])) ?>" class="text-decoration-none"><?= e((string) $item['nombre']) ?></a>
+                                    </td>
                                     <td><?= e((string) $item['telefono']) ?></td>
+                                    <td><?= e((string) ($item['plataforma_nombre'] ?? '—')) ?></td>
                                     <td><?= e((string) ($item['usuario_proveedor'] ?? '')) ?></td>
-                                    <td><?= e((string) ($item['notas'] ?? '')) ?></td>
+                                    <td><?= e(mb_strimwidth((string) ($item['notas'] ?? ''), 0, 50, '…')) ?></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>">Asignar vigencia</a>
@@ -72,6 +76,21 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </tbody>
                     </table>
                 </div>
+                <?php if (($totalPages ?? 1) > 1): ?>
+                <?php $pq = http_build_query(array_filter(['q' => $search ?? ''])); ?>
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                    <small class="text-secondary"><?= e((string) ($totalRows ?? 0)) ?> clientes en total</small>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= e(url('/clientes?' . $pq . '&page=' . (($page ?? 1) - 1))) ?>">‹</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
+                        <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= e(url('/clientes?' . $pq . '&page=' . (($page ?? 1) + 1))) ?>">›</a>
+                        </li>
+                    </ul>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -87,14 +106,13 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </div>
                     <?php endif; ?>
                     <div class="mb-3">
-                        <label class="form-label" for="contacto">Contacto</label>
+                        <label class="form-label" for="contacto">Contacto <span class="text-secondary fw-normal">(opcional)</span></label>
                         <input
                             type="text"
                             class="form-control"
                             id="contacto"
                             name="contacto"
                             value="<?= e(old('contacto', old('nombre'))) ?>"
-                            required
                         >
                     </div>
                     <div class="mb-3">
@@ -177,14 +195,13 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </div>
                     <?php endif; ?>
                     <div class="mb-3">
-                        <label class="form-label" for="contacto_antiguo">Contacto</label>
+                        <label class="form-label" for="contacto_antiguo">Contacto <span class="text-secondary fw-normal">(opcional)</span></label>
                         <input
                             type="text"
                             class="form-control"
                             id="contacto_antiguo"
                             name="contacto_antiguo"
                             value="<?= e(old('contacto_antiguo')) ?>"
-                            required
                         >
                     </div>
                     <div class="mb-3">

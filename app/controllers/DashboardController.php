@@ -50,27 +50,23 @@ class DashboardController extends Controller
         $this->sortRowsForMessaging($activeRows);
         $this->sortNoRenewRows($noRenewRows);
 
-        $rows = $activeRows;
+        $filteredRows = $activeRows;
         if ($selectedStatus !== 'TODOS') {
             if ($selectedStatus === 'VENCIDO') {
-                $rows = array_values(array_filter(
+                $filteredRows = array_values(array_filter(
                     $activeRows,
                     static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
                 ));
             } else {
-                $rows = array_values(array_filter(
+                $filteredRows = array_values(array_filter(
                     $activeRows,
                     static fn (array $item): bool => (string) ($item['estado'] ?? '') === $selectedStatus
                 ));
             }
         }
 
-        $totals = [
-            'costo' => 0.0,
-            'venta' => 0.0,
-            'ganancia' => 0.0,
-        ];
-        foreach ($rows as $item) {
+        $totals = ['costo' => 0.0, 'venta' => 0.0, 'ganancia' => 0.0];
+        foreach ($filteredRows as $item) {
             $cost = (float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0);
             $sale = (float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0);
             $totals['costo'] += $cost;
@@ -88,24 +84,15 @@ class DashboardController extends Controller
         ];
         foreach ($activeRows as $item) {
             $state = (string) ($item['estado'] ?? '');
-            if ($state === 'RECUP') {
-                $counts['VENCIDO']++;
-                continue;
-            }
-            if (isset($counts[$state])) {
-                $counts[$state]++;
-            }
+            if ($state === 'RECUP') { $counts['VENCIDO']++; continue; }
+            if (isset($counts[$state])) { $counts[$state]++; }
         }
-        foreach ($noRenewRows as $item) {
-            $state = (string) ($item['estado'] ?? '');
-            if ($state === 'RECUP') {
-                $counts['VENCIDO']++;
-                continue;
-            }
-            if (isset($counts[$state])) {
-                $counts[$state]++;
-            }
-        }
+
+        $perPage = PER_PAGE;
+        $totalRows = count($filteredRows);
+        $totalPages = max(1, (int) ceil($totalRows / $perPage));
+        $page = max(1, min((int) ($_GET['page'] ?? 1), $totalPages));
+        $rows = array_slice($filteredRows, ($page - 1) * $perPage, $perPage);
 
         $this->render('dashboard/index', [
             'pageTitle' => 'Ghost Panel',
@@ -121,7 +108,24 @@ class DashboardController extends Controller
             'today' => new DateTimeImmutable('today'),
             'noRenewRows' => $noRenewRows,
             'noRenewCount' => count($noRenewRows),
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalRows' => $totalRows,
+            'perPage' => $perPage,
         ]);
+    }
+
+    public function marcarContactados(): void
+    {
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids) || empty($ids)) {
+            flash('warning', 'No se seleccionaron suscripciones.');
+            $this->redirect('/dashboard');
+        }
+
+        $count = $this->suscripciones->bulkMarkContacted($ids);
+        flash('success', $count . ' suscripción(es) marcadas como contactadas.');
+        $this->redirect('/dashboard');
     }
 
     public function whatsapp(int $id): void
@@ -198,10 +202,6 @@ class DashboardController extends Controller
         if ($days <= 0) {
             return 'MENOS_1';
         }
-        if ($days <= 3) {
-            return 'MENOS_2';
-        }
-
         return 'MENOS_2';
     }
 

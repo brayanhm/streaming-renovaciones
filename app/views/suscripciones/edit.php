@@ -135,6 +135,11 @@ use App\Models\Plataforma;
                     </div>
                 </div>
 
+                <div class="col-12">
+                    <label class="form-label" for="notas">Notas internas</label>
+                    <textarea class="form-control" id="notas" name="notas" rows="2" placeholder="Ej: cliente paga en efectivo, acuerdo especial..."><?= e((string) ($item['notas'] ?? '')) ?></textarea>
+                </div>
+
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
                     <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>

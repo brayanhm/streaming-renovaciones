@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat /c/xampp/htdocs/streaming-renovaciones/app/config/*.php)",
+      "Bash(wc -l /c/xampp/htdocs/streaming-renovaciones/app/controllers/*.php /c/xampp/htdocs/streaming-renovaciones/app/models/*.php)",
+      "Bash(php -l app/controllers/DashboardController.php app/controllers/ClientesController.php app/controllers/SuscripcionesController.php app/controllers/ReportesController.php app/models/Suscripcion.php app/models/Cliente.php app/models/Movimiento.php app/views/reportes/index.php app/views/clientes/show.php app/views/suscripciones/historial.php)",
+      "Bash(/c/xampp/php/php.exe -l app/controllers/DashboardController.php app/controllers/ClientesController.php app/controllers/SuscripcionesController.php app/controllers/ReportesController.php app/models/Suscripcion.php app/models/Cliente.php app/models/Movimiento.php)",
+      "Bash(/c/xampp/php/php.exe -l app/controllers/ClientesController.php)",
+      "Bash(/c/xampp/php/php.exe -l app/controllers/SuscripcionesController.php)",
+      "Bash(/c/xampp/php/php.exe -l app/controllers/ReportesController.php)",
+      "Bash(/c/xampp/php/php.exe -l app/models/Suscripcion.php)",
+      "Bash(/c/xampp/php/php.exe -l app/models/Movimiento.php)",
+      "Bash(/c/xampp/php/php.exe -l app/models/Cliente.php)",
+      "Bash(/c/xampp/php/php.exe -l app/views/layouts/header.php)",
+      "Bash(/c/xampp/php/php.exe -l app/views/auth/login.php)",
+      "Bash(/c/xampp/php/php.exe -l app/models/User.php)",
+      "Bash(/c/xampp/php/php.exe -l app/controllers/AuthController.php)",
+      "Bash(/c/xampp/php/php.exe -l app/views/auth/profile.php)",
+      "Bash(/c/xampp/php/php.exe -l public/index.php)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, nombre, tipo_servicio, dato_renovacion FROM plataformas;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, plataforma_id, nombre_modalidad, tipo_cuenta, duracion_meses, dispositivos, precio, costo FROM modalidades WHERE plataforma_id = 4 ORDER BY duracion_meses;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \":*)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, nombre_modalidad, tipo_cuenta, duracion_meses, dispositivos, precio, costo FROM modalidades WHERE plataforma_id = 6 ORDER BY dispositivos, duracion_meses;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, username FROM usuarios;\")",
+      "Bash(/c/xampp/php/php.exe -r \"echo password_hash\\(''bt7274*'', PASSWORD_DEFAULT\\);\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"UPDATE usuarios SET password_hash = ''$2y$10$RhKkJmSbp156O5MLFQffCOhn/dO2aoEX0RrQpgsLcle.tvF/mVETq'' WHERE id = 1;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"UPDATE usuarios SET username = ''ghostbhm'' WHERE id = 1;\")",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, username, password_hash FROM usuarios;\")",
+      "Bash(/c/xampp/php/php.exe -r \":*)",
+      "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, username, LEFT\\(password_hash,10\\) as hash_preview FROM usuarios;\")"
+    ]
+  }
+}

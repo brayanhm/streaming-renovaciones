@@ -160,12 +160,20 @@ if (!function_exists('renewal_options')) {
     </div>
 </div>
 
+<form method="post" action="<?= e(url('/dashboard/marcar-contactados')) ?>" id="bulk-form">
+<div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+    <button type="submit" class="btn btn-outline-secondary btn-sm" id="bulk-btn" disabled>
+        Marcar seleccionados como contactados
+    </button>
+    <span class="text-secondary small" id="bulk-count"></span>
+</div>
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-striped table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
+                        <th><input type="checkbox" id="check-all" class="form-check-input"></th>
                         <th>Cliente</th>
                         <th>Teléfono</th>
                         <th>Servicio</th>
@@ -183,7 +191,7 @@ if (!function_exists('renewal_options')) {
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="12" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
+                            <td colspan="13" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
                         </tr>
                     <?php endif; ?>
 
@@ -211,8 +219,11 @@ if (!function_exists('renewal_options')) {
                         }
                         ?>
                         <tr>
+                            <td><input type="checkbox" name="ids[]" value="<?= e((string) (int) $row['id']) ?>" class="form-check-input row-check"></td>
                             <td>
-                                <div class="fw-semibold"><?= e((string) ($row['cliente_nombre'] ?? '')) ?></div>
+                                <div class="fw-semibold">
+                                    <a href="<?= e(url('/clientes/' . (int) ($row['cliente_id'] ?? 0))) ?>" class="text-decoration-none"><?= e((string) ($row['cliente_nombre'] ?? '')) ?></a>
+                                </div>
                                 <small class="text-secondary">#<?= e((string) ($row['id'] ?? '')) ?></small>
                             </td>
                             <td><?= e((string) ($row['cliente_telefono'] ?? '')) ?></td>
@@ -289,6 +300,32 @@ if (!function_exists('renewal_options')) {
         </div>
     </div>
 </div>
+</form>
+
+<?php if (($totalPages ?? 1) > 1): ?>
+<?php
+$paginationQuery = http_build_query(array_filter([
+    'estado' => $selectedStatus ?? 'TODOS',
+    'contacto' => $contacto ?? '',
+    'usuario' => $usuario ?? '',
+    'telefono' => $telefono ?? '',
+]));
+?>
+<nav class="d-flex justify-content-between align-items-center mt-2 mb-1">
+    <small class="text-secondary">
+        Mostrando <?= e((string) (min($perPage, $totalRows - ($page - 1) * $perPage))) ?> de <?= e((string) $totalRows) ?> suscripciones
+    </small>
+    <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . (($page ?? 1) - 1))) ?>">‹ Anterior</a>
+        </li>
+        <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
+        <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
+            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . (($page ?? 1) + 1))) ?>">Siguiente ›</a>
+        </li>
+    </ul>
+</nav>
+<?php endif; ?>
 
 <div class="card shadow-sm mt-3">
     <div class="card-body p-0">
@@ -405,4 +442,35 @@ if (!function_exists('renewal_options')) {
     </div>
 </div>
 
+<script>
+(() => {
+    const checkAll = document.getElementById('check-all');
+    const bulkBtn = document.getElementById('bulk-btn');
+    const bulkCount = document.getElementById('bulk-count');
+    const rowChecks = () => document.querySelectorAll('.row-check');
 
+    const updateBulk = () => {
+        const checked = document.querySelectorAll('.row-check:checked');
+        const n = checked.length;
+        bulkBtn.disabled = n === 0;
+        bulkCount.textContent = n > 0 ? n + ' seleccionada(s)' : '';
+        if (checkAll) {
+            checkAll.checked = n > 0 && n === rowChecks().length;
+            checkAll.indeterminate = n > 0 && n < rowChecks().length;
+        }
+    };
+
+    if (checkAll) {
+        checkAll.addEventListener('change', () => {
+            rowChecks().forEach(cb => { cb.checked = checkAll.checked; });
+            updateBulk();
+        });
+    }
+
+    document.addEventListener('change', e => {
+        if (e.target.classList.contains('row-check')) updateBulk();
+    });
+
+    updateBulk();
+})();
+</script>

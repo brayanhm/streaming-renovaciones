@@ -11,8 +11,8 @@ declare(strict_types=1);
         <form method="post" action="<?= e(url('/clientes/actualizar/' . (int) $item['id'])) ?>">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="contacto" class="form-label">Contacto</label>
-                    <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e((string) $item['nombre']) ?>" required>
+                    <label for="contacto" class="form-label">Contacto <span class="text-secondary fw-normal">(opcional)</span></label>
+                    <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e((string) $item['nombre']) ?>">
                 </div>
                 <div class="col-md-6">
                     <label for="numero" class="form-label">Número</label>

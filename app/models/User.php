@@ -49,6 +49,29 @@ class User extends BaseModel
         return (int) $this->db->lastInsertId();
     }
 
+    public function usernameExists(string $username, int $excludeId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) AS total FROM usuarios WHERE username = :username AND id <> :id LIMIT 1'
+        );
+        $stmt->execute(['username' => $username, 'id' => $excludeId]);
+
+        return (int) ($stmt->fetch()['total'] ?? 0) > 0;
+    }
+
+    public function updateUsername(int $id, string $username): void
+    {
+        $stmt = $this->db->prepare('UPDATE usuarios SET username = :username WHERE id = :id');
+        $stmt->execute(['username' => $username, 'id' => $id]);
+    }
+
+    public function updatePassword(int $id, string $password): void
+    {
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $this->db->prepare('UPDATE usuarios SET password_hash = :hash WHERE id = :id');
+        $stmt->execute(['hash' => $hash, 'id' => $id]);
+    }
+
     public function authenticate(string $username, string $password): ?array
     {
         $user = $this->findByUsername($username);

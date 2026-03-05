@@ -60,6 +60,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <th>Cliente</th>
                                 <th>Servicio</th>
                                 <th>Plan</th>
+                                <th>Notas</th>
                                 <th>Costo (Bs)</th>
                                 <th>Precio venta (Bs)</th>
                                 <th>Ganancia (Bs)</th>
@@ -71,7 +72,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="10" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
+                                <tr><td colspan="11" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <?php
@@ -92,6 +93,13 @@ if (!function_exists('tipo_suscripcion_label')) {
                                         <?php endif; ?>
                                     </td>
                                     <td><?= e(tipo_suscripcion_label($item)) ?></td>
+                                    <td>
+                                        <?php if (!empty($item['notas'])): ?>
+                                            <small><?= e(mb_strimwidth((string) $item['notas'], 0, 50, '…')) ?></small>
+                                        <?php else: ?>
+                                            <small class="text-secondary">—</small>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= e(money((float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0))) ?></td>
                                     <td><?= e(money((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0))) ?></td>
                                     <td class="<?= (float) ($item['ganancia_final'] ?? 0) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
@@ -107,6 +115,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $item['id'])) ?>">Historial</a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar esta suscripción?')">
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
@@ -118,6 +127,21 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </tbody>
                     </table>
                 </div>
+                <?php if (($totalPages ?? 1) > 1): ?>
+                <?php $pqs = http_build_query(array_filter(['q' => $search ?? '', 'estado' => $estado ?? ''])); ?>
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                    <small class="text-secondary"><?= e((string) ($totalRows ?? 0)) ?> suscripciones en total</small>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= e(url('/suscripciones?' . $pqs . '&page=' . (($page ?? 1) - 1))) ?>">‹</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
+                        <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= e(url('/suscripciones?' . $pqs . '&page=' . (($page ?? 1) + 1))) ?>">›</a>
+                        </li>
+                    </ul>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

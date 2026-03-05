@@ -28,7 +28,11 @@ class ClientesController extends Controller
     public function index(): void
     {
         $search = trim((string) ($_GET['q'] ?? ''));
-        $rows = $this->clientes->all($search);
+        $perPage = PER_PAGE;
+        $total = $this->clientes->count($search);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min((int) ($_GET['page'] ?? 1), $totalPages));
+        $rows = $this->clientes->all($search, $perPage, ($page - 1) * $perPage);
         $plataformas = $this->plataformas->all();
         $tiposSuscripcion = $this->modalidades->all();
         $missingContactCount = $this->clientes->countMissingContactData();
@@ -40,6 +44,27 @@ class ClientesController extends Controller
             'plataformas' => $plataformas,
             'tiposSuscripcion' => $tiposSuscripcion,
             'missingContactCount' => $missingContactCount,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalRows' => $total,
+            'perPage' => $perPage,
+        ]);
+    }
+
+    public function show(int $id): void
+    {
+        $item = $this->clientes->find($id);
+        if ($item === null) {
+            flash('danger', 'Cliente no encontrado.');
+            $this->redirect('/clientes');
+        }
+
+        $suscripciones = $this->suscripciones->allByCliente($id);
+
+        $this->render('clientes/show', [
+            'pageTitle' => 'Cliente: ' . ($item['nombre'] ?? ''),
+            'item' => $item,
+            'suscripciones' => $suscripciones,
         ]);
     }
 
@@ -67,13 +92,12 @@ class ClientesController extends Controller
         ];
 
         if (
-            $payload['nombre'] === '' ||
             $payload['telefono'] === '' ||
             $payload['plataforma_id'] <= 0 ||
             $payload['modalidad_id'] <= 0
         ) {
             set_old($payload);
-            flash('danger', 'Completa contacto, número, plataforma y plan de suscripción.');
+            flash('danger', 'Completa el número, la plataforma y el plan de suscripción.');
             $this->redirect('/clientes');
         }
 
@@ -174,13 +198,12 @@ class ClientesController extends Controller
         ];
 
         if (
-            $payload['contacto_antiguo'] === '' ||
             $payload['numero_antiguo'] === '' ||
             $payload['plataforma_id_antiguo'] <= 0 ||
             $payload['fecha_finalizacion'] === ''
         ) {
             set_old($payload);
-            flash('danger', 'Completa contacto, numero, plataforma y fecha de finalizacion.');
+            flash('danger', 'Completa el número, la plataforma y la fecha de finalización.');
             $this->redirect('/clientes');
         }
 
@@ -278,8 +301,8 @@ class ClientesController extends Controller
             'notas' => trim((string) ($_POST['notas'] ?? '')),
         ];
 
-        if ($payload['nombre'] === '' || $payload['telefono'] === '') {
-            flash('danger', 'Contacto y número son obligatorios.');
+        if ($payload['telefono'] === '') {
+            flash('danger', 'El número es obligatorio.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
@@ -305,8 +328,8 @@ class ClientesController extends Controller
         $contacto = trim((string) ($_POST['contacto'] ?? ''));
         $numero = normalize_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
 
-        if ($contacto === '' || $numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
-            flash('danger', 'Completa contacto y un número celular válido de Bolivia (8 dígitos, inicia con 6 o 7).');
+        if ($numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
+            flash('danger', 'Ingresa un número celular válido de Bolivia (8 dígitos, inicia con 6 o 7).');
             $this->redirect('/clientes/completar');
         }
 

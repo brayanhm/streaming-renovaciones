@@ -38,6 +38,7 @@ use App\Controllers\AuthController;
 use App\Controllers\ClientesController;
 use App\Controllers\DashboardController;
 use App\Controllers\PlataformasController;
+use App\Controllers\ReportesController;
 use App\Controllers\SuscripcionesController;
 use App\Controllers\TiposSuscripcionController;
 use App\Core\AuthMiddleware;
@@ -50,6 +51,7 @@ AuthMiddleware::handle($path);
 $routes = [
     ['GET', '#^/$#', [DashboardController::class, 'index']],
     ['GET', '#^/dashboard$#', [DashboardController::class, 'index']],
+    ['POST', '#^/dashboard/marcar-contactados$#', [DashboardController::class, 'marcarContactados']],
     ['GET', '#^/suscripciones/whatsapp/(\d+)$#', [DashboardController::class, 'whatsapp']],
     ['POST', '#^/suscripciones/renovar/(\d+)$#', [DashboardController::class, 'renovar']],
     ['POST', '#^/suscripciones/no-renovo/(\d+)$#', [DashboardController::class, 'noRenovo']],
@@ -60,6 +62,7 @@ $routes = [
     ['GET', '#^/clientes/completar$#', [ClientesController::class, 'completar']],
     ['POST', '#^/clientes/completar/actualizar/(\d+)$#', [ClientesController::class, 'updateMissingContact']],
     ['GET', '#^/clientes/editar/(\d+)$#', [ClientesController::class, 'edit']],
+    ['GET', '#^/clientes/(\d+)$#', [ClientesController::class, 'show']],
     ['POST', '#^/clientes/actualizar/(\d+)$#', [ClientesController::class, 'update']],
     ['POST', '#^/clientes/eliminar/(\d+)$#', [ClientesController::class, 'destroy']],
 
@@ -88,13 +91,18 @@ $routes = [
 
     ['GET', '#^/suscripciones$#', [SuscripcionesController::class, 'index']],
     ['POST', '#^/suscripciones$#', [SuscripcionesController::class, 'store']],
+    ['GET', '#^/suscripciones/historial/(\d+)$#', [SuscripcionesController::class, 'historial']],
     ['GET', '#^/suscripciones/editar/(\d+)$#', [SuscripcionesController::class, 'edit']],
     ['POST', '#^/suscripciones/actualizar/(\d+)$#', [SuscripcionesController::class, 'update']],
     ['POST', '#^/suscripciones/eliminar/(\d+)$#', [SuscripcionesController::class, 'destroy']],
 
+    ['GET', '#^/reportes$#', [ReportesController::class, 'index']],
+
     ['GET', '#^/login$#', [AuthController::class, 'showLogin']],
     ['POST', '#^/login$#', [AuthController::class, 'login']],
     ['GET', '#^/logout$#', [AuthController::class, 'logout']],
+    ['GET', '#^/perfil$#', [AuthController::class, 'showProfile']],
+    ['POST', '#^/perfil$#', [AuthController::class, 'updateProfile']],
 ];
 
 foreach ($routes as [$routeMethod, $routePattern, $handler]) {

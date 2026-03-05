@@ -88,6 +88,72 @@ class AuthController extends Controller
         $this->redirect('/login');
     }
 
+    public function showProfile(): void
+    {
+        $user = $this->users->findById((int) ($_SESSION['auth']['id'] ?? 0));
+        if ($user === null) {
+            $this->redirect('/login');
+        }
+
+        $this->render('auth/profile', [
+            'pageTitle' => 'Mi perfil',
+            'user' => $user,
+        ]);
+    }
+
+    public function updateProfile(): void
+    {
+        $userId = (int) ($_SESSION['auth']['id'] ?? 0);
+        $action = (string) ($_POST['_action'] ?? '');
+
+        if ($action === 'change_username') {
+            $newUsername = trim((string) ($_POST['username'] ?? ''));
+
+            if ($newUsername === '' || strlen($newUsername) < 3) {
+                flash('danger', 'El usuario debe tener al menos 3 caracteres.');
+                $this->redirect('/perfil');
+            }
+
+            if ($this->users->usernameExists($newUsername, $userId)) {
+                flash('danger', 'Ese nombre de usuario ya está en uso.');
+                $this->redirect('/perfil');
+            }
+
+            $this->users->updateUsername($userId, $newUsername);
+            $_SESSION['auth']['username'] = $newUsername;
+            flash('success', 'Usuario actualizado correctamente.');
+            $this->redirect('/perfil');
+        }
+
+        if ($action === 'change_password') {
+            $currentPassword = (string) ($_POST['current_password'] ?? '');
+            $newPassword     = (string) ($_POST['new_password'] ?? '');
+            $confirm         = (string) ($_POST['confirm_password'] ?? '');
+
+            $user = $this->users->findById($userId);
+            if ($user === null || !password_verify($currentPassword, (string) ($user['password_hash'] ?? ''))) {
+                flash('danger', 'La contraseña actual es incorrecta.');
+                $this->redirect('/perfil');
+            }
+
+            if (strlen($newPassword) < 6) {
+                flash('danger', 'La nueva contraseña debe tener al menos 6 caracteres.');
+                $this->redirect('/perfil');
+            }
+
+            if ($newPassword !== $confirm) {
+                flash('danger', 'Las contraseñas no coinciden.');
+                $this->redirect('/perfil');
+            }
+
+            $this->users->updatePassword($userId, $newPassword);
+            flash('success', 'Contraseña actualizada correctamente.');
+            $this->redirect('/perfil');
+        }
+
+        $this->redirect('/perfil');
+    }
+
     public function logout(): void
     {
         unset($_SESSION['auth']);

@@ -109,6 +109,7 @@ define('APP_ENV', app_env('APP_ENV', 'development'));
 define('APP_DEBUG', app_env_bool('APP_DEBUG', APP_ENV !== 'production'));
 define('APP_TIMEZONE', app_env('APP_TIMEZONE', 'America/La_Paz'));
 define('RECUP_DAYS', app_env_int('RECUP_DAYS', 3));
+define('PER_PAGE', app_env_int('PER_PAGE', 30));
 define('APP_CURRENCY_CODE', app_env('APP_CURRENCY_CODE', 'BOB'));
 define('APP_CURRENCY_SYMBOL', app_env('APP_CURRENCY_SYMBOL', 'Bs'));
 define('APP_MONEY_DECIMALS', app_env_int('APP_MONEY_DECIMALS', 0));

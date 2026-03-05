@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\Cliente;
 use App\Models\Modalidad;
+use App\Models\Movimiento;
 use App\Models\Plataforma;
 use App\Models\Suscripcion;
 
@@ -35,7 +36,12 @@ class SuscripcionesController extends Controller
             $estado = '';
         }
 
-        $rows = $this->suscripciones->all($search, $estado);
+        $perPage = PER_PAGE;
+        $total = $this->suscripciones->count($search, $estado);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min((int) ($_GET['page'] ?? 1), $totalPages));
+        $rows = $this->suscripciones->all($search, $estado, 'TODOS', '', '', '', $perPage, ($page - 1) * $perPage);
+
         $clientes = $this->clientes->all();
         if ($selectedClientId > 0 && $this->clientes->find($selectedClientId) === null) {
             $selectedClientId = 0;
@@ -53,6 +59,27 @@ class SuscripcionesController extends Controller
             'estado' => $estado,
             'estados' => Suscripcion::ESTADOS,
             'selectedClientId' => $selectedClientId,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalRows' => $total,
+            'perPage' => $perPage,
+        ]);
+    }
+
+    public function historial(int $id): void
+    {
+        $suscripcion = $this->suscripciones->findWithRelations($id);
+        if ($suscripcion === null) {
+            flash('danger', 'Suscripción no encontrada.');
+            $this->redirect('/suscripciones');
+        }
+
+        $movimientos = (new Movimiento())->allBySuscripcion($id);
+
+        $this->render('suscripciones/historial', [
+            'pageTitle' => 'Historial de renovaciones',
+            'suscripcion' => $suscripcion,
+            'movimientos' => $movimientos,
         ]);
     }
 
@@ -139,6 +166,7 @@ class SuscripcionesController extends Controller
             'fecha_vencimiento' => trim((string) ($_POST['fecha_vencimiento'] ?? '')),
             'estado' => strtoupper(trim((string) ($_POST['estado'] ?? 'ACTIVO'))),
             'usuario_proveedor' => trim((string) ($_POST['usuario_proveedor'] ?? '')),
+            'notas' => trim((string) ($_POST['notas'] ?? '')),
             'flag_no_renovo' => isset($_POST['flag_no_renovo']) ? 1 : 0,
         ];
 

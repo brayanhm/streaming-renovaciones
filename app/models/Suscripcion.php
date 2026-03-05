@@ -18,7 +18,9 @@ class Suscripcion extends BaseModel
         string $searchField = 'TODOS',
         string $contacto = '',
         string $usuario = '',
-        string $telefono = ''
+        string $telefono = '',
+        int $limit = 0,
+        int $offset = 0
     ): array
     {
         $sql = 'SELECT
@@ -100,6 +102,10 @@ class Suscripcion extends BaseModel
 
         $sql .= ' ORDER BY s.fecha_vencimiento ASC, s.id DESC';
 
+        if ($limit > 0) {
+            $sql .= ' LIMIT ' . $limit . ' OFFSET ' . $offset;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
@@ -167,6 +173,7 @@ class Suscripcion extends BaseModel
                 fecha_vencimiento,
                 estado,
                 usuario_proveedor,
+                notas,
                 flag_no_renovo
             ) VALUES (
                 :cliente_id,
@@ -178,6 +185,7 @@ class Suscripcion extends BaseModel
                 :fecha_vencimiento,
                 :estado,
                 :usuario_proveedor,
+                :notas,
                 :flag_no_renovo
             )'
         );
@@ -192,6 +200,7 @@ class Suscripcion extends BaseModel
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
+            'notas' => isset($data['notas']) && $data['notas'] !== '' ? $data['notas'] : null,
             'flag_no_renovo' => $data['flag_no_renovo'],
         ]);
 
@@ -213,6 +222,7 @@ class Suscripcion extends BaseModel
                 fecha_vencimiento = :fecha_vencimiento,
                 estado = :estado,
                 usuario_proveedor = :usuario_proveedor,
+                notas = :notas,
                 flag_no_renovo = :flag_no_renovo
             WHERE id = :id'
         );
@@ -228,6 +238,7 @@ class Suscripcion extends BaseModel
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
+            'notas' => isset($data['notas']) && $data['notas'] !== '' ? $data['notas'] : null,
             'flag_no_renovo' => $data['flag_no_renovo'],
         ]);
     }
@@ -241,40 +252,37 @@ class Suscripcion extends BaseModel
 
     public function recalculateStates(int $recupDays = RECUP_DAYS): void
     {
-        $stmt = $this->db->query(
-            'SELECT id, fecha_vencimiento, estado, ultimo_contacto_fecha, ultimo_contacto_tipo, flag_no_renovo
-             FROM suscripciones'
-        );
-        $rows = $stmt->fetchAll();
-        $updateStmt = $this->db->prepare(
-            'UPDATE suscripciones
-             SET estado = :estado, flag_no_renovo = :flag_no_renovo
-             WHERE id = :id'
-        );
+        $sql = "UPDATE suscripciones
+            SET
+              flag_no_renovo = CASE
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) < 0 THEN 1
+                ELSE flag_no_renovo
+              END,
+              estado = CASE
+                WHEN flag_no_renovo = 1 THEN 'VENCIDO'
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) < 0 THEN
+                  CASE
+                    WHEN ABS(DATEDIFF(fecha_vencimiento, CURDATE())) >= :recupDays THEN 'RECUP'
+                    ELSE 'VENCIDO'
+                  END
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) > 3 THEN 'ACTIVO'
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) BETWEEN 1 AND 3 THEN
+                  CASE
+                    WHEN COALESCE(ultimo_contacto_tipo, '') IN ('MENOS_2', 'MENOS_1') THEN 'ESPERA'
+                    ELSE 'CONTACTAR_2D'
+                  END
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) = 0 THEN
+                  CASE
+                    WHEN ultimo_contacto_tipo = 'MENOS_1' THEN 'ESPERA'
+                    WHEN estado = 'CONTACTAR_2D'
+                         AND COALESCE(ultimo_contacto_tipo, '') NOT IN ('MENOS_2', 'MENOS_1') THEN 'CONTACTAR_2D'
+                    ELSE 'REENVIAR_1D'
+                  END
+                ELSE estado
+              END";
 
-        foreach ($rows as $row) {
-            $nextState = $this->resolveState($row, $recupDays);
-            $current = (string) ($row['estado'] ?? '');
-            $currentFlagNoRenovo = (int) ($row['flag_no_renovo'] ?? 0);
-            $nextFlagNoRenovo = $currentFlagNoRenovo;
-
-            $today = new DateTimeImmutable('today');
-            $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
-            $daysToDue = (int) $today->diff($dueDate)->format('%r%a');
-
-            // Cuando la vigencia ya paso, se marca automaticamente como no renovado.
-            if ($daysToDue < 0) {
-                $nextFlagNoRenovo = 1;
-            }
-
-            if ($nextState !== $current || $nextFlagNoRenovo !== $currentFlagNoRenovo) {
-                $updateStmt->execute([
-                    'id' => (int) $row['id'],
-                    'estado' => $nextState,
-                    'flag_no_renovo' => $nextFlagNoRenovo,
-                ]);
-            }
-        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['recupDays' => $recupDays]);
     }
 
     public function markWhatsappContact(int $id, string $contactType): bool
@@ -599,5 +607,142 @@ class Suscripcion extends BaseModel
         $targetDay = min($day, $targetLastDay);
 
         return $targetFirst->setDate($targetYear, $targetMonth, $targetDay);
+    }
+
+    public function count(
+        string $search = '',
+        string $estado = '',
+        string $searchField = 'TODOS',
+        string $contacto = '',
+        string $usuario = '',
+        string $telefono = ''
+    ): int {
+        $sql = 'SELECT COUNT(*) AS total
+            FROM suscripciones s
+            INNER JOIN clientes c ON c.id = s.cliente_id
+            INNER JOIN plataformas p ON p.id = s.plataforma_id
+            INNER JOIN modalidades m ON m.id = s.modalidad_id';
+        $conditions = [];
+        $params = [];
+
+        $searchField = strtoupper(trim($searchField));
+        if (!in_array($searchField, self::FILTROS_BUSQUEDA, true)) {
+            $searchField = 'TODOS';
+        }
+
+        $contacto = trim($contacto);
+        $usuario = trim($usuario);
+        $telefono = trim($telefono);
+
+        if ($contacto !== '' || $usuario !== '' || $telefono !== '') {
+            if ($contacto !== '') {
+                $conditions[] = 'c.nombre LIKE :contacto_term';
+                $params['contacto_term'] = '%' . $contacto . '%';
+            }
+            if ($usuario !== '') {
+                $conditions[] = 's.usuario_proveedor LIKE :usuario_term';
+                $params['usuario_term'] = '%' . $usuario . '%';
+            }
+            if ($telefono !== '') {
+                $conditions[] = 'c.telefono LIKE :telefono_term';
+                $params['telefono_term'] = '%' . $telefono . '%';
+            }
+        } elseif ($search !== '') {
+            if ($searchField === 'CONTACTO') {
+                $conditions[] = 'c.nombre LIKE :term';
+            } elseif ($searchField === 'USUARIO') {
+                $conditions[] = 's.usuario_proveedor LIKE :term';
+            } elseif ($searchField === 'TELEFONO') {
+                $conditions[] = 'c.telefono LIKE :term';
+            } else {
+                $conditions[] = '(c.nombre LIKE :term_contacto OR c.telefono LIKE :term_telefono OR s.usuario_proveedor LIKE :term_usuario OR p.nombre LIKE :term_plataforma OR m.nombre_modalidad LIKE :term_modalidad)';
+                $like = '%' . $search . '%';
+                $params['term_contacto'] = $like;
+                $params['term_telefono'] = $like;
+                $params['term_usuario'] = $like;
+                $params['term_plataforma'] = $like;
+                $params['term_modalidad'] = $like;
+            }
+            if ($searchField !== 'TODOS') {
+                $params['term'] = '%' . $search . '%';
+            }
+        }
+
+        if ($estado !== '' && in_array($estado, self::ESTADOS, true)) {
+            $conditions[] = 's.estado = :estado';
+            $params['estado'] = $estado;
+        }
+
+        if ($conditions !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) ($stmt->fetch()['total'] ?? 0);
+    }
+
+    public function allByCliente(int $clienteId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT
+                s.*,
+                p.nombre AS plataforma_nombre,
+                p.tipo_servicio AS plataforma_tipo_servicio,
+                p.dato_renovacion AS plataforma_dato_renovacion,
+                m.nombre_modalidad,
+                m.tipo_cuenta,
+                m.duracion_meses,
+                m.dispositivos,
+                m.precio AS modalidad_precio,
+                m.costo AS modalidad_costo,
+                COALESCE(s.precio_venta, m.precio) AS precio_final,
+                COALESCE(s.costo_base, m.costo) AS costo_final,
+                (COALESCE(s.precio_venta, m.precio) - COALESCE(s.costo_base, m.costo)) AS ganancia_final,
+                DATEDIFF(s.fecha_vencimiento, CURDATE()) AS dias_para_vencer
+            FROM suscripciones s
+            INNER JOIN plataformas p ON p.id = s.plataforma_id
+            INNER JOIN modalidades m ON m.id = s.modalidad_id
+            WHERE s.cliente_id = :cliente_id
+            ORDER BY s.fecha_vencimiento DESC, s.id DESC'
+        );
+        $stmt->execute(['cliente_id' => $clienteId]);
+
+        return $stmt->fetchAll();
+    }
+
+    public function bulkMarkContacted(array $ids): int
+    {
+        $count = 0;
+        foreach ($ids as $rawId) {
+            $id = (int) $rawId;
+            if ($id <= 0) {
+                continue;
+            }
+
+            $stmt = $this->db->prepare(
+                'SELECT id, estado FROM suscripciones WHERE id = :id LIMIT 1'
+            );
+            $stmt->execute(['id' => $id]);
+            $row = $stmt->fetch();
+            if (!$row) {
+                continue;
+            }
+
+            $estado = (string) ($row['estado'] ?? '');
+            $tipo = match ($estado) {
+                'CONTACTAR_2D' => 'MENOS_2',
+                'REENVIAR_1D' => 'MENOS_1',
+                'VENCIDO', 'RECUP' => 'REC_7',
+                default => 'MENOS_2',
+            };
+
+            if ($this->markWhatsappContact($id, $tipo)) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 }
