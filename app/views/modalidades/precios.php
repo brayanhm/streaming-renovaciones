@@ -79,22 +79,22 @@ use App\Models\Modalidad;
                                     <td>
                                         <input
                                             type="number"
-                                            min="1"
-                                            step="1"
+                                            min="0.01"
+                                            step="0.01"
                                             class="form-control js-costo"
                                             name="costo[<?= $id ?>]"
-                                            value="<?= e((string) ((int) round($costo))) ?>"
+                                            value="<?= e(format_decimal_amount($costo)) ?>"
                                             required
                                         >
                                     </td>
                                     <td>
                                         <input
                                             type="number"
-                                            min="1"
-                                            step="1"
+                                            min="0.01"
+                                            step="0.01"
                                             class="form-control js-precio"
                                             name="precio[<?= $id ?>]"
-                                            value="<?= e((string) ((int) round($precio))) ?>"
+                                            value="<?= e(format_decimal_amount($precio)) ?>"
                                             required
                                         >
                                     </td>
@@ -125,7 +125,10 @@ use App\Models\Modalidad;
 
     const money = (value) => {
         const sign = value < 0 ? '-' : '';
-        const abs = Math.abs(value).toLocaleString('es-BO');
+        const abs = Math.abs(value).toLocaleString('es-BO', {
+            minimumFractionDigits: Number.isInteger(Math.abs(value)) ? 0 : 2,
+            maximumFractionDigits: 2,
+        });
         return 'Bs ' + sign + abs;
     };
 
@@ -137,8 +140,8 @@ use App\Models\Modalidad;
             const gainEl = row.querySelector('.js-ganancia');
             if (!costInput || !priceInput || !gainEl) return;
 
-            const cost = Number.parseInt(costInput.value || '0', 10);
-            const price = Number.parseInt(priceInput.value || '0', 10);
+            const cost = Number.parseFloat(costInput.value || '0');
+            const price = Number.parseFloat(priceInput.value || '0');
             const gain = (Number.isNaN(price) ? 0 : price) - (Number.isNaN(cost) ? 0 : cost);
             gainEl.textContent = money(gain);
             gainEl.classList.toggle('text-danger', gain < 0);

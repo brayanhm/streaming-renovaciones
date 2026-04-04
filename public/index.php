@@ -94,6 +94,7 @@ $routes = [
     ['GET', '#^/suscripciones/historial/(\d+)$#', [SuscripcionesController::class, 'historial']],
     ['GET', '#^/suscripciones/editar/(\d+)$#', [SuscripcionesController::class, 'edit']],
     ['POST', '#^/suscripciones/actualizar/(\d+)$#', [SuscripcionesController::class, 'update']],
+    ['POST', '#^/suscripciones/finalizacion/(\d+)$#', [SuscripcionesController::class, 'updateDueDate']],
     ['POST', '#^/suscripciones/eliminar/(\d+)$#', [SuscripcionesController::class, 'destroy']],
 
     ['GET', '#^/reportes$#', [ReportesController::class, 'index']],

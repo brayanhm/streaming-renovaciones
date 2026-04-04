@@ -37,6 +37,14 @@ class Suscripcion extends BaseModel
                 m.dispositivos,
                 m.precio AS modalidad_precio,
                 m.costo AS modalidad_costo,
+                (
+                    SELECT GROUP_CONCAT(m2.duracion_meses ORDER BY m2.duracion_meses SEPARATOR \',\')
+                    FROM modalidades m2
+                    WHERE m2.plataforma_id = s.plataforma_id
+                      AND m2.nombre_modalidad = m.nombre_modalidad
+                      AND m2.tipo_cuenta = m.tipo_cuenta
+                      AND m2.dispositivos <=> m.dispositivos
+                ) AS modalidad_duraciones_disponibles,
                 COALESCE(s.precio_venta, m.precio) AS precio_final,
                 COALESCE(s.costo_base, m.costo) AS costo_final,
                 (COALESCE(s.precio_venta, m.precio) - COALESCE(s.costo_base, m.costo)) AS ganancia_final,
@@ -243,6 +251,37 @@ class Suscripcion extends BaseModel
         ]);
     }
 
+    public function updateDueDate(int $id, string $dueDate): bool
+    {
+        $subscription = $this->find($id);
+        if ($subscription === null) {
+            return false;
+        }
+
+        $state = $this->resolveState([
+            'fecha_vencimiento' => $dueDate,
+            'estado' => (string) ($subscription['estado'] ?? 'ACTIVO'),
+            'flag_no_renovo' => 0,
+            'ultimo_contacto_tipo' => '',
+        ], RECUP_DAYS);
+
+        $stmt = $this->db->prepare(
+            'UPDATE suscripciones
+             SET fecha_vencimiento = :fecha_vencimiento,
+                 estado = :estado,
+                 flag_no_renovo = 0,
+                 ultimo_contacto_fecha = NULL,
+                 ultimo_contacto_tipo = NULL
+             WHERE id = :id'
+        );
+
+        return $stmt->execute([
+            'id' => $id,
+            'fecha_vencimiento' => $dueDate,
+            'estado' => $state,
+        ]);
+    }
+
     public function delete(int $id): bool
     {
         $stmt = $this->db->prepare('DELETE FROM suscripciones WHERE id = :id');
@@ -254,10 +293,6 @@ class Suscripcion extends BaseModel
     {
         $sql = "UPDATE suscripciones
             SET
-              flag_no_renovo = CASE
-                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) < 0 THEN 1
-                ELSE flag_no_renovo
-              END,
               estado = CASE
                 WHEN flag_no_renovo = 1 THEN 'VENCIDO'
                 WHEN DATEDIFF(fecha_vencimiento, CURDATE()) < 0 THEN
@@ -305,10 +340,7 @@ class Suscripcion extends BaseModel
         }
 
         $contactedAt = new DateTimeImmutable('now');
-        $today = new DateTimeImmutable('today');
-        $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
-        $daysToDue = (int) $today->diff($dueDate)->format('%r%a');
-        $nextFlagNoRenovo = $daysToDue < 0 ? 1 : (int) ($row['flag_no_renovo'] ?? 0);
+        $nextFlagNoRenovo = (int) ($row['flag_no_renovo'] ?? 0);
 
         $nextState = $this->resolveState([
             'fecha_vencimiento' => (string) $row['fecha_vencimiento'],
@@ -361,6 +393,11 @@ class Suscripcion extends BaseModel
                 'SELECT
                     s.id,
                     s.fecha_vencimiento,
+                    s.plataforma_id,
+                    m.nombre_modalidad,
+                    m.tipo_cuenta,
+                    m.duracion_meses,
+                    m.dispositivos,
                     COALESCE(s.precio_venta, m.precio) AS precio_final,
                     COALESCE(s.costo_base, m.costo) AS costo_final,
                     p.duraciones_disponibles
@@ -388,6 +425,27 @@ class Suscripcion extends BaseModel
                 return null;
             }
 
+            $targetModalidad = $this->findMatchingRenewalModalidad(
+                (int) $row['plataforma_id'],
+                (string) ($row['nombre_modalidad'] ?? ''),
+                (string) ($row['tipo_cuenta'] ?? 'CUENTA_COMPLETA'),
+                isset($row['dispositivos']) ? (int) $row['dispositivos'] : null,
+                $months
+            );
+            if ($targetModalidad === null) {
+                $this->db->rollBack();
+
+                return null;
+            }
+
+            $preserveCurrentAmounts = (int) ($row['duracion_meses'] ?? 0) === $months;
+            $nextPrecioVenta = $preserveCurrentAmounts
+                ? number_format((float) ($row['precio_final'] ?? $targetModalidad['precio'] ?? 0), 2, '.', '')
+                : (string) $targetModalidad['precio'];
+            $nextCostoBase = $preserveCurrentAmounts
+                ? number_format((float) ($row['costo_final'] ?? $targetModalidad['costo'] ?? 0), 2, '.', '')
+                : (string) $targetModalidad['costo'];
+
             $today = new DateTimeImmutable('today');
             $currentDue = new DateTimeImmutable((string) $row['fecha_vencimiento']);
 
@@ -399,7 +457,10 @@ class Suscripcion extends BaseModel
 
             $update = $this->db->prepare(
                 'UPDATE suscripciones
-                 SET fecha_vencimiento = :fecha_vencimiento,
+                 SET modalidad_id = :modalidad_id,
+                     precio_venta = :precio_venta,
+                     costo_base = :costo_base,
+                     fecha_vencimiento = :fecha_vencimiento,
                      estado = :estado,
                      flag_no_renovo = 0,
                      ultimo_contacto_fecha = NULL,
@@ -408,6 +469,9 @@ class Suscripcion extends BaseModel
             );
             $update->execute([
                 'id' => $id,
+                'modalidad_id' => (int) $targetModalidad['id'],
+                'precio_venta' => $nextPrecioVenta,
+                'costo_base' => $nextCostoBase,
                 'fecha_vencimiento' => $newDueStr,
                 'estado' => 'ACTIVO',
             ]);
@@ -416,8 +480,8 @@ class Suscripcion extends BaseModel
                 'INSERT INTO movimientos (suscripcion_id, tipo, meses, monto, costo, utilidad)
                  VALUES (:suscripcion_id, :tipo, :meses, :monto, :costo, :utilidad)'
             );
-            $monto = $row['precio_final'] !== null ? (float) $row['precio_final'] : null;
-            $costo = $row['costo_final'] !== null ? (float) $row['costo_final'] : null;
+            $monto = (float) $nextPrecioVenta;
+            $costo = (float) $nextCostoBase;
             $movement->execute([
                 'suscripcion_id' => $id,
                 'tipo' => 'RENOVACION',
@@ -595,18 +659,36 @@ class Suscripcion extends BaseModel
 
     private function addMonthsClamped(DateTimeImmutable $baseDate, int $months): DateTimeImmutable
     {
-        $day = (int) $baseDate->format('d');
-        $year = (int) $baseDate->format('Y');
-        $month = (int) $baseDate->format('m');
+        return \shift_months_clamped($baseDate, $months);
+    }
 
-        $firstOfMonth = $baseDate->setDate($year, $month, 1);
-        $targetFirst = $firstOfMonth->modify('+' . $months . ' months');
-        $targetYear = (int) $targetFirst->format('Y');
-        $targetMonth = (int) $targetFirst->format('m');
-        $targetLastDay = (int) $targetFirst->format('t');
-        $targetDay = min($day, $targetLastDay);
+    private function findMatchingRenewalModalidad(
+        int $plataformaId,
+        string $nombreModalidad,
+        string $tipoCuenta,
+        ?int $dispositivos,
+        int $duracionMeses
+    ): ?array {
+        $stmt = $this->db->prepare(
+            'SELECT id, precio, costo
+             FROM modalidades
+             WHERE plataforma_id = :plataforma_id
+               AND nombre_modalidad = :nombre_modalidad
+               AND tipo_cuenta = :tipo_cuenta
+               AND dispositivos <=> :dispositivos
+               AND duracion_meses = :duracion_meses
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'plataforma_id' => $plataformaId,
+            'nombre_modalidad' => $nombreModalidad,
+            'tipo_cuenta' => $tipoCuenta,
+            'dispositivos' => $dispositivos,
+            'duracion_meses' => $duracionMeses,
+        ]);
+        $result = $stmt->fetch();
 
-        return $targetFirst->setDate($targetYear, $targetMonth, $targetDay);
+        return $result ?: null;
     }
 
     public function count(

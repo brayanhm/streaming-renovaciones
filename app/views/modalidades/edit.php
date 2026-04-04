@@ -85,12 +85,12 @@ $returnQuery = $returnPlatformId > 0
                     <label class="form-label" for="costo">Costo (Bs)</label>
                     <input
                         type="number"
-                        step="1"
-                        min="1"
+                        step="0.01"
+                        min="0.01"
                         class="form-control js-costo"
                         id="costo"
                         name="costo"
-                        value="<?= e((string) ((int) round((float) ($item['costo'] ?? 0)))) ?>"
+                        value="<?= e(format_decimal_amount($item['costo'] ?? 0)) ?>"
                         required
                     >
                 </div>
@@ -98,12 +98,12 @@ $returnQuery = $returnPlatformId > 0
                     <label class="form-label" for="precio">Precio de venta (Bs)</label>
                     <input
                         type="number"
-                        step="1"
-                        min="1"
+                        step="0.01"
+                        min="0.01"
                         class="form-control js-precio"
                         id="precio"
                         name="precio"
-                        value="<?= e((string) ((int) round((float) ($item['precio'] ?? 0)))) ?>"
+                        value="<?= e(format_decimal_amount($item['precio'] ?? 0)) ?>"
                         required
                     >
                 </div>
@@ -183,11 +183,14 @@ $returnQuery = $returnPlatformId > 0
     };
 
     const applyGanancia = () => {
-        const costo = Number.parseInt(costoInput.value || '0', 10);
-        const precio = Number.parseInt(precioInput.value || '0', 10);
+        const costo = Number.parseFloat(costoInput.value || '0');
+        const precio = Number.parseFloat(precioInput.value || '0');
         const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
         const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO');
+        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
+            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
+            maximumFractionDigits: 2,
+        });
         gananciaEl.textContent = 'Bs ' + sign + abs;
         gananciaEl.classList.toggle('text-danger', ganancia < 0);
         gananciaEl.classList.toggle('text-success', ganancia >= 0);

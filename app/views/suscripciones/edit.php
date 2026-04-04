@@ -47,8 +47,8 @@ use App\Models\Plataforma;
                             <option
                                 value="<?= e((string) $modalidad['id']) ?>"
                                 data-plataforma-id="<?= e((string) $modalidad['plataforma_id']) ?>"
-                                data-costo="<?= e((string) ((int) round((float) ($modalidad['costo'] ?? 0)))) ?>"
-                                data-precio="<?= e((string) ((int) round((float) $modalidad['precio']))) ?>"
+                                data-costo="<?= e(format_decimal_amount($modalidad['costo'] ?? 0)) ?>"
+                                data-precio="<?= e(format_decimal_amount($modalidad['precio'] ?? 0)) ?>"
                                 <?= (int) $item['modalidad_id'] === (int) $modalidad['id'] ? 'selected' : '' ?>
                             >
                                 <?= e((string) $modalidad['plataforma_nombre']) ?>
@@ -67,12 +67,12 @@ use App\Models\Plataforma;
                     <label class="form-label" for="costo_base">Costo de la cuenta (Bs)</label>
                     <input
                         type="number"
-                        step="1"
-                        min="1"
+                        step="0.01"
+                        min="0.01"
                         class="form-control js-costo-base"
                         id="costo_base"
                         name="costo_base"
-                        value="<?= e((string) ((int) round((float) ($item['costo_base'] ?? 0)))) ?>"
+                        value="<?= e(isset($item['costo_base']) && $item['costo_base'] !== null ? format_decimal_amount($item['costo_base']) : '') ?>"
                         required
                     >
                 </div>
@@ -81,12 +81,12 @@ use App\Models\Plataforma;
                     <label class="form-label" for="precio_venta">Precio final de venta (Bs)</label>
                     <input
                         type="number"
-                        step="1"
-                        min="1"
+                        step="0.01"
+                        min="0.01"
                         class="form-control js-precio-venta"
                         id="precio_venta"
                         name="precio_venta"
-                        value="<?= e((string) ((int) round((float) ($item['precio_venta'] ?? 0)))) ?>"
+                        value="<?= e(isset($item['precio_venta']) && $item['precio_venta'] !== null ? format_decimal_amount($item['precio_venta']) : '') ?>"
                         required
                     >
                 </div>
@@ -163,6 +163,9 @@ use App\Models\Plataforma;
     const costoBaseInput = form.querySelector('.js-costo-base');
     const precioVentaInput = form.querySelector('.js-precio-venta');
     const gananciaEl = form.querySelector('.js-ganancia');
+    const originalModalidadId = modalidadSelect.value;
+    const originalCosto = costoBaseInput.value;
+    const originalPrecio = precioVentaInput.value;
 
     const applyFilters = () => {
         const plataformaId = plataformaSelect.value;
@@ -206,7 +209,22 @@ use App\Models\Plataforma;
             }
         }
 
+        applyGanancia();
+    };
+
+    const syncPricingFromSelected = () => {
         const selectedModalidad = modalidadSelect.options[modalidadSelect.selectedIndex];
+        if (
+            selectedModalidad &&
+            selectedModalidad.value === originalModalidadId &&
+            originalCosto !== '' &&
+            originalPrecio !== ''
+        ) {
+            costoBaseInput.value = originalCosto;
+            precioVentaInput.value = originalPrecio;
+            applyGanancia();
+            return;
+        }
         if (selectedModalidad && selectedModalidad.dataset.costo) {
             costoBaseInput.value = selectedModalidad.dataset.costo;
         }
@@ -217,21 +235,30 @@ use App\Models\Plataforma;
     };
 
     const applyGanancia = () => {
-        const costo = Number.parseInt(costoBaseInput.value || '0', 10);
-        const precio = Number.parseInt(precioVentaInput.value || '0', 10);
+        const costo = Number.parseFloat(costoBaseInput.value || '0');
+        const precio = Number.parseFloat(precioVentaInput.value || '0');
         const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
         const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO');
+        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
+            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
+            maximumFractionDigits: 2,
+        });
         gananciaEl.textContent = 'Bs ' + sign + abs;
         gananciaEl.classList.toggle('text-danger', ganancia < 0);
         gananciaEl.classList.toggle('text-success', ganancia >= 0);
     };
 
     plataformaSelect.addEventListener('change', applyFilters);
-    modalidadSelect.addEventListener('change', applyFilters);
+    modalidadSelect.addEventListener('change', () => {
+        applyFilters();
+        syncPricingFromSelected();
+    });
     costoBaseInput.addEventListener('input', applyGanancia);
     precioVentaInput.addEventListener('input', applyGanancia);
     applyFilters();
+    if (costoBaseInput.value === '' || precioVentaInput.value === '') {
+        syncPricingFromSelected();
+    }
     applyGanancia();
 })();
 </script>

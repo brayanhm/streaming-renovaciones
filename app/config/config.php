@@ -214,12 +214,61 @@ function e(mixed $value): string
 
 function money(mixed $value): string
 {
+    $amount = (float) $value;
+    $decimals = APP_MONEY_DECIMALS;
+
+    if ($decimals <= 0 && abs($amount - round($amount)) > 0.00001) {
+        $decimals = 2;
+    }
+
     return APP_CURRENCY_SYMBOL . ' ' . number_format(
-        (float) $value,
-        APP_MONEY_DECIMALS,
+        $amount,
+        $decimals,
         APP_DECIMAL_SEPARATOR,
         APP_THOUSANDS_SEPARATOR
     );
+}
+
+function format_decimal_amount(mixed $value, int $scale = 2): string
+{
+    $formatted = number_format((float) $value, $scale, '.', '');
+
+    return rtrim(rtrim($formatted, '0'), '.');
+}
+
+function normalize_decimal_amount(string $value, int $scale = 2): ?string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+
+    $normalized = str_replace([' ', ','], ['', '.'], $value);
+    if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $normalized)) {
+        return null;
+    }
+
+    return number_format((float) $normalized, $scale, '.', '');
+}
+
+function shift_months_clamped(DateTimeImmutable $baseDate, int $months): DateTimeImmutable
+{
+    if ($months === 0) {
+        return $baseDate;
+    }
+
+    $day = (int) $baseDate->format('d');
+    $year = (int) $baseDate->format('Y');
+    $month = (int) $baseDate->format('m');
+
+    $firstOfMonth = $baseDate->setDate($year, $month, 1);
+    $targetFirst = $firstOfMonth->modify(sprintf('%+d months', $months));
+    $targetYear = (int) $targetFirst->format('Y');
+    $targetMonth = (int) $targetFirst->format('m');
+    $targetLastDay = (int) $targetFirst->format('t');
+    $targetDay = min($day, $targetLastDay);
+
+    return $targetFirst->setDate($targetYear, $targetMonth, $targetDay);
 }
 
 function flash(string $type, string $message): void

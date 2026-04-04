@@ -121,6 +121,22 @@ if (!function_exists('status_badge_show')) {
                                     <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $sus['id'])) ?>">Historial</a>
                                     <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $sus['id'])) ?>">Editar</a>
                                 </div>
+                                <details class="mt-2">
+                                    <summary class="small text-primary" role="button">Modificar finalizacion</summary>
+                                    <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $sus['id'])) ?>" class="mt-2">
+                                        <label class="form-label form-label-sm mb-1" for="fecha_vencimiento_<?= (int) $sus['id'] ?>">Nueva fecha</label>
+                                        <input
+                                            type="date"
+                                            class="form-control form-control-sm mb-2"
+                                            id="fecha_vencimiento_<?= (int) $sus['id'] ?>"
+                                            name="fecha_vencimiento"
+                                            value="<?= e((string) ($sus['fecha_vencimiento'] ?? '')) ?>"
+                                            min="<?= e((string) ($sus['fecha_inicio'] ?? '')) ?>"
+                                            required
+                                        >
+                                        <button class="btn btn-success btn-sm w-100" type="submit">Guardar finalizacion</button>
+                                    </form>
+                                </details>
                             </td>
                         </tr>
                     <?php endforeach; ?>

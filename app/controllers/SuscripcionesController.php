@@ -9,6 +9,7 @@ use App\Models\Modalidad;
 use App\Models\Movimiento;
 use App\Models\Plataforma;
 use App\Models\Suscripcion;
+use DateTimeImmutable;
 
 class SuscripcionesController extends Controller
 {
@@ -70,7 +71,7 @@ class SuscripcionesController extends Controller
     {
         $suscripcion = $this->suscripciones->findWithRelations($id);
         if ($suscripcion === null) {
-            flash('danger', 'Suscripción no encontrada.');
+            flash('danger', 'Suscripcion no encontrada.');
             $this->redirect('/suscripciones');
         }
 
@@ -93,10 +94,10 @@ class SuscripcionesController extends Controller
         try {
             $this->suscripciones->create($payload);
             clear_old();
-            flash('success', 'Suscripción creada.');
+            flash('success', 'Suscripcion creada.');
         } catch (\Throwable $exception) {
             set_old($payload);
-            flash('danger', 'No se pudo crear la suscripción: ' . $exception->getMessage());
+            flash('danger', 'No se pudo crear la suscripcion: ' . $exception->getMessage());
         }
 
         $this->redirect('/suscripciones');
@@ -106,7 +107,7 @@ class SuscripcionesController extends Controller
     {
         $item = $this->suscripciones->find($id);
         if ($item === null) {
-            flash('danger', 'Suscripción no encontrada.');
+            flash('danger', 'Suscripcion no encontrada.');
             $this->redirect('/suscripciones');
         }
 
@@ -115,7 +116,7 @@ class SuscripcionesController extends Controller
         $tiposSuscripcion = $this->modalidades->all();
 
         $this->render('suscripciones/edit', [
-            'pageTitle' => 'Editar suscripción',
+            'pageTitle' => 'Editar suscripcion',
             'item' => $item,
             'clientes' => $clientes,
             'plataformas' => $plataformas,
@@ -134,21 +135,64 @@ class SuscripcionesController extends Controller
         try {
             $this->suscripciones->update($id, $payload);
             clear_old();
-            flash('success', 'Suscripción actualizada.');
+            flash('success', 'Suscripcion actualizada.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo actualizar la suscripción: ' . $exception->getMessage());
+            flash('danger', 'No se pudo actualizar la suscripcion: ' . $exception->getMessage());
         }
 
         $this->redirect('/suscripciones');
+    }
+
+    public function updateDueDate(int $id): void
+    {
+        $subscription = $this->suscripciones->find($id);
+        if ($subscription === null) {
+            flash('danger', 'Suscripcion no encontrada.');
+            $this->goBack('/clientes');
+        }
+
+        $clienteId = (int) ($subscription['cliente_id'] ?? 0);
+        $fallbackPath = $clienteId > 0 ? '/clientes/' . $clienteId : '/clientes';
+        $rawDueDate = trim((string) ($_POST['fecha_vencimiento'] ?? ''));
+        if ($rawDueDate === '') {
+            flash('danger', 'Debes indicar la nueva fecha de finalizacion.');
+            $this->goBack($fallbackPath);
+        }
+
+        try {
+            $dueDate = new DateTimeImmutable($rawDueDate);
+        } catch (\Throwable) {
+            flash('danger', 'La fecha de finalizacion no es valida.');
+            $this->goBack($fallbackPath);
+        }
+
+        $startDateRaw = (string) ($subscription['fecha_inicio'] ?? '');
+        if ($startDateRaw !== '' && $dueDate->format('Y-m-d') < $startDateRaw) {
+            flash('danger', 'La fecha de finalizacion no puede ser anterior a la fecha de inicio.');
+            $this->goBack($fallbackPath);
+        }
+
+        try {
+            $ok = $this->suscripciones->updateDueDate($id, $dueDate->format('Y-m-d'));
+            if (!$ok) {
+                flash('danger', 'No se pudo actualizar la fecha de finalizacion.');
+                $this->goBack($fallbackPath);
+            }
+            flash('success', 'Fecha de finalizacion actualizada a ' . $dueDate->format('Y-m-d') . '.');
+        } catch (\Throwable $exception) {
+            flash('danger', 'No se pudo actualizar la finalizacion: ' . $exception->getMessage());
+        }
+
+        $this->goBack($fallbackPath);
     }
 
     public function destroy(int $id): void
     {
         try {
             $this->suscripciones->delete($id);
-            flash('success', 'Suscripción eliminada.');
+            flash('success', 'Suscripcion eliminada.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo eliminar la suscripción: ' . $exception->getMessage());
+            flash('danger', 'No se pudo eliminar la suscripcion: ' . $exception->getMessage());
         }
 
         $this->redirect('/suscripciones');
@@ -179,7 +223,7 @@ class SuscripcionesController extends Controller
             !in_array($payload['estado'], Suscripcion::ESTADOS, true)
         ) {
             set_old($payload);
-            flash('danger', 'Completa todos los campos obligatorios de la suscripción.');
+            flash('danger', 'Completa todos los campos obligatorios de la suscripcion.');
 
             return null;
         }
@@ -224,7 +268,7 @@ class SuscripcionesController extends Controller
 
             if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
                 set_old($payload);
-                flash('danger', 'Debes ingresar un correo válido para la cuenta de renovación.');
+                flash('danger', 'Debes ingresar un correo valido para la cuenta de renovacion.');
 
                 return null;
             }
@@ -232,26 +276,32 @@ class SuscripcionesController extends Controller
             $payload['usuario_proveedor'] = '';
         }
 
-        if ($payload['precio_venta'] !== '' && !preg_match('/^\d+$/', $payload['precio_venta'])) {
+        $normalizedPrice = $payload['precio_venta'] === ''
+            ? null
+            : normalize_decimal_amount($payload['precio_venta']);
+        if ($payload['precio_venta'] !== '' && $normalizedPrice === null) {
             set_old($payload);
-            flash('danger', 'El precio de venta debe ser un número entero mayor a 0.');
+            flash('danger', 'El precio de venta debe ser un numero valido mayor a 0.');
 
             return null;
         }
 
-        if ($payload['costo_base'] !== '' && !preg_match('/^\d+$/', $payload['costo_base'])) {
+        $normalizedCost = $payload['costo_base'] === ''
+            ? null
+            : normalize_decimal_amount($payload['costo_base']);
+        if ($payload['costo_base'] !== '' && $normalizedCost === null) {
             set_old($payload);
-            flash('danger', 'El costo debe ser un número entero mayor a 0.');
+            flash('danger', 'El costo debe ser un numero valido mayor a 0.');
 
             return null;
         }
 
-        $costValue = $payload['costo_base'] === ''
-            ? (int) round((float) ($modalidad['costo'] ?? 0))
-            : (int) $payload['costo_base'];
-        $priceValue = $payload['precio_venta'] === ''
-            ? (int) round((float) $modalidad['precio'])
-            : (int) $payload['precio_venta'];
+        $costValue = $normalizedCost === null
+            ? (float) (normalize_decimal_amount((string) ($modalidad['costo'] ?? '0')) ?? '0')
+            : (float) $normalizedCost;
+        $priceValue = $normalizedPrice === null
+            ? (float) (normalize_decimal_amount((string) ($modalidad['precio'] ?? '0')) ?? '0')
+            : (float) $normalizedPrice;
         if ($costValue <= 0) {
             set_old($payload);
             flash('danger', 'El costo debe ser mayor a 0.');
@@ -265,10 +315,9 @@ class SuscripcionesController extends Controller
             return null;
         }
 
-        $payload['costo_base'] = (string) $costValue;
-        $payload['precio_venta'] = (string) $priceValue;
+        $payload['costo_base'] = number_format($costValue, 2, '.', '');
+        $payload['precio_venta'] = number_format($priceValue, 2, '.', '');
 
         return $payload;
     }
 }
-

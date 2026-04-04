@@ -191,8 +191,8 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 <option
                                     value="<?= e((string) $modalidad['id']) ?>"
                                     data-plataforma-id="<?= e((string) $modalidad['plataforma_id']) ?>"
-                                    data-costo="<?= e((string) ((int) round((float) ($modalidad['costo'] ?? 0)))) ?>"
-                                    data-precio="<?= e((string) ((int) round((float) $modalidad['precio']))) ?>"
+                                    data-costo="<?= e(format_decimal_amount($modalidad['costo'] ?? 0)) ?>"
+                                    data-precio="<?= e(format_decimal_amount($modalidad['precio'] ?? 0)) ?>"
                                     <?= $oldMod === (string) $modalidad['id'] ? 'selected' : '' ?>
                                 >
                                     <?= e((string) $modalidad['plataforma_nombre']) ?>
@@ -211,8 +211,8 @@ if (!function_exists('tipo_suscripcion_label')) {
                         <label class="form-label" for="costo_base">Costo de la cuenta (Bs)</label>
                         <input
                             type="number"
-                            step="1"
-                            min="1"
+                            step="0.01"
+                            min="0.01"
                             class="form-control js-costo-base"
                             id="costo_base"
                             name="costo_base"
@@ -225,8 +225,8 @@ if (!function_exists('tipo_suscripcion_label')) {
                         <label class="form-label" for="precio_venta">Precio final de venta (Bs)</label>
                         <input
                             type="number"
-                            step="1"
-                            min="1"
+                            step="0.01"
+                            min="0.01"
                             class="form-control js-precio-venta"
                             id="precio_venta"
                             name="precio_venta"
@@ -258,7 +258,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 class="form-control"
                                 id="fecha_vencimiento"
                                 name="fecha_vencimiento"
-                                value="<?= e(old('fecha_vencimiento', date('Y-m-d', strtotime('+1 month')))) ?>"
+                                value="<?= e(old('fecha_vencimiento', shift_months_clamped(new DateTimeImmutable('today'), 1)->format('Y-m-d'))) ?>"
                                 required
                             >
                         </div>
@@ -373,15 +373,22 @@ if (!function_exists('tipo_suscripcion_label')) {
         if (selectedModalidad && selectedModalidad.dataset.precio) {
             precioVentaInput.value = selectedModalidad.dataset.precio;
         }
+        if (!selectedModalidad || !selectedModalidad.value) {
+            costoBaseInput.value = '';
+            precioVentaInput.value = '';
+        }
         applyGanancia();
     };
 
     const applyGanancia = () => {
-        const costo = Number.parseInt(costoBaseInput.value || '0', 10);
-        const precio = Number.parseInt(precioVentaInput.value || '0', 10);
+        const costo = Number.parseFloat(costoBaseInput.value || '0');
+        const precio = Number.parseFloat(precioVentaInput.value || '0');
         const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
         const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO');
+        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
+            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
+            maximumFractionDigits: 2,
+        });
         gananciaEl.textContent = 'Bs ' + sign + abs;
         gananciaEl.classList.toggle('text-danger', ganancia < 0);
         gananciaEl.classList.toggle('text-success', ganancia >= 0);

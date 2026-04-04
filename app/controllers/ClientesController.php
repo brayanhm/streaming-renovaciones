@@ -148,7 +148,7 @@ class ClientesController extends Controller
         $today = new DateTimeImmutable('today');
         $duracion = max(1, (int) ($modalidad['duracion_meses'] ?? 1));
         $fechaInicio = $today->format('Y-m-d');
-        $fechaVencimiento = $today->modify('+' . $duracion . ' months')->format('Y-m-d');
+        $fechaVencimiento = shift_months_clamped($today, $duracion)->format('Y-m-d');
 
         $clientePayload = [
             'nombre' => $payload['nombre'],
@@ -158,8 +158,8 @@ class ClientesController extends Controller
         $suscripcionPayload = [
             'plataforma_id' => $payload['plataforma_id'],
             'modalidad_id' => $payload['modalidad_id'],
-            'costo_base' => (string) max(1, (int) round((float) ($modalidad['costo'] ?? 0))),
-            'precio_venta' => (string) max(1, (int) round((float) ($modalidad['precio'] ?? 0))),
+            'costo_base' => normalize_decimal_amount((string) ($modalidad['costo'] ?? '0')) ?? '0.00',
+            'precio_venta' => normalize_decimal_amount((string) ($modalidad['precio'] ?? '0')) ?? '0.00',
             'fecha_inicio' => $fechaInicio,
             'fecha_vencimiento' => $fechaVencimiento,
             'estado' => 'ACTIVO',
@@ -237,10 +237,15 @@ class ClientesController extends Controller
         }
 
         $duracion = max(1, (int) ($modalidad['duracion_meses'] ?? 1));
-        $fechaInicio = $fechaVencimiento->modify('-' . $duracion . ' months')->format('Y-m-d');
+        $fechaInicio = shift_months_clamped($fechaVencimiento, -$duracion)->format('Y-m-d');
         $fechaVencimientoStr = $fechaVencimiento->format('Y-m-d');
         $today = new DateTimeImmutable('today');
-        $isExpired = $fechaVencimiento < $today;
+        $daysToDue = (int) $today->diff($fechaVencimiento)->format('%r%a');
+        $isExpired = $daysToDue < 0;
+        $estado = 'ACTIVO';
+        if ($isExpired) {
+            $estado = abs($daysToDue) >= RECUP_DAYS ? 'RECUP' : 'VENCIDO';
+        }
 
         $clientePayload = [
             'nombre' => $payload['contacto_antiguo'],
@@ -250,13 +255,13 @@ class ClientesController extends Controller
         $suscripcionPayload = [
             'plataforma_id' => $payload['plataforma_id_antiguo'],
             'modalidad_id' => (int) $modalidad['id'],
-            'costo_base' => (string) max(1, (int) round((float) ($modalidad['costo'] ?? 0))),
-            'precio_venta' => (string) max(1, (int) round((float) ($modalidad['precio'] ?? 0))),
+            'costo_base' => normalize_decimal_amount((string) ($modalidad['costo'] ?? '0')) ?? '0.00',
+            'precio_venta' => normalize_decimal_amount((string) ($modalidad['precio'] ?? '0')) ?? '0.00',
             'fecha_inicio' => $fechaInicio,
             'fecha_vencimiento' => $fechaVencimientoStr,
-            'estado' => $isExpired ? 'VENCIDO' : 'ACTIVO',
+            'estado' => $estado,
             'usuario_proveedor' => '',
-            'flag_no_renovo' => $isExpired ? 1 : 0,
+            'flag_no_renovo' => 0,
         ];
 
         $pdo = db();

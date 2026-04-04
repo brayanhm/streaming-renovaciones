@@ -43,7 +43,9 @@ if (!function_exists('renewal_options')) {
     function renewal_options(array $row): array
     {
         return Plataforma::resolveRenewalMonths(
-            isset($row['plataforma_duraciones_disponibles']) ? (string) $row['plataforma_duraciones_disponibles'] : null
+            isset($row['modalidad_duraciones_disponibles']) && (string) $row['modalidad_duraciones_disponibles'] !== ''
+                ? (string) $row['modalidad_duraciones_disponibles']
+                : (isset($row['plataforma_duraciones_disponibles']) ? (string) $row['plataforma_duraciones_disponibles'] : null)
         );
     }
 }
@@ -160,20 +162,12 @@ if (!function_exists('renewal_options')) {
     </div>
 </div>
 
-<form method="post" action="<?= e(url('/dashboard/marcar-contactados')) ?>" id="bulk-form">
-<div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
-    <button type="submit" class="btn btn-outline-secondary btn-sm" id="bulk-btn" disabled>
-        Marcar seleccionados como contactados
-    </button>
-    <span class="text-secondary small" id="bulk-count"></span>
-</div>
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-striped table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th><input type="checkbox" id="check-all" class="form-check-input"></th>
                         <th>Cliente</th>
                         <th>Teléfono</th>
                         <th>Servicio</th>
@@ -191,7 +185,7 @@ if (!function_exists('renewal_options')) {
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="13" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
+                            <td colspan="12" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
                         </tr>
                     <?php endif; ?>
 
@@ -219,7 +213,6 @@ if (!function_exists('renewal_options')) {
                         }
                         ?>
                         <tr>
-                            <td><input type="checkbox" name="ids[]" value="<?= e((string) (int) $row['id']) ?>" class="form-check-input row-check"></td>
                             <td>
                                 <div class="fw-semibold">
                                     <a href="<?= e(url('/clientes/' . (int) ($row['cliente_id'] ?? 0))) ?>" class="text-decoration-none"><?= e((string) ($row['cliente_nombre'] ?? '')) ?></a>
@@ -249,6 +242,20 @@ if (!function_exists('renewal_options')) {
                                 <small class="<?= e($diasClass) ?>">
                                     <?= e($diasLabel) ?>
                                 </small>
+                                <details class="mt-2">
+                                    <summary class="small text-primary" role="button">Editar finalizacion</summary>
+                                    <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
+                                        <input
+                                            type="date"
+                                            class="form-control form-control-sm mb-2"
+                                            name="fecha_vencimiento"
+                                            value="<?= e($vencimiento) ?>"
+                                            min="<?= e((string) ($row['fecha_inicio'] ?? '')) ?>"
+                                            required
+                                        >
+                                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Guardar</button>
+                                    </form>
+                                </details>
                             </td>
                             <td><?= e(money((float) ($row['costo_final'] ?? $row['modalidad_costo'] ?? 0))) ?></td>
                             <td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
@@ -300,7 +307,6 @@ if (!function_exists('renewal_options')) {
         </div>
     </div>
 </div>
-</form>
 
 <?php if (($totalPages ?? 1) > 1): ?>
 <?php
@@ -382,7 +388,23 @@ $paginationQuery = http_build_query(array_filter([
                                 </div>
                             </td>
                             <td><?= e(tipo_suscripcion_dashboard($row)) ?></td>
-                            <td><?= e($vencimiento) ?></td>
+                            <td>
+                                <div><?= e($vencimiento) ?></div>
+                                <details class="mt-2">
+                                    <summary class="small text-primary" role="button">Editar finalizacion</summary>
+                                    <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
+                                        <input
+                                            type="date"
+                                            class="form-control form-control-sm mb-2"
+                                            name="fecha_vencimiento"
+                                            value="<?= e($vencimiento) ?>"
+                                            min="<?= e((string) ($row['fecha_inicio'] ?? '')) ?>"
+                                            required
+                                        >
+                                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Guardar</button>
+                                    </form>
+                                </details>
+                            </td>
                             <td>
                                 <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
                                 <div><small class="text-danger fw-semibold">Marcado como no renovado</small></div>
@@ -442,35 +464,3 @@ $paginationQuery = http_build_query(array_filter([
     </div>
 </div>
 
-<script>
-(() => {
-    const checkAll = document.getElementById('check-all');
-    const bulkBtn = document.getElementById('bulk-btn');
-    const bulkCount = document.getElementById('bulk-count');
-    const rowChecks = () => document.querySelectorAll('.row-check');
-
-    const updateBulk = () => {
-        const checked = document.querySelectorAll('.row-check:checked');
-        const n = checked.length;
-        bulkBtn.disabled = n === 0;
-        bulkCount.textContent = n > 0 ? n + ' seleccionada(s)' : '';
-        if (checkAll) {
-            checkAll.checked = n > 0 && n === rowChecks().length;
-            checkAll.indeterminate = n > 0 && n < rowChecks().length;
-        }
-    };
-
-    if (checkAll) {
-        checkAll.addEventListener('change', () => {
-            rowChecks().forEach(cb => { cb.checked = checkAll.checked; });
-            updateBulk();
-        });
-    }
-
-    document.addEventListener('change', e => {
-        if (e.target.classList.contains('row-check')) updateBulk();
-    });
-
-    updateBulk();
-})();
-</script>

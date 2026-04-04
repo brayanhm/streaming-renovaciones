@@ -74,17 +74,22 @@ class DashboardController extends Controller
             $totals['ganancia'] += ($sale - $cost);
         }
 
+        $expiredCount = count(array_filter(
+            $activeRows,
+            static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
+        )) + count($noRenewRows);
+
         $counts = [
             'TODOS' => count($activeRows),
             'CONTACTAR_2D' => 0,
             'REENVIAR_1D' => 0,
             'ESPERA' => 0,
             'ACTIVO' => 0,
-            'VENCIDO' => 0,
+            'VENCIDO' => $expiredCount,
         ];
         foreach ($activeRows as $item) {
             $state = (string) ($item['estado'] ?? '');
-            if ($state === 'RECUP') { $counts['VENCIDO']++; continue; }
+            if ($state === 'RECUP' || $state === 'VENCIDO') { continue; }
             if (isset($counts[$state])) { $counts[$state]++; }
         }
 
