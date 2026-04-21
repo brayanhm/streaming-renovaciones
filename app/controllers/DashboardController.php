@@ -48,21 +48,31 @@ class DashboardController extends Controller
             $activeRows[] = $row;
         }
         $this->sortRowsForMessaging($activeRows);
-        $this->sortNoRenewRows($noRenewRows);
 
-        $filteredRows = $activeRows;
-        if ($selectedStatus !== 'TODOS') {
-            if ($selectedStatus === 'VENCIDO') {
-                $filteredRows = array_values(array_filter(
-                    $activeRows,
-                    static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
-                ));
-            } else {
-                $filteredRows = array_values(array_filter(
-                    $activeRows,
-                    static fn (array $item): bool => (string) ($item['estado'] ?? '') === $selectedStatus
-                ));
-            }
+        $nonExpiredStates = ['REENVIAR_1D', 'CONTACTAR_2D', 'ESPERA', 'ACTIVO'];
+        $filteredRows = array_values(array_filter(
+            $activeRows,
+            static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), $nonExpiredStates, true)
+        ));
+        if ($selectedStatus === 'VENCIDO') {
+            $filteredRows = array_values(array_filter(
+                $activeRows,
+                static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
+            ));
+            $filteredRows = array_merge($filteredRows, $noRenewRows);
+            usort($filteredRows, static function (array $l, array $r): int {
+                $ld = (string) ($l['fecha_vencimiento'] ?? '');
+                $rd = (string) ($r['fecha_vencimiento'] ?? '');
+                if ($ld !== $rd) {
+                    return strcmp($rd, $ld); // descending: most recently expired first
+                }
+                return (int) ($r['id'] ?? 0) <=> (int) ($l['id'] ?? 0);
+            });
+        } elseif ($selectedStatus !== 'TODOS') {
+            $filteredRows = array_values(array_filter(
+                $activeRows,
+                static fn (array $item): bool => (string) ($item['estado'] ?? '') === $selectedStatus
+            ));
         }
 
         $totals = ['costo' => 0.0, 'venta' => 0.0, 'ganancia' => 0.0];
@@ -80,7 +90,7 @@ class DashboardController extends Controller
         )) + count($noRenewRows);
 
         $counts = [
-            'TODOS' => count($activeRows),
+            'TODOS' => 0,
             'CONTACTAR_2D' => 0,
             'REENVIAR_1D' => 0,
             'ESPERA' => 0,
@@ -91,6 +101,7 @@ class DashboardController extends Controller
             $state = (string) ($item['estado'] ?? '');
             if ($state === 'RECUP' || $state === 'VENCIDO') { continue; }
             if (isset($counts[$state])) { $counts[$state]++; }
+            $counts['TODOS']++;
         }
 
         $perPage = PER_PAGE;
@@ -111,8 +122,6 @@ class DashboardController extends Controller
             'selectedStatus' => $selectedStatus,
             'totals' => $totals,
             'today' => new DateTimeImmutable('today'),
-            'noRenewRows' => $noRenewRows,
-            'noRenewCount' => count($noRenewRows),
             'page' => $page,
             'totalPages' => $totalPages,
             'totalRows' => $totalRows,
@@ -212,39 +221,7 @@ class DashboardController extends Controller
 
     private function sortRowsForMessaging(array &$rows): void
     {
-        $statePriority = [
-            'REENVIAR_1D' => 0,
-            'CONTACTAR_2D' => 1,
-            'VENCIDO' => 2,
-            'RECUP' => 3,
-            'ESPERA' => 4,
-            'ACTIVO' => 5,
-        ];
-
-        usort($rows, static function (array $left, array $right) use ($statePriority): int {
-            $leftState = (string) ($left['estado'] ?? 'ACTIVO');
-            $rightState = (string) ($right['estado'] ?? 'ACTIVO');
-            $leftPriority = $statePriority[$leftState] ?? 99;
-            $rightPriority = $statePriority[$rightState] ?? 99;
-
-            if ($leftPriority !== $rightPriority) {
-                return $leftPriority <=> $rightPriority;
-            }
-
-            $leftDays = (int) ($left['dias_para_vencer'] ?? 0);
-            $rightDays = (int) ($right['dias_para_vencer'] ?? 0);
-            $leftAbs = abs($leftDays);
-            $rightAbs = abs($rightDays);
-            if ($leftAbs !== $rightAbs) {
-                return $leftAbs <=> $rightAbs;
-            }
-
-            $leftPast = $leftDays < 0;
-            $rightPast = $rightDays < 0;
-            if ($leftPast !== $rightPast) {
-                return $leftPast ? -1 : 1;
-            }
-
+        usort($rows, static function (array $left, array $right): int {
             $leftDue = (string) ($left['fecha_vencimiento'] ?? '');
             $rightDue = (string) ($right['fecha_vencimiento'] ?? '');
             if ($leftDue !== $rightDue) {
@@ -255,17 +232,6 @@ class DashboardController extends Controller
         });
     }
 
-    private function sortNoRenewRows(array &$rows): void
-    {
-        usort($rows, static function (array $left, array $right): int {
-            $leftDue = (string) ($left['fecha_vencimiento'] ?? '');
-            $rightDue = (string) ($right['fecha_vencimiento'] ?? '');
-            if ($leftDue !== $rightDue) {
-                return strcmp($rightDue, $leftDue);
-            }
 
-            return (int) ($right['id'] ?? 0) <=> (int) ($left['id'] ?? 0);
-        });
-    }
 }
 

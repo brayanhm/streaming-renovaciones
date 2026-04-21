@@ -264,6 +264,9 @@ if (!function_exists('renewal_options')) {
                             </td>
                             <td>
                                 <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
+                                <?php if ((int) ($row['flag_no_renovo'] ?? 0) === 1): ?>
+                                    <div><small class="text-danger fw-semibold">No renovó</small></div>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <a
@@ -333,109 +336,6 @@ $paginationQuery = http_build_query(array_filter([
 </nav>
 <?php endif; ?>
 
-<div class="card shadow-sm mt-3">
-    <div class="card-body p-0">
-        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-            <h2 class="h6 mb-0">No renovados</h2>
-            <span class="badge text-bg-danger"><?= e((string) ($noRenewCount ?? 0)) ?></span>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Teléfono</th>
-                        <th>Servicio</th>
-                        <th>Plan</th>
-                        <th>Vencimiento</th>
-                        <th>Estado</th>
-                        <th>Renovar</th>
-                        <th>WhatsApp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($noRenewRows)): ?>
-                        <tr>
-                            <td colspan="8" class="text-center py-4 text-secondary">No hay suscripciones marcadas como no renovadas.</td>
-                        </tr>
-                    <?php endif; ?>
-                    <?php foreach (($noRenewRows ?? []) as $row): ?>
-                        <?php
-                        $vencimiento = (string) ($row['fecha_vencimiento'] ?? '');
-                        $status = (int) ($row['flag_no_renovo'] ?? 0) === 1
-                            ? 'VENCIDO'
-                            : (string) ($row['estado'] ?? 'VENCIDO');
-                        $whatsType = (string) ($row['contact_type_sugerido'] ?? 'REC_7');
-                        $renewOptions = renewal_options($row);
-                        ?>
-                        <tr>
-                            <td class="fw-semibold"><?= e((string) ($row['cliente_nombre'] ?? '')) ?></td>
-                            <td><?= e((string) ($row['cliente_telefono'] ?? '')) ?></td>
-                            <td>
-                                <div class="fw-semibold"><?= e((string) ($row['plataforma_nombre'] ?? '')) ?></div>
-                                <small class="text-secondary"><?= e((string) ($row['nombre_modalidad'] ?? '')) ?></small>
-                                <div>
-                                    <?php
-                                    $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($row['plataforma_dato_renovacion'] ?? 'USUARIO'));
-                                    $renewalValue = trim((string) ($row['usuario_proveedor'] ?? ''));
-                                    ?>
-                                    <span class="badge text-bg-light border"><?= e((string) ($row['plataforma_tipo_servicio'] ?? '')) ?></span>
-                                    <?php if ($renewalValue !== ''): ?>
-                                        <span class="badge text-bg-secondary"><?= e($renovacionLabel) ?>: <?= e($renewalValue) ?></span>
-                                    <?php else: ?>
-                                        <span class="badge text-bg-light border text-secondary"><?= e($renovacionLabel) ?>: sin dato</span>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                            <td><?= e(tipo_suscripcion_dashboard($row)) ?></td>
-                            <td>
-                                <div><?= e($vencimiento) ?></div>
-                                <details class="mt-2">
-                                    <summary class="small text-primary" role="button">Editar finalizacion</summary>
-                                    <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
-                                        <input
-                                            type="date"
-                                            class="form-control form-control-sm mb-2"
-                                            name="fecha_vencimiento"
-                                            value="<?= e($vencimiento) ?>"
-                                            min="<?= e((string) ($row['fecha_inicio'] ?? '')) ?>"
-                                            required
-                                        >
-                                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Guardar</button>
-                                    </form>
-                                </details>
-                            </td>
-                            <td>
-                                <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
-                                <div><small class="text-danger fw-semibold">Marcado como no renovado</small></div>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-wrap gap-1">
-                                    <?php foreach ($renewOptions as $months): ?>
-                                        <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>">
-                                            <input type="hidden" name="meses" value="<?= e((string) $months) ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">+<?= e((string) $months) ?>M</button>
-                                        </form>
-                                    <?php endforeach; ?>
-                                </div>
-                            </td>
-                            <td>
-                                <a
-                                    class="btn btn-success btn-sm px-3"
-                                    href="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'] . '?tipo=' . $whatsType)) ?>"
-                                    target="_blank"
-                                    rel="noopener"
-                                >
-                                    WhatsApp
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 
 <div class="row g-3 mt-1">
     <div class="col-12 col-md-4">
