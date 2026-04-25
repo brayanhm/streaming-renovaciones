@@ -202,6 +202,11 @@ class TiposSuscripcionController extends Controller
     public function update(int $id): void
     {
         $returnPlatformId = $this->resolveReturnPlatformId();
+        if ($this->tiposSuscripcion->find($id) === null) {
+            flash('danger', 'Tipo de suscripcion no encontrado.');
+            $this->redirect($this->buildIndexPath($returnPlatformId));
+        }
+
         $payload = $this->collectPayload();
         if ($payload === null) {
             $this->redirect($this->buildEditPath($id, $returnPlatformId));
@@ -221,6 +226,10 @@ class TiposSuscripcionController extends Controller
     public function destroy(int $id): void
     {
         $returnPlatformId = $this->resolveReturnPlatformId();
+        if ($this->tiposSuscripcion->find($id) === null) {
+            flash('danger', 'Tipo de suscripcion no encontrado.');
+            $this->redirect($this->buildIndexPath($returnPlatformId));
+        }
 
         try {
             $this->tiposSuscripcion->delete($id);

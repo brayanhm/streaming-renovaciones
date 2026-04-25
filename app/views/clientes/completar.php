@@ -55,6 +55,7 @@ declare(strict_types=1);
                             <td><?= e((string) ($item['fecha_vencimiento'] ?? '')) ?></td>
                             <td colspan="3">
                                 <form method="post" action="<?= e(url('/clientes/completar/actualizar/' . (int) $item['id'])) ?>" class="row g-2">
+                                    <?= csrf_field() ?>
                                     <div class="col-12 col-md-4">
                                         <input
                                             type="text"

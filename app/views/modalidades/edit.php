@@ -16,6 +16,7 @@ $returnQuery = $returnPlatformId > 0
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="post" action="<?= e(url('/tipos-suscripcion/actualizar/' . (int) $item['id'])) ?>" id="edit-plan-form">
+            <?= csrf_field() ?>
             <?php if ($returnPlatformId > 0): ?>
                 <input type="hidden" name="return_plataforma_id" value="<?= e((string) $returnPlatformId) ?>">
             <?php endif; ?>

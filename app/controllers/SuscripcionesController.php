@@ -127,6 +127,11 @@ class SuscripcionesController extends Controller
 
     public function update(int $id): void
     {
+        if ($this->suscripciones->find($id) === null) {
+            flash('danger', 'Suscripcion no encontrada.');
+            $this->redirect('/suscripciones');
+        }
+
         $payload = $this->collectPayload();
         if ($payload === null) {
             $this->redirect('/suscripciones/editar/' . $id);
@@ -159,9 +164,8 @@ class SuscripcionesController extends Controller
             $this->goBack($fallbackPath);
         }
 
-        try {
-            $dueDate = new DateTimeImmutable($rawDueDate);
-        } catch (\Throwable) {
+        $dueDate = parse_ymd_date($rawDueDate);
+        if ($dueDate === null) {
             flash('danger', 'La fecha de finalizacion no es valida.');
             $this->goBack($fallbackPath);
         }
@@ -188,6 +192,11 @@ class SuscripcionesController extends Controller
 
     public function destroy(int $id): void
     {
+        if ($this->suscripciones->find($id) === null) {
+            flash('danger', 'Suscripcion no encontrada.');
+            $this->redirect('/suscripciones');
+        }
+
         try {
             $this->suscripciones->delete($id);
             flash('success', 'Suscripcion eliminada.');
@@ -228,9 +237,28 @@ class SuscripcionesController extends Controller
             return null;
         }
 
-        if ($payload['fecha_inicio'] > $payload['fecha_vencimiento']) {
+        $startDate = parse_ymd_date($payload['fecha_inicio']);
+        $dueDate = parse_ymd_date($payload['fecha_vencimiento']);
+        if ($startDate === null || $dueDate === null) {
+            set_old($payload);
+            flash('danger', 'Las fechas deben ser validas y usar el formato YYYY-MM-DD.');
+
+            return null;
+        }
+
+        if ($startDate > $dueDate) {
             set_old($payload);
             flash('danger', 'La fecha de inicio no puede ser posterior a la fecha de vencimiento.');
+
+            return null;
+        }
+
+        $payload['fecha_inicio'] = $startDate->format('Y-m-d');
+        $payload['fecha_vencimiento'] = $dueDate->format('Y-m-d');
+
+        if ($this->clientes->find($payload['cliente_id']) === null) {
+            set_old($payload);
+            flash('danger', 'El cliente seleccionado no existe.');
 
             return null;
         }

@@ -227,6 +227,7 @@ declare(strict_types=1);
 
         <?php if (($hasUsers ?? false) === true): ?>
             <form method="post" action="<?= e(url('/login')) ?>">
+                <?= csrf_field() ?>
                 <div class="mb-3">
                     <label for="username" class="form-label">Usuario</label>
                     <input
@@ -267,6 +268,7 @@ declare(strict_types=1);
                 Aún no hay usuarios registrados. Crea el administrador inicial para empezar.
             </div>
             <form method="post" action="<?= e(url('/login')) ?>">
+                <?= csrf_field() ?>
                 <input type="hidden" name="_action" value="setup_admin">
                 <div class="mb-3">
                     <label for="username" class="form-label">Usuario admin</label>

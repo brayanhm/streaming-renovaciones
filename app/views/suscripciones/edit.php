@@ -12,6 +12,7 @@ use App\Models\Plataforma;
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="post" action="<?= e(url('/suscripciones/actualizar/' . (int) $item['id'])) ?>" id="edit-subscription-form">
+            <?= csrf_field() ?>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label" for="cliente_id">Cliente</label>

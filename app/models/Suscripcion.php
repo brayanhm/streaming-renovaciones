@@ -300,19 +300,7 @@ class Suscripcion extends BaseModel
                     WHEN ABS(DATEDIFF(fecha_vencimiento, CURDATE())) >= :recupDays THEN 'RECUP'
                     ELSE 'VENCIDO'
                   END
-                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) > 3 THEN 'ACTIVO'
-                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) BETWEEN 1 AND 3 THEN
-                  CASE
-                    WHEN COALESCE(ultimo_contacto_tipo, '') IN ('MENOS_2', 'MENOS_1') THEN 'ESPERA'
-                    ELSE 'CONTACTAR_2D'
-                  END
-                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) = 0 THEN
-                  CASE
-                    WHEN ultimo_contacto_tipo = 'MENOS_1' THEN 'ESPERA'
-                    WHEN estado = 'CONTACTAR_2D'
-                         AND COALESCE(ultimo_contacto_tipo, '') NOT IN ('MENOS_2', 'MENOS_1') THEN 'CONTACTAR_2D'
-                    ELSE 'REENVIAR_1D'
-                  END
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) >= 0 THEN 'ACTIVO'
                 ELSE estado
               END";
 
@@ -394,6 +382,7 @@ class Suscripcion extends BaseModel
                     s.id,
                     s.fecha_vencimiento,
                     s.plataforma_id,
+                    p.nombre AS plataforma_nombre,
                     m.nombre_modalidad,
                     m.tipo_cuenta,
                     m.duracion_meses,
@@ -477,13 +466,15 @@ class Suscripcion extends BaseModel
             ]);
 
             $movement = $this->db->prepare(
-                'INSERT INTO movimientos (suscripcion_id, tipo, meses, monto, costo, utilidad)
-                 VALUES (:suscripcion_id, :tipo, :meses, :monto, :costo, :utilidad)'
+                'INSERT INTO movimientos (suscripcion_id, plataforma_id, plataforma_nombre, tipo, meses, monto, costo, utilidad)
+                 VALUES (:suscripcion_id, :plataforma_id, :plataforma_nombre, :tipo, :meses, :monto, :costo, :utilidad)'
             );
             $monto = (float) $nextPrecioVenta;
             $costo = (float) $nextCostoBase;
             $movement->execute([
                 'suscripcion_id' => $id,
+                'plataforma_id' => (int) $row['plataforma_id'],
+                'plataforma_nombre' => (string) ($row['plataforma_nombre'] ?? ''),
                 'tipo' => 'RENOVACION',
                 'meses' => $months,
                 'monto' => $monto,
@@ -574,28 +565,6 @@ class Suscripcion extends BaseModel
             }
 
             return 'VENCIDO';
-        }
-
-        $currentState = (string) ($row['estado'] ?? '');
-        $contactType = (string) ($row['ultimo_contacto_tipo'] ?? '');
-        $contactedMinus3 = $contactType === 'MENOS_2';
-        $contactedDueDay = $contactType === 'MENOS_1';
-
-        if ($daysToDue === 0) {
-            if ($contactedDueDay) {
-                return 'ESPERA';
-            }
-
-            // Si no se envio el primer mensaje, no avanzar automaticamente a otro estado pendiente.
-            if ($currentState === 'CONTACTAR_2D' && !$contactedMinus3) {
-                return 'CONTACTAR_2D';
-            }
-
-            return 'REENVIAR_1D';
-        }
-
-        if ($daysToDue > 0 && $daysToDue <= 3) {
-            return ($contactedMinus3 || $contactedDueDay) ? 'ESPERA' : 'CONTACTAR_2D';
         }
 
         return 'ACTIVO';

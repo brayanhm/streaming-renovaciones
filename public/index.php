@@ -48,6 +48,11 @@ $path = request_path();
 
 AuthMiddleware::handle($path);
 
+if ($method === 'POST' && !verify_csrf_token(isset($_POST['_csrf']) ? (string) $_POST['_csrf'] : null)) {
+    flash('danger', 'La sesion expiro o el formulario no es valido. Intenta nuevamente.');
+    redirect($path === '/login' ? '/login' : '/dashboard');
+}
+
 $routes = [
     ['GET', '#^/$#', [DashboardController::class, 'index']],
     ['GET', '#^/dashboard$#', [DashboardController::class, 'index']],

@@ -91,6 +91,7 @@ use App\Models\Plataforma;
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>">Ver tipos</a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/plataformas/editar/' . (int) $item['id'])) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/plataformas/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta plataforma?')">
+                                                <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
                                             </form>
                                         </div>
@@ -109,6 +110,7 @@ use App\Models\Plataforma;
             <div class="card-body">
                 <h2 class="h5 mb-3">Nueva plataforma</h2>
                 <form method="post" action="<?= e(url('/plataformas')) ?>" id="create-platform-form" accept-charset="UTF-8">
+                    <?= csrf_field() ?>
                     <div class="mb-3">
                         <label class="form-label" for="nombre">Nombre</label>
                         <input type="text" class="form-control" id="nombre" name="nombre" value="<?= e(old('nombre')) ?>" required>

@@ -30,8 +30,18 @@ class Controller
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
 
         if (is_string($referer) && $referer !== '') {
-            header('Location: ' . $referer);
-            exit;
+            $refererParts = parse_url($referer);
+            $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+            $refererHost = is_array($refererParts) ? (string) ($refererParts['host'] ?? '') : '';
+            $refererPath = is_array($refererParts) ? (string) ($refererParts['path'] ?? '') : '';
+            $basePath = rtrim(base_url_path(), '/');
+            $sameHost = $refererHost === '' || strcasecmp($refererHost, (string) $currentHost) === 0;
+            $sameBasePath = $basePath === '' || $basePath === '/' || str_starts_with($refererPath, $basePath . '/') || $refererPath === $basePath;
+
+            if ($sameHost && $sameBasePath) {
+                header('Location: ' . $referer);
+                exit;
+            }
         }
 
         $this->redirect($fallback);

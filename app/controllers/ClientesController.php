@@ -195,6 +195,7 @@ class ClientesController extends Controller
             'notas_antiguo' => trim((string) ($_POST['notas_antiguo'] ?? '')),
             'plataforma_id_antiguo' => (int) ($_POST['plataforma_id_antiguo'] ?? 0),
             'fecha_finalizacion' => trim((string) ($_POST['fecha_finalizacion'] ?? '')),
+            'usuario_proveedor_antiguo' => trim((string) ($_POST['usuario_proveedor_antiguo'] ?? '')),
         ];
 
         if (
@@ -214,9 +215,8 @@ class ClientesController extends Controller
             $this->redirect('/clientes');
         }
 
-        try {
-            $fechaVencimiento = new DateTimeImmutable($payload['fecha_finalizacion']);
-        } catch (\Throwable) {
+        $fechaVencimiento = parse_ymd_date($payload['fecha_finalizacion']);
+        if ($fechaVencimiento === null) {
             set_old($payload);
             flash('danger', 'La fecha de finalizacion no es valida.');
             $this->redirect('/clientes');
@@ -227,6 +227,32 @@ class ClientesController extends Controller
             set_old($payload);
             flash('danger', 'La plataforma seleccionada no existe.');
             $this->redirect('/clientes');
+        }
+
+        $tipoServicio = strtoupper((string) ($plataforma['tipo_servicio'] ?? ''));
+        $datoRenovacion = Plataforma::normalizeDatoRenovacion(
+            isset($plataforma['dato_renovacion']) ? (string) $plataforma['dato_renovacion'] : null,
+            $tipoServicio
+        );
+
+        if ($tipoServicio === 'RENOVABLE') {
+            if ($payload['usuario_proveedor_antiguo'] === '') {
+                set_old($payload);
+                $fieldLabel = $datoRenovacion === 'CORREO' ? 'correo' : 'usuario';
+                flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para este cliente antiguo.');
+                $this->redirect('/clientes');
+            }
+
+            if (
+                $datoRenovacion === 'CORREO' &&
+                filter_var($payload['usuario_proveedor_antiguo'], FILTER_VALIDATE_EMAIL) === false
+            ) {
+                set_old($payload);
+                flash('danger', 'Debes ingresar un correo valido para la cuenta del cliente antiguo.');
+                $this->redirect('/clientes');
+            }
+        } else {
+            $payload['usuario_proveedor_antiguo'] = '';
         }
 
         $modalidad = $this->modalidades->firstByPlataforma($payload['plataforma_id_antiguo']);
@@ -260,7 +286,7 @@ class ClientesController extends Controller
             'fecha_inicio' => $fechaInicio,
             'fecha_vencimiento' => $fechaVencimientoStr,
             'estado' => $estado,
-            'usuario_proveedor' => '',
+            'usuario_proveedor' => $payload['usuario_proveedor_antiguo'],
             'flag_no_renovo' => 0,
         ];
 
@@ -300,6 +326,11 @@ class ClientesController extends Controller
 
     public function update(int $id): void
     {
+        if ($this->clientes->find($id) === null) {
+            flash('danger', 'Cliente no encontrado.');
+            $this->redirect('/clientes');
+        }
+
         $payload = [
             'nombre' => trim((string) ($_POST['contacto'] ?? $_POST['nombre'] ?? '')),
             'telefono' => trim((string) ($_POST['numero'] ?? $_POST['telefono'] ?? '')),
@@ -355,6 +386,11 @@ class ClientesController extends Controller
 
     public function destroy(int $id): void
     {
+        if ($this->clientes->find($id) === null) {
+            flash('danger', 'Cliente no encontrado.');
+            $this->redirect('/clientes');
+        }
+
         try {
             $this->clientes->delete($id);
             flash('success', 'Cliente eliminado.');

@@ -48,6 +48,7 @@ class AuthController extends Controller
             $this->redirect('/login');
         }
 
+        session_regenerate_id(true);
         $_SESSION['auth'] = [
             'id' => (int) $user['id'],
             'username' => (string) $user['username'],

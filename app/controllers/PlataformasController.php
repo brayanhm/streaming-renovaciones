@@ -70,6 +70,11 @@ class PlataformasController extends Controller
 
     public function update(int $id): void
     {
+        if ($this->plataformas->find($id) === null) {
+            flash('danger', 'Plataforma no encontrada.');
+            $this->redirect('/plataformas');
+        }
+
         $payload = $this->collectPayload();
         if ($payload === null) {
             $this->redirect('/plataformas/editar/' . $id);
@@ -93,6 +98,11 @@ class PlataformasController extends Controller
 
     public function destroy(int $id): void
     {
+        if ($this->plataformas->find($id) === null) {
+            flash('danger', 'Plataforma no encontrada.');
+            $this->redirect('/plataformas');
+        }
+
         try {
             $this->plataformas->delete($id);
             flash('success', 'Plataforma eliminada.');

@@ -98,6 +98,7 @@ $returnQuery = $selectedPlatformId > 0
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar este tipo de suscripción?')">
+                                                <?= csrf_field() ?>
                                                 <?php if ($selectedPlatformId > 0): ?>
                                                     <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
                                                 <?php endif; ?>
@@ -119,6 +120,7 @@ $returnQuery = $selectedPlatformId > 0
             <div class="card-body">
                 <h2 class="h5 mb-3">Nuevo tipo de suscripción</h2>
                 <form method="post" action="<?= e(url('/tipos-suscripcion')) ?>" id="create-plan-form">
+                    <?= csrf_field() ?>
                     <?php if ($selectedPlatformId > 0): ?>
                         <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
                     <?php endif; ?>

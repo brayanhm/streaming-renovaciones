@@ -118,6 +118,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $item['id'])) ?>">Historial</a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar esta suscripción?')">
+                                                <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
                                             </form>
                                         </div>
@@ -151,6 +152,7 @@ if (!function_exists('tipo_suscripcion_label')) {
             <div class="card-body">
                 <h2 class="h5 mb-3">Nueva vigencia de cuenta</h2>
                 <form method="post" action="<?= e(url('/suscripciones')) ?>" id="create-subscription-form">
+                    <?= csrf_field() ?>
                     <div class="mb-3">
                         <label class="form-label" for="cliente_id">Cliente</label>
                         <select class="form-select" id="cliente_id" name="cliente_id" required>

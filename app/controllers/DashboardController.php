@@ -35,6 +35,7 @@ class DashboardController extends Controller
         }
 
         $allRows = $this->suscripciones->all($search, '', $searchField, $contacto, $usuario, $telefono);
+        $countRows = $this->suscripciones->all();
         $activeRows = [];
         $noRenewRows = [];
         foreach ($allRows as $row) {
@@ -84,25 +85,7 @@ class DashboardController extends Controller
             $totals['ganancia'] += ($sale - $cost);
         }
 
-        $expiredCount = count(array_filter(
-            $activeRows,
-            static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
-        )) + count($noRenewRows);
-
-        $counts = [
-            'TODOS' => 0,
-            'CONTACTAR_2D' => 0,
-            'REENVIAR_1D' => 0,
-            'ESPERA' => 0,
-            'ACTIVO' => 0,
-            'VENCIDO' => $expiredCount,
-        ];
-        foreach ($activeRows as $item) {
-            $state = (string) ($item['estado'] ?? '');
-            if ($state === 'RECUP' || $state === 'VENCIDO') { continue; }
-            if (isset($counts[$state])) { $counts[$state]++; }
-            $counts['TODOS']++;
-        }
+        $counts = $this->buildDashboardCounts($countRows);
 
         $perPage = PER_PAGE;
         $totalRows = count($filteredRows);
@@ -191,6 +174,11 @@ class DashboardController extends Controller
 
     public function noRenovo(int $id): void
     {
+        if ($this->suscripciones->find($id) === null) {
+            flash('danger', 'Suscripcion no encontrada.');
+            $this->redirect('/dashboard');
+        }
+
         $ok = $this->suscripciones->markNoRenovo($id);
         if ($ok) {
             flash('warning', 'Suscripción marcada como no renovada.');
@@ -230,6 +218,33 @@ class DashboardController extends Controller
 
             return (int) ($right['id'] ?? 0) <=> (int) ($left['id'] ?? 0);
         });
+    }
+
+    private function buildDashboardCounts(array $rows): array
+    {
+        $counts = [
+            'TODOS' => 0,
+            'CONTACTAR_2D' => 0,
+            'REENVIAR_1D' => 0,
+            'ESPERA' => 0,
+            'ACTIVO' => 0,
+            'VENCIDO' => 0,
+        ];
+
+        foreach ($rows as $item) {
+            $state = (string) ($item['estado'] ?? '');
+            if ((int) ($item['flag_no_renovo'] ?? 0) === 1 || $state === 'RECUP' || $state === 'VENCIDO') {
+                $counts['VENCIDO']++;
+                continue;
+            }
+
+            if (isset($counts[$state])) {
+                $counts[$state]++;
+                $counts['TODOS']++;
+            }
+        }
+
+        return $counts;
     }
 
 

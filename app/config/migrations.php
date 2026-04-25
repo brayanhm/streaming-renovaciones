@@ -73,6 +73,20 @@ function run_schema_migrations(): void
 
     ensure_column(
         $pdo,
+        'movimientos',
+        'plataforma_id',
+        'ALTER TABLE movimientos ADD COLUMN plataforma_id INT NULL AFTER suscripcion_id'
+    );
+
+    ensure_column(
+        $pdo,
+        'movimientos',
+        'plataforma_nombre',
+        'ALTER TABLE movimientos ADD COLUMN plataforma_nombre VARCHAR(100) NULL AFTER plataforma_id'
+    );
+
+    ensure_column(
+        $pdo,
         'plataformas',
         'duraciones_disponibles',
         'ALTER TABLE plataformas ADD COLUMN duraciones_disponibles VARCHAR(100) NULL AFTER tipo_servicio'
@@ -103,6 +117,16 @@ function run_schema_migrations(): void
          SET s.costo_base = m.costo
          WHERE s.costo_base IS NULL'
     );
+    $pdo->exec(
+        'UPDATE movimientos mv
+         INNER JOIN suscripciones s ON s.id = mv.suscripcion_id
+         INNER JOIN plataformas p ON p.id = s.plataforma_id
+         SET mv.plataforma_id = COALESCE(mv.plataforma_id, s.plataforma_id),
+             mv.plataforma_nombre = COALESCE(mv.plataforma_nombre, p.nombre)
+         WHERE mv.suscripcion_id IS NOT NULL
+           AND (mv.plataforma_id IS NULL OR mv.plataforma_nombre IS NULL)'
+    );
+    ensure_movimientos_subscription_fk_set_null($pdo);
     $pdo->exec("UPDATE plataformas SET duraciones_disponibles = NULL WHERE TRIM(COALESCE(duraciones_disponibles, '')) = ''");
     $pdo->exec(
         "UPDATE plataformas
@@ -171,5 +195,50 @@ function ensure_table_utf8mb4(\PDO $pdo, string $table): void
             DB_CHARSET,
             DB_COLLATION
         )
+    );
+}
+
+function ensure_movimientos_subscription_fk_set_null(\PDO $pdo): void
+{
+    $query = $pdo->prepare(
+        'SELECT CONSTRAINT_NAME, DELETE_RULE
+         FROM information_schema.REFERENTIAL_CONSTRAINTS
+         WHERE CONSTRAINT_SCHEMA = :schema
+           AND TABLE_NAME = :table
+           AND REFERENCED_TABLE_NAME = :referenced
+         LIMIT 1'
+    );
+    $query->execute([
+        'schema' => DB_NAME,
+        'table' => 'movimientos',
+        'referenced' => 'suscripciones',
+    ]);
+
+    $constraint = $query->fetch();
+    $deleteRule = strtoupper((string) ($constraint['DELETE_RULE'] ?? ''));
+    if ($deleteRule === 'SET NULL') {
+        return;
+    }
+
+    $constraintName = (string) ($constraint['CONSTRAINT_NAME'] ?? '');
+    if ($constraintName !== '') {
+        $safeConstraint = str_replace('`', '``', $constraintName);
+        $pdo->exec('ALTER TABLE movimientos DROP FOREIGN KEY `' . $safeConstraint . '`');
+    }
+
+    $pdo->exec('ALTER TABLE movimientos MODIFY suscripcion_id INT NULL');
+    $pdo->exec(
+        'UPDATE movimientos mv
+         LEFT JOIN suscripciones s ON s.id = mv.suscripcion_id
+         SET mv.suscripcion_id = NULL
+         WHERE mv.suscripcion_id IS NOT NULL
+           AND s.id IS NULL'
+    );
+
+    $pdo->exec(
+        'ALTER TABLE movimientos
+         ADD CONSTRAINT movimientos_suscripciones_set_null_fk
+         FOREIGN KEY (suscripcion_id) REFERENCES suscripciones (id)
+         ON DELETE SET NULL ON UPDATE CASCADE'
     );
 }

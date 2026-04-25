@@ -245,6 +245,7 @@ if (!function_exists('renewal_options')) {
                                 <details class="mt-2">
                                     <summary class="small text-primary" role="button">Editar finalizacion</summary>
                                     <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
+                                        <?= csrf_field() ?>
                                         <input
                                             type="date"
                                             class="form-control form-control-sm mb-2"
@@ -292,6 +293,7 @@ if (!function_exists('renewal_options')) {
                                 <div class="d-flex flex-wrap gap-1">
                                     <?php foreach ($renewOptions as $months): ?>
                                         <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="meses" value="<?= e((string) $months) ?>">
                                             <button type="submit" class="btn btn-primary btn-sm">+<?= e((string) $months) ?>M</button>
                                         </form>
@@ -300,6 +302,7 @@ if (!function_exists('renewal_options')) {
                             </td>
                             <td>
                                 <form method="post" action="<?= e(url('/suscripciones/no-renovo/' . (int) $row['id'])) ?>">
+                                    <?= csrf_field() ?>
                                     <button type="submit" class="btn btn-outline-danger btn-sm">Marcar</button>
                                 </form>
                             </td>

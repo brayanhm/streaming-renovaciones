@@ -7,12 +7,24 @@ class Movimiento extends BaseModel
 {
     public function createRenovacion(int $suscripcionId, int $meses, ?float $monto): int
     {
+        $subscription = $this->db->prepare(
+            'SELECT s.plataforma_id, p.nombre AS plataforma_nombre
+             FROM suscripciones s
+             INNER JOIN plataformas p ON p.id = s.plataforma_id
+             WHERE s.id = :id
+             LIMIT 1'
+        );
+        $subscription->execute(['id' => $suscripcionId]);
+        $row = $subscription->fetch() ?: [];
+
         $stmt = $this->db->prepare(
-            'INSERT INTO movimientos (suscripcion_id, tipo, meses, monto)
-             VALUES (:suscripcion_id, :tipo, :meses, :monto)'
+            'INSERT INTO movimientos (suscripcion_id, plataforma_id, plataforma_nombre, tipo, meses, monto)
+             VALUES (:suscripcion_id, :plataforma_id, :plataforma_nombre, :tipo, :meses, :monto)'
         );
         $stmt->execute([
             'suscripcion_id' => $suscripcionId,
+            'plataforma_id' => isset($row['plataforma_id']) ? (int) $row['plataforma_id'] : null,
+            'plataforma_nombre' => isset($row['plataforma_nombre']) ? (string) $row['plataforma_nombre'] : null,
             'tipo' => 'RENOVACION',
             'meses' => $meses,
             'monto' => $monto,
@@ -58,15 +70,15 @@ class Movimiento extends BaseModel
     {
         $stmt = $this->db->query(
             'SELECT
-                p.nombre AS plataforma,
+                COALESCE(p.nombre, mv.plataforma_nombre, "Sin plataforma") AS plataforma,
                 COUNT(mv.id) AS renovaciones,
                 SUM(mv.monto) AS total_monto,
                 SUM(mv.costo) AS total_costo,
                 SUM(mv.utilidad) AS total_utilidad
              FROM movimientos mv
-             INNER JOIN suscripciones s ON s.id = mv.suscripcion_id
-             INNER JOIN plataformas p ON p.id = s.plataforma_id
-             GROUP BY p.id, p.nombre
+             LEFT JOIN suscripciones s ON s.id = mv.suscripcion_id
+             LEFT JOIN plataformas p ON p.id = COALESCE(mv.plataforma_id, s.plataforma_id)
+             GROUP BY COALESCE(mv.plataforma_id, s.plataforma_id, 0), COALESCE(p.nombre, mv.plataforma_nombre, "Sin plataforma")
              ORDER BY total_utilidad DESC'
         );
 

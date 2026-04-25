@@ -12,6 +12,7 @@ declare(strict_types=1);
             <div class="card-body">
                 <h2 class="h5 mb-4">Cambiar nombre de usuario</h2>
                 <form method="post" action="<?= e(url('/perfil')) ?>">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="_action" value="change_username">
                     <div class="mb-3">
                         <label class="form-label" for="username">Nuevo usuario</label>
@@ -37,6 +38,7 @@ declare(strict_types=1);
             <div class="card-body">
                 <h2 class="h5 mb-4">Cambiar contraseña</h2>
                 <form method="post" action="<?= e(url('/perfil')) ?>">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="_action" value="change_password">
                     <div class="mb-3">
                         <label class="form-label" for="current_password">Contraseña actual</label>

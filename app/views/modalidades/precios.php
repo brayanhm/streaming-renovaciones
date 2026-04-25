@@ -46,6 +46,7 @@ use App\Models\Modalidad;
             </div>
 
             <form method="post" action="<?= e(url('/tipos-suscripcion/precios')) ?>" id="bulk-pricing-form">
+                <?= csrf_field() ?>
                 <input type="hidden" name="plataforma_id" value="<?= e((string) (int) ($selectedPlatformId ?? 0)) ?>">
                 <div class="table-responsive">
                     <table class="table table-striped align-middle">

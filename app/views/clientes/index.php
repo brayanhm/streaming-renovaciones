@@ -67,6 +67,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>">Asignar vigencia</a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>">Editar</a>
                                             <form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar este cliente?')">
+                                                <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
                                             </form>
                                         </div>
@@ -100,6 +101,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
             <div class="card-body">
                 <h2 class="h5 mb-3">Nuevo cliente</h2>
                 <form method="post" action="<?= e(url('/clientes')) ?>" id="create-client-form">
+                    <?= csrf_field() ?>
                     <?php if (!$hasSubscriptionCatalog): ?>
                         <div class="alert alert-warning">
                             Antes de crear clientes, registra al menos una plataforma y un tipo de suscripción.
@@ -189,6 +191,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
             <div class="card-body">
                 <h2 class="h5 mb-3">Agregar cliente antiguo</h2>
                 <form method="post" action="<?= e(url('/clientes/antiguo')) ?>">
+                    <?= csrf_field() ?>
                     <?php if (!$hasSubscriptionCatalog): ?>
                         <div class="alert alert-warning">
                             Debes tener plataformas y planes creados para registrar clientes antiguos.
@@ -230,6 +233,17 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             <?php endforeach; ?>
                         </select>
                         <small class="text-secondary">Se usara automaticamente el primer plan disponible de la plataforma.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="usuario_proveedor_antiguo">Usuario o correo de renovacion</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="usuario_proveedor_antiguo"
+                            name="usuario_proveedor_antiguo"
+                            value="<?= e(old('usuario_proveedor_antiguo')) ?>"
+                        >
+                        <small class="text-secondary">Obligatorio si la plataforma antigua es renovable.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="fecha_finalizacion">Fecha de finalizacion</label>

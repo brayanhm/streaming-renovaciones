@@ -271,6 +271,47 @@ function shift_months_clamped(DateTimeImmutable $baseDate, int $months): DateTim
     return $targetFirst->setDate($targetYear, $targetMonth, $targetDay);
 }
 
+function parse_ymd_date(string $value): ?DateTimeImmutable
+{
+    $value = trim($value);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return null;
+    }
+
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    $errors = DateTimeImmutable::getLastErrors();
+    if (
+        $date === false ||
+        (is_array($errors) && ((int) ($errors['warning_count'] ?? 0) > 0 || (int) ($errors['error_count'] ?? 0) > 0))
+    ) {
+        return null;
+    }
+
+    return $date->format('Y-m-d') === $value ? $date : null;
+}
+
+function csrf_token(): string
+{
+    if (!isset($_SESSION['_csrf_token']) || !is_string($_SESSION['_csrf_token']) || $_SESSION['_csrf_token'] === '') {
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['_csrf_token'];
+}
+
+function csrf_field(): string
+{
+    return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">';
+}
+
+function verify_csrf_token(?string $token): bool
+{
+    return is_string($token)
+        && isset($_SESSION['_csrf_token'])
+        && is_string($_SESSION['_csrf_token'])
+        && hash_equals($_SESSION['_csrf_token'], $token);
+}
+
 function flash(string $type, string $message): void
 {
     if (!isset($_SESSION['_flash'])) {

@@ -9,6 +9,7 @@ declare(strict_types=1);
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="post" action="<?= e(url('/clientes/actualizar/' . (int) $item['id'])) ?>">
+            <?= csrf_field() ?>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="contacto" class="form-label">Contacto <span class="text-secondary fw-normal">(opcional)</span></label>

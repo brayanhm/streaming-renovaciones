@@ -124,6 +124,7 @@ if (!function_exists('status_badge_show')) {
                                 <details class="mt-2">
                                     <summary class="small text-primary" role="button">Modificar finalizacion</summary>
                                     <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $sus['id'])) ?>" class="mt-2">
+                                        <?= csrf_field() ?>
                                         <label class="form-label form-label-sm mb-1" for="fecha_vencimiento_<?= (int) $sus['id'] ?>">Nueva fecha</label>
                                         <input
                                             type="date"
