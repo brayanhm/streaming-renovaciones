@@ -8,6 +8,41 @@ $mesesNombres = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
         <h1 class="h3 mb-1">Reportes financieros</h1>
         <p class="text-secondary mb-0">Resumen de renovaciones, ingresos y ganancias.</p>
     </div>
+    <a href="<?= e(url('/reportes/exportar')) ?>" class="btn btn-outline-primary">Exportar CSV</a>
+</div>
+
+<?php
+$cartera = $cartera ?? [];
+$totalCartera = (int) ($cartera['total'] ?? 0);
+$noRenov = (int) ($cartera['no_renovaron'] ?? 0);
+$churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
+?>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-1">Activos</h2>
+            <div class="h4 mb-0 text-success"><?= e((string) (int) ($cartera['activos'] ?? 0)) ?></div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-1">Vencen en 7 días</h2>
+            <div class="h4 mb-0 text-warning"><?= e((string) (int) ($cartera['vencen_7'] ?? 0)) ?></div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-1">Vencen en 30 días</h2>
+            <div class="h4 mb-0"><?= e((string) (int) ($cartera['vencen_30'] ?? 0)) ?></div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-1">Tasa de no-renovación</h2>
+            <div class="h4 mb-0 <?= $churn >= 20 ? 'text-danger' : 'text-secondary' ?>"><?= e((string) $churn) ?>%</div>
+            <small class="text-secondary"><?= e((string) $noRenov) ?> de <?= e((string) $totalCartera) ?></small>
+        </div></div>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">

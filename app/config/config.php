@@ -109,7 +109,9 @@ define('APP_ENV', app_env('APP_ENV', 'development'));
 define('APP_DEBUG', app_env_bool('APP_DEBUG', APP_ENV !== 'production'));
 define('APP_TIMEZONE', app_env('APP_TIMEZONE', 'America/La_Paz'));
 define('RECUP_DAYS', app_env_int('RECUP_DAYS', 3));
+define('CONTACT_DAYS', app_env_int('CONTACT_DAYS', 3));
 define('PER_PAGE', app_env_int('PER_PAGE', 30));
+define('APP_KEY', app_env('APP_KEY', ''));
 define('APP_CURRENCY_CODE', app_env('APP_CURRENCY_CODE', 'BOB'));
 define('APP_CURRENCY_SYMBOL', app_env('APP_CURRENCY_SYMBOL', 'Bs'));
 define('APP_MONEY_DECIMALS', app_env_int('APP_MONEY_DECIMALS', 0));
@@ -154,7 +156,106 @@ if (APP_DEBUG) {
 }
 ini_set('default_charset', 'UTF-8');
 
+/**
+ * Registra un mensaje en storage/logs/app.log.
+ */
+function app_log(string $level, string $message): void
+{
+    $dir = STORAGE_PATH . '/logs';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    @file_put_contents(
+        $dir . '/app.log',
+        sprintf('[%s] %s: %s%s', date('Y-m-d H:i:s'), strtoupper($level), $message, PHP_EOL),
+        FILE_APPEND
+    );
+}
+
+// Manejador global: registra cualquier excepcion no capturada y muestra una
+// pagina generica en produccion (o el detalle en modo debug).
+set_exception_handler(static function (\Throwable $e): void {
+    app_log('error', $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+    }
+    if (APP_DEBUG) {
+        echo '<pre style="padding:1rem;font-family:monospace;">'
+            . htmlspecialchars((string) $e, ENT_QUOTES, 'UTF-8') . '</pre>';
+    } else {
+        echo 'Ocurrio un error interno. Intenta nuevamente mas tarde.';
+    }
+});
+
+set_error_handler(static function (int $severity, string $message, string $file = '', int $line = 0): bool {
+    if ((error_reporting() & $severity) === 0) {
+        return false; // respeta @ y el nivel configurado
+    }
+    app_log('warning', $message . ' @ ' . $file . ':' . $line);
+    return false; // deja seguir el flujo normal de PHP
+});
+
+if (!function_exists('encrypt_secret')) {
+    /**
+     * Cifra un secreto (p. ej. la contrasena de una cuenta) con AES-256-CBC.
+     * Devuelve base64(iv|ciphertext) o '' si el valor es vacio.
+     */
+    function encrypt_secret(string $plain): string
+    {
+        $plain = trim($plain);
+        if ($plain === '' || APP_KEY === '' || !function_exists('openssl_encrypt')) {
+            return $plain === '' ? '' : $plain; // sin clave: se guarda tal cual (mejor que perder el dato)
+        }
+        $key = hash('sha256', APP_KEY, true);
+        $iv = random_bytes(16);
+        $cipher = openssl_encrypt($plain, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        if ($cipher === false) {
+            return $plain;
+        }
+        return 'enc:' . base64_encode($iv . $cipher);
+    }
+}
+
+if (!function_exists('decrypt_secret')) {
+    function decrypt_secret(?string $stored): string
+    {
+        $stored = (string) $stored;
+        if ($stored === '') {
+            return '';
+        }
+        if (!str_starts_with($stored, 'enc:')) {
+            return $stored; // valor en claro (sin clave al momento de guardar)
+        }
+        if (APP_KEY === '' || !function_exists('openssl_decrypt')) {
+            return '';
+        }
+        $raw = base64_decode(substr($stored, 4), true);
+        if ($raw === false || strlen($raw) <= 16) {
+            return '';
+        }
+        $key = hash('sha256', APP_KEY, true);
+        $iv = substr($raw, 0, 16);
+        $cipher = substr($raw, 16);
+        $plain = openssl_decrypt($cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        return $plain === false ? '' : $plain;
+    }
+}
+
 if (session_status() === PHP_SESSION_NONE) {
+    // Endurecer la cookie de sesion: HttpOnly (sin acceso desde JS), SameSite=Lax
+    // (mitiga CSRF de terceros) y Secure automatico cuando la conexion es HTTPS.
+    $sessionSecure = (
+        (isset($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off' && $_SERVER['HTTPS'] !== '')
+        || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'
+    );
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => $sessionSecure,
+    ]);
     session_start();
 }
 
@@ -363,6 +464,137 @@ function auth_user(): ?array
 function is_logged_in(): bool
 {
     return auth_user() !== null;
+}
+
+function client_ip(): string
+{
+    $ip = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '');
+    if (str_contains($ip, ',')) {
+        $ip = trim(explode(',', $ip)[0]);
+    }
+
+    return substr($ip, 0, 45);
+}
+
+/**
+ * Registra una accion sensible en la tabla de auditoria. Nunca interrumpe el flujo.
+ */
+function audit(string $accion, string $detalle = ''): void
+{
+    try {
+        $stmt = \db()->prepare(
+            'INSERT INTO auditoria (usuario, accion, detalle, ip) VALUES (:u, :a, :d, :ip)'
+        );
+        $stmt->execute([
+            'u' => (string) ($_SESSION['auth']['username'] ?? ''),
+            'a' => mb_substr($accion, 0, 60),
+            'd' => mb_substr($detalle, 0, 255),
+            'ip' => client_ip(),
+        ]);
+    } catch (\Throwable $exception) {
+        app_log('warning', 'audit fallo: ' . $exception->getMessage());
+    }
+}
+
+function login_ip_locked_until(): int
+{
+    try {
+        $stmt = \db()->prepare('SELECT bloqueado_hasta FROM login_intentos WHERE ip = :ip LIMIT 1');
+        $stmt->execute(['ip' => client_ip()]);
+        $row = $stmt->fetch();
+        if (!$row || empty($row['bloqueado_hasta'])) {
+            return 0;
+        }
+
+        return (int) strtotime((string) $row['bloqueado_hasta']);
+    } catch (\Throwable $exception) {
+        return 0;
+    }
+}
+
+function login_ip_register_fail(int $maxAttempts = 5, int $lockSeconds = 300): void
+{
+    try {
+        $ip = client_ip();
+        $pdo = \db();
+        $stmt = $pdo->prepare('SELECT intentos FROM login_intentos WHERE ip = :ip LIMIT 1');
+        $stmt->execute(['ip' => $ip]);
+        $intentos = ((int) ($stmt->fetch()['intentos'] ?? 0)) + 1;
+
+        if ($intentos >= $maxAttempts) {
+            $lockUntil = date('Y-m-d H:i:s', time() + $lockSeconds);
+            $pdo->prepare(
+                'INSERT INTO login_intentos (ip, intentos, bloqueado_hasta) VALUES (:ip, 0, :lock)
+                 ON DUPLICATE KEY UPDATE intentos = 0, bloqueado_hasta = :lock2'
+            )->execute(['ip' => $ip, 'lock' => $lockUntil, 'lock2' => $lockUntil]);
+        } else {
+            $pdo->prepare(
+                'INSERT INTO login_intentos (ip, intentos, bloqueado_hasta) VALUES (:ip, :n, NULL)
+                 ON DUPLICATE KEY UPDATE intentos = :n2, bloqueado_hasta = NULL'
+            )->execute(['ip' => $ip, 'n' => $intentos, 'n2' => $intentos]);
+        }
+    } catch (\Throwable $exception) {
+        app_log('warning', 'login throttle fallo: ' . $exception->getMessage());
+    }
+}
+
+function login_ip_clear(): void
+{
+    try {
+        \db()->prepare('DELETE FROM login_intentos WHERE ip = :ip')->execute(['ip' => client_ip()]);
+    } catch (\Throwable $exception) {
+        // best-effort
+    }
+}
+
+/**
+ * Genera un respaldo .sql de la base con mysqldump. Best-effort: si el binario no
+ * esta disponible o exec esta deshabilitado (hosting), registra y devuelve null
+ * sin interrumpir (la transaccion ya garantiza que no queden datos a medias).
+ */
+function backup_database(string $tag = 'manual'): ?string
+{
+    $dir = STORAGE_PATH . '/backups';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    if (!function_exists('exec')) {
+        app_log('warning', 'backup: exec() deshabilitado');
+        return null;
+    }
+
+    $bin = app_env('MYSQLDUMP_PATH', 'mysqldump');
+    $safeTag = preg_replace('/[^a-z0-9_]+/i', '_', $tag) ?? 'manual';
+    $file = $dir . '/pre_' . $safeTag . '_' . date('Ymd_His') . '.sql';
+
+    $cmd = escapeshellarg($bin)
+        . ' --host=' . escapeshellarg(DB_HOST)
+        . ' --port=' . escapeshellarg((string) DB_PORT)
+        . ' --user=' . escapeshellarg(DB_USER)
+        . ' ' . escapeshellarg(DB_NAME)
+        . ' --result-file=' . escapeshellarg($file);
+
+    // Password via MYSQL_PWD para no exponerlo en la linea de comandos.
+    if (DB_PASS !== '') {
+        putenv('MYSQL_PWD=' . DB_PASS);
+    }
+    $output = [];
+    $code = 0;
+    @exec($cmd . ' 2>&1', $output, $code);
+    if (DB_PASS !== '') {
+        putenv('MYSQL_PWD');
+    }
+
+    if ($code === 0 && is_file($file) && filesize($file) > 0) {
+        return $file;
+    }
+
+    app_log('warning', 'backup fallo (code ' . $code . '): ' . implode(' | ', array_slice($output, 0, 3)));
+    if (is_file($file)) {
+        @unlink($file);
+    }
+
+    return null;
 }
 
 function normalize_phone(string $value): string

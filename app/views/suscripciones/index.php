@@ -267,17 +267,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
                     <small class="text-secondary d-block mt-1">Define manualmente la vigencia de la cuenta para este cliente.</small>
 
-                    <div class="mt-3 mb-3">
-                        <label class="form-label" for="estado">Estado inicial de la suscripción</label>
-                        <select class="form-select" id="estado" name="estado" required>
-                            <?php $oldEstado = old('estado', 'ACTIVO'); ?>
-                            <?php foreach ($estados as $status): ?>
-                                <option value="<?= e($status) ?>" <?= $oldEstado === $status ? 'selected' : '' ?>><?= e($status) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3 js-usuario-wrap">
+                    <div class="mt-3 mb-3 js-usuario-wrap">
                         <label class="form-label js-usuario-label" for="usuario_proveedor">Dato de la cuenta para renovar</label>
                         <input
                             type="text"
@@ -288,6 +278,12 @@ if (!function_exists('tipo_suscripcion_label')) {
                             placeholder="Ej: usuario123"
                         >
                         <small class="text-secondary js-usuario-help">Se pedirá según la configuración de la plataforma.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="password_cuenta">Contraseña de la cuenta (opcional)</label>
+                        <input type="text" class="form-control" id="password_cuenta" name="password_cuenta" value="<?= e(old('password_cuenta')) ?>" placeholder="Contraseña del proveedor" autocomplete="off">
+                        <small class="text-secondary">Se guarda cifrada. Sirve para tener a mano el acceso de la cuenta.</small>
                     </div>
 
                     <div class="form-check mb-3">

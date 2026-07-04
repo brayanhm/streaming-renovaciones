@@ -110,15 +110,7 @@ use App\Models\Plataforma;
                     <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" value="<?= e((string) $item['fecha_vencimiento']) ?>" required>
                 </div>
 
-                <div class="col-md-4">
-                    <label class="form-label" for="estado">Estado</label>
-                    <select class="form-select" id="estado" name="estado" required>
-                        <?php foreach ($estados as $status): ?>
-                            <option value="<?= e($status) ?>" <?= (string) $item['estado'] === $status ? 'selected' : '' ?>><?= e($status) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-4 js-usuario-wrap">
+                <div class="col-md-6 js-usuario-wrap">
                     <label class="form-label js-usuario-label" for="usuario_proveedor">Dato de la cuenta para renovar</label>
                     <input
                         type="text"
@@ -128,6 +120,19 @@ use App\Models\Plataforma;
                         value="<?= e((string) ($item['usuario_proveedor'] ?? '')) ?>"
                     >
                     <small class="text-secondary js-usuario-help">Se pedirá según la configuración de la plataforma.</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="password_cuenta">Contraseña de la cuenta</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="password_cuenta"
+                        name="password_cuenta"
+                        value="<?= e(decrypt_secret((string) ($item['password_cuenta'] ?? ''))) ?>"
+                        placeholder="Contraseña del proveedor"
+                        autocomplete="off"
+                    >
+                    <small class="text-secondary">Se guarda cifrada.</small>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
                     <div class="form-check">

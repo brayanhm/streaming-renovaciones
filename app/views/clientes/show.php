@@ -93,8 +93,12 @@ if (!function_exists('status_badge_show')) {
                                 <?php if (!empty($sus['usuario_proveedor'])): ?>
                                     <?php $renovLabel = Plataforma::datoRenovacionLabel((string) ($sus['plataforma_dato_renovacion'] ?? 'USUARIO')); ?>
                                     <small><?= e($renovLabel) ?>: <?= e((string) $sus['usuario_proveedor']) ?></small>
-                                <?php else: ?>
+                                <?php elseif (empty($sus['password_cuenta'])): ?>
                                     <small class="text-secondary">—</small>
+                                <?php endif; ?>
+                                <?php $pwdCuenta = decrypt_secret((string) ($sus['password_cuenta'] ?? '')); ?>
+                                <?php if ($pwdCuenta !== ''): ?>
+                                    <div><small class="text-secondary">Clave: <?= e($pwdCuenta) ?></small></div>
                                 <?php endif; ?>
                             </td>
                             <td>

@@ -111,16 +111,8 @@ class TiposSuscripcionController extends Controller
             }
         }
 
-        if ($selectedPlatformId > 0 && $selectedPlatform !== null) {
-            $duraciones = Plataforma::parseDuracionesDisponibles((string) ($selectedPlatform['duraciones_disponibles'] ?? ''));
-            if ($duraciones !== []) {
-                $generated = $this->tiposSuscripcion->ensurePlatformDurations($selectedPlatformId, $duraciones);
-                if ($generated > 0) {
-                    flash('info', 'Se generaron ' . $generated . ' duraciones faltantes automaticamente.');
-                }
-            }
-        }
-
+        // No se generan planes al ver la pagina (un GET no debe mutar datos):
+        // la generacion de duraciones faltantes ocurre al crear/guardar la plataforma.
         $rows = $selectedPlatformId > 0
             ? $this->tiposSuscripcion->allByPlataforma($selectedPlatformId)
             : [];
@@ -233,9 +225,13 @@ class TiposSuscripcionController extends Controller
 
         try {
             $this->tiposSuscripcion->delete($id);
+            audit('plan.eliminar', 'ID ' . $id);
             flash('success', 'Tipo de suscripcion eliminado.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo eliminar el tipo de suscripcion: ' . $exception->getMessage());
+            $isFk = str_contains($exception->getMessage(), '1451') || stripos($exception->getMessage(), 'foreign key') !== false;
+            flash('danger', $isFk
+                ? 'No se puede eliminar este plan porque tiene suscripciones asociadas. Reasígnalas o elimínalas primero.'
+                : 'No se pudo eliminar el tipo de suscripcion: ' . $exception->getMessage());
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));

@@ -59,6 +59,8 @@ class ClientesController extends Controller
             $this->redirect('/clientes');
         }
 
+        // Recalcular estados para que el badge no quede desfasado respecto a los dias mostrados.
+        $this->suscripciones->recalculateStates(RECUP_DAYS);
         $suscripciones = $this->suscripciones->allByCliente($id);
 
         $this->render('clientes/show', [
@@ -71,12 +73,24 @@ class ClientesController extends Controller
     public function completar(): void
     {
         $search = trim((string) ($_GET['q'] ?? ''));
-        $rows = $this->clientes->missingContactData($search);
+        $plataformaId = (int) ($_GET['plataforma_id'] ?? 0);
+        if ($plataformaId > 0 && $this->plataformas->find($plataformaId) === null) {
+            $plataformaId = 0;
+        }
+        $tipoCuenta = strtoupper(trim((string) ($_GET['tipo_cuenta'] ?? '')));
+        if (!in_array($tipoCuenta, Modalidad::TIPOS_CUENTA, true)) {
+            $tipoCuenta = '';
+        }
+
+        $rows = $this->clientes->missingContactData($search, $plataformaId, $tipoCuenta);
 
         $this->render('clientes/completar', [
             'pageTitle' => 'Completar contactos',
             'rows' => $rows,
             'search' => $search,
+            'plataformas' => $this->plataformas->all(),
+            'selectedPlataformaId' => $plataformaId,
+            'selectedTipoCuenta' => $tipoCuenta,
         ]);
     }
 
@@ -355,10 +369,11 @@ class ClientesController extends Controller
 
     public function updateMissingContact(int $id): void
     {
+        // goBack conserva los filtros activos (plataforma, tipo de cuenta, busqueda).
         $item = $this->clientes->find($id);
         if ($item === null) {
             flash('danger', 'Cliente no encontrado.');
-            $this->redirect('/clientes/completar');
+            $this->goBack('/clientes/completar');
         }
 
         $contacto = trim((string) ($_POST['contacto'] ?? ''));
@@ -366,7 +381,7 @@ class ClientesController extends Controller
 
         if ($numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
             flash('danger', 'Ingresa un número celular válido de Bolivia (8 dígitos, inicia con 6 o 7).');
-            $this->redirect('/clientes/completar');
+            $this->goBack('/clientes/completar');
         }
 
         $ok = $this->clientes->update($id, [
@@ -377,11 +392,11 @@ class ClientesController extends Controller
 
         if (!$ok) {
             flash('danger', 'No se pudo actualizar el registro.');
-            $this->redirect('/clientes/completar');
+            $this->goBack('/clientes/completar');
         }
 
         flash('success', 'Contacto y número actualizados.');
-        $this->redirect('/clientes/completar');
+        $this->goBack('/clientes/completar');
     }
 
     public function destroy(int $id): void
@@ -393,6 +408,7 @@ class ClientesController extends Controller
 
         try {
             $this->clientes->delete($id);
+            audit('cliente.eliminar', 'ID ' . $id);
             flash('success', 'Cliente eliminado.');
         } catch (\Throwable $exception) {
             flash('danger', 'No se pudo eliminar el cliente: ' . $exception->getMessage());

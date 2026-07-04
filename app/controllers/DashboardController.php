@@ -21,11 +21,6 @@ class DashboardController extends Controller
         $this->suscripciones->recalculateStates(RECUP_DAYS);
         $dashboardStates = ['TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
 
-        $search = trim((string) ($_GET['q'] ?? ''));
-        $searchField = strtoupper(trim((string) ($_GET['filtro'] ?? 'TODOS')));
-        if (!in_array($searchField, Suscripcion::FILTROS_BUSQUEDA, true)) {
-            $searchField = 'TODOS';
-        }
         $contacto = trim((string) ($_GET['contacto'] ?? ''));
         $usuario = trim((string) ($_GET['usuario'] ?? ''));
         $telefono = trim((string) ($_GET['telefono'] ?? ''));
@@ -34,8 +29,7 @@ class DashboardController extends Controller
             $selectedStatus = 'TODOS';
         }
 
-        $allRows = $this->suscripciones->all($search, '', $searchField, $contacto, $usuario, $telefono);
-        $countRows = $this->suscripciones->all();
+        $allRows = $this->suscripciones->all('', '', 'TODOS', $contacto, $usuario, $telefono);
         $activeRows = [];
         $noRenewRows = [];
         foreach ($allRows as $row) {
@@ -78,6 +72,11 @@ class DashboardController extends Controller
 
         $totals = ['costo' => 0.0, 'venta' => 0.0, 'ganancia' => 0.0];
         foreach ($filteredRows as $item) {
+            // Las marcadas "no renovo" se muestran en la pestaña VENCIDO pero no
+            // deben inflar la ganancia estimada: ya se sabe que no renovaran.
+            if ((int) ($item['flag_no_renovo'] ?? 0) === 1) {
+                continue;
+            }
             $cost = (float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0);
             $sale = (float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0);
             $totals['costo'] += $cost;
@@ -85,7 +84,7 @@ class DashboardController extends Controller
             $totals['ganancia'] += ($sale - $cost);
         }
 
-        $counts = $this->buildDashboardCounts($countRows);
+        $counts = $this->buildDashboardCounts($allRows);
 
         $perPage = PER_PAGE;
         $totalRows = count($filteredRows);
@@ -97,8 +96,6 @@ class DashboardController extends Controller
             'pageTitle' => 'Ghost Panel',
             'rows' => $rows,
             'counts' => $counts,
-            'search' => $search,
-            'searchField' => $searchField,
             'contacto' => $contacto,
             'usuario' => $usuario,
             'telefono' => $telefono,
@@ -112,17 +109,39 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function marcarContactados(): void
+    public function contactar(): void
     {
-        $ids = $_POST['ids'] ?? [];
-        if (!is_array($ids) || empty($ids)) {
-            flash('warning', 'No se seleccionaron suscripciones.');
-            $this->redirect('/dashboard');
+        $this->suscripciones->recalculateStates(RECUP_DAYS);
+
+        $pendingStates = ['REENVIAR_1D', 'CONTACTAR_2D', 'RECUP'];
+        $order = ['REENVIAR_1D' => 0, 'CONTACTAR_2D' => 1, 'RECUP' => 2];
+
+        $rows = [];
+        foreach ($this->suscripciones->all() as $row) {
+            if ((int) ($row['flag_no_renovo'] ?? 0) === 1) {
+                continue;
+            }
+            $estado = (string) ($row['estado'] ?? '');
+            if (!in_array($estado, $pendingStates, true)) {
+                continue;
+            }
+            $row['contact_type_sugerido'] = $this->suscripciones->inferContactType($row);
+            $rows[] = $row;
         }
 
-        $count = $this->suscripciones->bulkMarkContacted($ids);
-        flash('success', $count . ' suscripción(es) marcadas como contactadas.');
-        $this->redirect('/dashboard');
+        usort($rows, static function (array $a, array $b) use ($order): int {
+            $oa = $order[(string) $a['estado']] ?? 9;
+            $ob = $order[(string) $b['estado']] ?? 9;
+            if ($oa !== $ob) {
+                return $oa <=> $ob;
+            }
+            return strcmp((string) ($a['fecha_vencimiento'] ?? ''), (string) ($b['fecha_vencimiento'] ?? ''));
+        });
+
+        $this->render('dashboard/contactar', [
+            'pageTitle' => 'Contactar hoy',
+            'rows' => $rows,
+        ]);
     }
 
     public function whatsapp(int $id): void
@@ -133,7 +152,7 @@ class DashboardController extends Controller
             $this->redirect('/dashboard');
         }
 
-        $paramType = strtoupper(trim((string) ($_GET['tipo'] ?? '')));
+        $paramType = strtoupper(trim((string) ($_POST['tipo'] ?? '')));
         $contactType = in_array($paramType, Suscripcion::CONTACTOS, true)
             ? $paramType
             : $this->inferContactTypeFromDueDate((string) ($subscription['fecha_vencimiento'] ?? ''));
@@ -191,6 +210,10 @@ class DashboardController extends Controller
 
     private function inferContactTypeFromDueDate(string $dueDate): string
     {
+        if (trim($dueDate) === '') {
+            return 'MENOS_2';
+        }
+
         $today = new DateTimeImmutable('today');
         $due = new DateTimeImmutable($dueDate);
         $days = (int) $today->diff($due)->format('%r%a');

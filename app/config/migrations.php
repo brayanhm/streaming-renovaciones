@@ -108,6 +108,54 @@ function run_schema_migrations(): void
         'ALTER TABLE suscripciones ADD COLUMN notas TEXT NULL AFTER usuario_proveedor'
     );
 
+    ensure_column(
+        $pdo,
+        'usuarios',
+        'activo',
+        'ALTER TABLE usuarios ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER rol'
+    );
+
+    ensure_column(
+        $pdo,
+        'suscripciones',
+        'password_cuenta',
+        'ALTER TABLE suscripciones ADD COLUMN password_cuenta VARCHAR(255) NULL AFTER usuario_proveedor'
+    );
+
+    ensure_table(
+        $pdo,
+        'auditoria',
+        'CREATE TABLE auditoria (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario VARCHAR(60) NULL,
+            accion VARCHAR(60) NOT NULL,
+            detalle VARCHAR(255) NULL,
+            ip VARCHAR(45) NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_auditoria_fecha (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=' . DB_CHARSET . ' COLLATE=' . DB_COLLATION
+    );
+
+    ensure_table(
+        $pdo,
+        'login_intentos',
+        'CREATE TABLE login_intentos (
+            ip VARCHAR(45) NOT NULL PRIMARY KEY,
+            intentos INT NOT NULL DEFAULT 0,
+            bloqueado_hasta DATETIME NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=' . DB_CHARSET . ' COLLATE=' . DB_COLLATION
+    );
+
+    // Llaves foraneas. Borrar una plataforma o un plan NO debe arrasar las
+    // suscripciones que dependen de ellos: se fuerza ON DELETE RESTRICT (el
+    // esquema original tenia CASCADE, un peligro de perdida masiva de datos).
+    // La relacion cliente->suscripcion se deja como esta (borrar un cliente si
+    // elimina sus suscripciones, que es la intencion).
+    ensure_foreign_key($pdo, 'suscripciones', 'plataforma_id', 'plataformas', 'id', 'RESTRICT');
+    ensure_foreign_key($pdo, 'suscripciones', 'modalidad_id', 'modalidades', 'id', 'RESTRICT');
+    ensure_foreign_key($pdo, 'modalidades', 'plataforma_id', 'plataformas', 'id', 'RESTRICT');
+
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
     $pdo->exec('UPDATE modalidades SET costo = precio WHERE costo IS NULL OR costo <= 0');
@@ -165,6 +213,93 @@ function ensure_column(\PDO $pdo, string $table, string $column, string $ddl): v
     $total = (int) ($query->fetch()['total'] ?? 0);
     if ($total === 0) {
         $pdo->exec($ddl);
+    }
+}
+
+function ensure_table(\PDO $pdo, string $table, string $createSql): void
+{
+    $query = $pdo->prepare(
+        'SELECT COUNT(*) AS total FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table'
+    );
+    $query->execute(['schema' => DB_NAME, 'table' => $table]);
+    if ((int) ($query->fetch()['total'] ?? 0) === 0) {
+        $pdo->exec($createSql);
+    }
+}
+
+function ensure_foreign_key(
+    \PDO $pdo,
+    string $table,
+    string $column,
+    string $referencedTable,
+    string $referencedColumn,
+    string $onDelete = 'RESTRICT'
+): void {
+    $safeTable = str_replace('`', '``', $table);
+
+    // Ya existe una FK sobre esta columna hacia esa tabla? Con que DELETE_RULE?
+    $existing = $pdo->prepare(
+        'SELECT k.CONSTRAINT_NAME, rc.DELETE_RULE
+         FROM information_schema.KEY_COLUMN_USAGE k
+         JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+           ON rc.CONSTRAINT_NAME = k.CONSTRAINT_NAME AND rc.CONSTRAINT_SCHEMA = k.TABLE_SCHEMA
+         WHERE k.TABLE_SCHEMA = :schema
+           AND k.TABLE_NAME = :table
+           AND k.COLUMN_NAME = :column
+           AND k.REFERENCED_TABLE_NAME = :ref
+         LIMIT 1'
+    );
+    $existing->execute([
+        'schema' => DB_NAME,
+        'table' => $table,
+        'column' => $column,
+        'ref' => $referencedTable,
+    ]);
+    $current = $existing->fetch();
+
+    if ($current) {
+        // Ya tiene la regla deseada: nada que hacer.
+        if (strtoupper((string) $current['DELETE_RULE']) === strtoupper($onDelete)) {
+            return;
+        }
+        // Regla distinta (p. ej. CASCADE peligroso): se elimina para recrearla.
+        $safeConstraint = str_replace('`', '``', (string) $current['CONSTRAINT_NAME']);
+        try {
+            $pdo->exec("ALTER TABLE `{$safeTable}` DROP FOREIGN KEY `{$safeConstraint}`");
+        } catch (\PDOException $exception) {
+            app_log('warning', "No se pudo soltar FK {$safeConstraint}: " . $exception->getMessage());
+            return;
+        }
+    }
+
+    // Hay filas huerfanas? Si las hay, no se agrega la FK (evita fallar la migracion).
+    $safeColumn = str_replace('`', '``', $column);
+    $safeRef = str_replace('`', '``', $referencedTable);
+    $safeRefCol = str_replace('`', '``', $referencedColumn);
+
+    $orphans = (int) $pdo->query(
+        "SELECT COUNT(*) AS total
+         FROM `{$safeTable}` t
+         LEFT JOIN `{$safeRef}` r ON r.`{$safeRefCol}` = t.`{$safeColumn}`
+         WHERE t.`{$safeColumn}` IS NOT NULL AND r.`{$safeRefCol}` IS NULL"
+    )->fetch()['total'] ?? 0;
+
+    if ($orphans > 0) {
+        app_log('warning', "FK omitida: {$table}.{$column} -> {$referencedTable} ({$orphans} huerfanos)");
+        return;
+    }
+
+    $constraintName = 'fk_' . $table . '_' . $column;
+    try {
+        $pdo->exec(
+            "ALTER TABLE `{$safeTable}`
+             ADD CONSTRAINT `{$constraintName}`
+             FOREIGN KEY (`{$safeColumn}`) REFERENCES `{$safeRef}` (`{$safeRefCol}`)
+             ON DELETE {$onDelete} ON UPDATE CASCADE"
+        );
+    } catch (\PDOException $exception) {
+        app_log('warning', "No se pudo crear FK {$constraintName}: " . $exception->getMessage());
     }
 }
 

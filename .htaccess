@@ -6,12 +6,11 @@ RewriteRule ^(?:streaming_renovaciones.*\.sql)$ - [F,L,NC]
 RewriteRule ^(?:README\.md|AGENTS\.md)$ - [F,L,NC]
 RewriteRule ^\.(?!well-known/) - [F,L,NC]
 
-# Si el recurso real existe en /public, servirlo desde ahi.
+# Sirve archivos estaticos reales desde /public. Funciona tanto si el proyecto
+# esta en la raiz del dominio como en una subcarpeta (p. ej. /streaming-renovaciones/).
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
-RewriteRule ^(.*)$ public/$1 [L]
+RewriteRule ^(.+\.(?:png|jpe?g|gif|svg|ico|webp|avif|css|js|mjs|map|woff2?|ttf|eot|otf|txt|pdf|mp4|webm))$ public/$1 [L,NC]
 
 # Front controller en raiz (carga public/index.php).
 RewriteCond %{REQUEST_FILENAME} !-f

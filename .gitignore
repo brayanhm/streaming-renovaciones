@@ -4,5 +4,8 @@
 /storage/logs/*.log
 !/storage/logs/.gitkeep
 *.log
+# Volcados y respaldos de base de datos: contienen datos de clientes, no deben versionarse.
+*.sql
+/storage/backups/
 Thumbs.db
 .DS_Store

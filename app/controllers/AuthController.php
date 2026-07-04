@@ -32,6 +32,14 @@ class AuthController extends Controller
             $this->handleSetupAdmin();
         }
 
+        // Throttle por IP contra fuerza bruta: tras varios intentos fallidos se
+        // bloquea temporalmente a esa direccion (persistido en BD, no en cookie).
+        $lockUntil = login_ip_locked_until();
+        if ($lockUntil > time()) {
+            flash('danger', 'Demasiados intentos fallidos. Espera ' . ($lockUntil - time()) . ' segundos e intenta de nuevo.');
+            $this->redirect('/login');
+        }
+
         $username = trim((string) ($_POST['username'] ?? ''));
         $password = trim((string) ($_POST['password'] ?? ''));
 
@@ -44,11 +52,25 @@ class AuthController extends Controller
         $user = $this->users->authenticate($username, $password);
         if ($user === null) {
             set_old(['username' => $username]);
-            flash('danger', 'Usuario o contraseña incorrectos.');
+
+            // Distinguir "credenciales correctas pero cuenta desactivada" para dar un mensaje util.
+            $existing = $this->users->findByUsername($username);
+            if (
+                $existing !== null
+                && (int) ($existing['activo'] ?? 1) === 0
+                && password_verify($password, (string) ($existing['password_hash'] ?? ''))
+            ) {
+                flash('warning', 'Tu cuenta está desactivada. Contacta a un administrador.');
+            } else {
+                flash('danger', 'Usuario o contraseña incorrectos.');
+            }
+
+            login_ip_register_fail();
             $this->redirect('/login');
         }
 
         session_regenerate_id(true);
+        login_ip_clear();
         $_SESSION['auth'] = [
             'id' => (int) $user['id'],
             'username' => (string) $user['username'],
@@ -56,6 +78,7 @@ class AuthController extends Controller
         ];
 
         clear_old();
+        audit('login', 'Inicio de sesion');
         flash('success', 'Sesión iniciada correctamente.');
         $this->redirect('/dashboard');
     }
@@ -157,6 +180,7 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        audit('logout', 'Cierre de sesion');
         unset($_SESSION['auth']);
         session_regenerate_id(true);
         flash('success', 'Sesión cerrada.');

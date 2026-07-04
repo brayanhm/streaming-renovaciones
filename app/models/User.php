@@ -5,6 +5,17 @@ namespace App\Models;
 
 class User extends BaseModel
 {
+    public const ROLES = ['admin', 'operador'];
+
+    public function all(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT id, username, rol, activo, created_at FROM usuarios ORDER BY id ASC'
+        );
+
+        return $stmt->fetchAll();
+    }
+
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM usuarios WHERE id = :id LIMIT 1');
@@ -36,9 +47,10 @@ class User extends BaseModel
     public function create(string $username, string $password, string $rol = 'admin'): int
     {
         $hash = password_hash($password, PASSWORD_DEFAULT);
+        $rol = in_array($rol, self::ROLES, true) ? $rol : 'operador';
 
         $stmt = $this->db->prepare(
-            'INSERT INTO usuarios (username, password_hash, rol) VALUES (:username, :password_hash, :rol)'
+            'INSERT INTO usuarios (username, password_hash, rol, activo) VALUES (:username, :password_hash, :rol, 1)'
         );
         $stmt->execute([
             'username' => $username,
@@ -47,6 +59,41 @@ class User extends BaseModel
         ]);
 
         return (int) $this->db->lastInsertId();
+    }
+
+    public function updateProfileData(int $id, string $username, string $rol): void
+    {
+        $rol = in_array($rol, self::ROLES, true) ? $rol : 'operador';
+
+        $stmt = $this->db->prepare('UPDATE usuarios SET username = :username, rol = :rol WHERE id = :id');
+        $stmt->execute(['username' => $username, 'rol' => $rol, 'id' => $id]);
+    }
+
+    public function setActive(int $id, bool $active): void
+    {
+        $stmt = $this->db->prepare('UPDATE usuarios SET activo = :activo WHERE id = :id');
+        $stmt->execute(['activo' => $active ? 1 : 0, 'id' => $id]);
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM usuarios WHERE id = :id');
+
+        return $stmt->execute(['id' => $id]);
+    }
+
+    /**
+     * Cuenta administradores activos, opcionalmente excluyendo un id.
+     * Sirve para impedir que el sistema quede sin ningun admin habilitado.
+     */
+    public function activeAdminCount(int $excludeId = 0): int
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'admin' AND activo = 1 AND id <> :id"
+        );
+        $stmt->execute(['id' => $excludeId]);
+
+        return (int) ($stmt->fetch()['total'] ?? 0);
     }
 
     public function usernameExists(string $username, int $excludeId): bool
@@ -81,6 +128,12 @@ class User extends BaseModel
 
         $hash = (string) ($user['password_hash'] ?? '');
         if ($hash === '' || !password_verify($password, $hash)) {
+            return null;
+        }
+
+        // La columna 'activo' puede no existir en instalaciones muy antiguas: por
+        // defecto se considera activo. Un usuario desactivado no puede iniciar sesion.
+        if (array_key_exists('activo', $user) && (int) $user['activo'] === 0) {
             return null;
         }
 

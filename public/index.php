@@ -37,10 +37,12 @@ spl_autoload_register(static function (string $className): void {
 use App\Controllers\AuthController;
 use App\Controllers\ClientesController;
 use App\Controllers\DashboardController;
+use App\Controllers\ImportacionesController;
 use App\Controllers\PlataformasController;
 use App\Controllers\ReportesController;
 use App\Controllers\SuscripcionesController;
 use App\Controllers\TiposSuscripcionController;
+use App\Controllers\UsuariosController;
 use App\Core\AuthMiddleware;
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -56,8 +58,8 @@ if ($method === 'POST' && !verify_csrf_token(isset($_POST['_csrf']) ? (string) $
 $routes = [
     ['GET', '#^/$#', [DashboardController::class, 'index']],
     ['GET', '#^/dashboard$#', [DashboardController::class, 'index']],
-    ['POST', '#^/dashboard/marcar-contactados$#', [DashboardController::class, 'marcarContactados']],
-    ['GET', '#^/suscripciones/whatsapp/(\d+)$#', [DashboardController::class, 'whatsapp']],
+    ['GET', '#^/contactar$#', [DashboardController::class, 'contactar']],
+    ['POST', '#^/suscripciones/whatsapp/(\d+)$#', [DashboardController::class, 'whatsapp']],
     ['POST', '#^/suscripciones/renovar/(\d+)$#', [DashboardController::class, 'renovar']],
     ['POST', '#^/suscripciones/no-renovo/(\d+)$#', [DashboardController::class, 'noRenovo']],
 
@@ -103,6 +105,24 @@ $routes = [
     ['POST', '#^/suscripciones/eliminar/(\d+)$#', [SuscripcionesController::class, 'destroy']],
 
     ['GET', '#^/reportes$#', [ReportesController::class, 'index']],
+    ['GET', '#^/reportes/exportar$#', [ReportesController::class, 'exportarMovimientos']],
+
+    ['GET', '#^/importar$#', [ImportacionesController::class, 'hub']],
+    ['GET', '#^/importar/flujotv$#', [ImportacionesController::class, 'flujotvForm']],
+    ['POST', '#^/importar/flujotv/preview$#', [ImportacionesController::class, 'flujotvPreview']],
+    ['POST', '#^/importar/flujotv/aplicar$#', [ImportacionesController::class, 'flujotvApply']],
+    ['GET', '#^/importar/flujotv-dispositivos$#', [ImportacionesController::class, 'disposForm']],
+    ['POST', '#^/importar/flujotv-dispositivos/preview$#', [ImportacionesController::class, 'disposPreview']],
+    ['POST', '#^/importar/flujotv-dispositivos/aplicar$#', [ImportacionesController::class, 'disposApply']],
+
+    ['GET', '#^/usuarios$#', [UsuariosController::class, 'index']],
+    ['GET', '#^/usuarios/auditoria$#', [UsuariosController::class, 'auditoria']],
+    ['POST', '#^/usuarios$#', [UsuariosController::class, 'store']],
+    ['GET', '#^/usuarios/editar/(\d+)$#', [UsuariosController::class, 'edit']],
+    ['POST', '#^/usuarios/actualizar/(\d+)$#', [UsuariosController::class, 'update']],
+    ['POST', '#^/usuarios/password/(\d+)$#', [UsuariosController::class, 'resetPassword']],
+    ['POST', '#^/usuarios/estado/(\d+)$#', [UsuariosController::class, 'toggleActive']],
+    ['POST', '#^/usuarios/eliminar/(\d+)$#', [UsuariosController::class, 'destroy']],
 
     ['GET', '#^/login$#', [AuthController::class, 'showLogin']],
     ['POST', '#^/login$#', [AuthController::class, 'login']],

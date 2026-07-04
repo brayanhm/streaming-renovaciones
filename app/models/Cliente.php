@@ -98,24 +98,48 @@ class Cliente extends BaseModel
         return (int) ($row['total'] ?? 0);
     }
 
-    public function missingContactData(string $search = ''): array
+    public function missingContactData(string $search = '', int $plataformaId = 0, string $tipoCuenta = ''): array
     {
+        // Subconsulta que elige la suscripcion mas reciente del cliente; si hay
+        // filtros de plataforma/tipo de cuenta, la mas reciente que los cumpla.
+        $subConditions = 'WHERE s2.cliente_id = c.id';
+        $params = [];
+
+        if ($plataformaId > 0) {
+            $subConditions .= ' AND s2.plataforma_id = :plataforma_id';
+            $params['plataforma_id'] = $plataformaId;
+        }
+        if ($tipoCuenta !== '') {
+            $subConditions .= ' AND m2.tipo_cuenta = :tipo_cuenta';
+            $params['tipo_cuenta'] = $tipoCuenta;
+        }
+
         $sql = "SELECT
                 c.*,
                 s.usuario_proveedor,
                 s.fecha_vencimiento,
-                p.nombre AS plataforma_nombre
+                p.nombre AS plataforma_nombre,
+                m.nombre_modalidad,
+                m.tipo_cuenta,
+                m.dispositivos
             FROM clientes c
             LEFT JOIN suscripciones s ON s.id = (
                 SELECT s2.id
                 FROM suscripciones s2
-                WHERE s2.cliente_id = c.id
+                INNER JOIN modalidades m2 ON m2.id = s2.modalidad_id
+                $subConditions
                 ORDER BY s2.fecha_vencimiento DESC, s2.id DESC
                 LIMIT 1
             )
             LEFT JOIN plataformas p ON p.id = s.plataforma_id
+            LEFT JOIN modalidades m ON m.id = s.modalidad_id
             WHERE c.telefono = ''";
-        $params = [];
+
+        // Con filtros activos solo interesan los clientes que tengan una
+        // suscripcion que los cumpla.
+        if ($plataformaId > 0 || $tipoCuenta !== '') {
+            $sql .= ' AND s.id IS NOT NULL';
+        }
 
         if ($search !== '') {
             $sql .= ' AND (c.nombre LIKE :term_nombre OR c.telefono LIKE :term_telefono OR s.usuario_proveedor LIKE :term_usuario)';

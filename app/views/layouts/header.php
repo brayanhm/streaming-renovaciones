@@ -25,6 +25,10 @@ if (is_active_menu($currentPath, '/clientes')) {
     $section = 'suscripciones';
 } elseif (is_active_menu($currentPath, '/reportes')) {
     $section = 'reportes';
+} elseif (is_active_menu($currentPath, '/importar')) {
+    $section = 'importar';
+} elseif (is_active_menu($currentPath, '/usuarios')) {
+    $section = 'usuarios';
 } elseif (is_active_menu($currentPath, '/login')) {
     $section = 'auth';
 }
@@ -36,6 +40,8 @@ $sectionColors = [
     'tipos'         => ['accent' => '#ffc107', 'soft' => '#1a1200', 'head_start' => '#332400', 'head_end' => '#4a3500'],
     'suscripciones' => ['accent' => '#4d9fff', 'soft' => '#001233', 'head_start' => '#001d47', 'head_end' => '#002a60'],
     'reportes'      => ['accent' => '#a855f7', 'soft' => '#150030', 'head_start' => '#2a0060', 'head_end' => '#3d0080'],
+    'importar'      => ['accent' => '#84cc16', 'soft' => '#0e1a00', 'head_start' => '#1a3300', 'head_end' => '#274d00'],
+    'usuarios'      => ['accent' => '#ff6b6b', 'soft' => '#2a0808', 'head_start' => '#4a1010', 'head_end' => '#661515'],
     'auth'          => ['accent' => '#00d4ff', 'soft' => '#001824', 'head_start' => '#002d47', 'head_end' => '#004060'],
 ];
 $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
@@ -274,6 +280,9 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
                         <a class="nav-link <?= is_active_menu($currentPath, '/dashboard') || $currentPath === '/' ? 'active' : '' ?>" href="<?= e(url('/dashboard')) ?>">Ghost Panel</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link <?= is_active_menu($currentPath, '/contactar') ? 'active' : '' ?>" href="<?= e(url('/contactar')) ?>">Contactar</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link <?= is_active_menu($currentPath, '/clientes') ? 'active' : '' ?>" href="<?= e(url('/clientes')) ?>">Clientes</a>
                     </li>
                     <li class="nav-item">
@@ -289,6 +298,14 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
                     <li class="nav-item">
                         <a class="nav-link <?= is_active_menu($currentPath, '/reportes') ? 'active' : '' ?>" href="<?= e(url('/reportes')) ?>">Reportes</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= is_active_menu($currentPath, '/importar') ? 'active' : '' ?>" href="<?= e(url('/importar')) ?>">Importar</a>
+                    </li>
+                    <?php if ((string) ($authUser['rol'] ?? '') === 'admin'): ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?= is_active_menu($currentPath, '/usuarios') ? 'active' : '' ?>" href="<?= e(url('/usuarios')) ?>">Usuarios</a>
+                    </li>
+                    <?php endif; ?>
                 </ul>
                 <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
                     <a href="<?= e(url('/perfil')) ?>" class="badge text-bg-secondary px-3 py-2 text-decoration-none">

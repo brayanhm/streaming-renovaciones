@@ -181,6 +181,7 @@ class Suscripcion extends BaseModel
                 fecha_vencimiento,
                 estado,
                 usuario_proveedor,
+                password_cuenta,
                 notas,
                 flag_no_renovo
             ) VALUES (
@@ -193,11 +194,13 @@ class Suscripcion extends BaseModel
                 :fecha_vencimiento,
                 :estado,
                 :usuario_proveedor,
+                :password_cuenta,
                 :notas,
                 :flag_no_renovo
             )'
         );
 
+        $passwordCuenta = trim((string) ($data['password_cuenta'] ?? ''));
         $stmt->execute([
             'cliente_id' => $data['cliente_id'],
             'plataforma_id' => $data['plataforma_id'],
@@ -208,6 +211,7 @@ class Suscripcion extends BaseModel
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
+            'password_cuenta' => $passwordCuenta !== '' ? \encrypt_secret($passwordCuenta) : null,
             'notas' => isset($data['notas']) && $data['notas'] !== '' ? $data['notas'] : null,
             'flag_no_renovo' => $data['flag_no_renovo'],
         ]);
@@ -230,11 +234,13 @@ class Suscripcion extends BaseModel
                 fecha_vencimiento = :fecha_vencimiento,
                 estado = :estado,
                 usuario_proveedor = :usuario_proveedor,
+                password_cuenta = :password_cuenta,
                 notas = :notas,
                 flag_no_renovo = :flag_no_renovo
             WHERE id = :id'
         );
 
+        $passwordCuenta = trim((string) ($data['password_cuenta'] ?? ''));
         return $stmt->execute([
             'id' => $id,
             'cliente_id' => $data['cliente_id'],
@@ -246,6 +252,7 @@ class Suscripcion extends BaseModel
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
+            'password_cuenta' => $passwordCuenta !== '' ? \encrypt_secret($passwordCuenta) : null,
             'notas' => isset($data['notas']) && $data['notas'] !== '' ? $data['notas'] : null,
             'flag_no_renovo' => $data['flag_no_renovo'],
         ]);
@@ -300,12 +307,26 @@ class Suscripcion extends BaseModel
                     WHEN ABS(DATEDIFF(fecha_vencimiento, CURDATE())) >= :recupDays THEN 'RECUP'
                     ELSE 'VENCIDO'
                   END
-                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) >= 0 THEN 'ACTIVO'
-                ELSE estado
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) = 0 THEN
+                  CASE
+                    WHEN ultimo_contacto_fecha IS NOT NULL AND DATE(ultimo_contacto_fecha) = CURDATE() THEN 'ESPERA'
+                    ELSE 'REENVIAR_1D'
+                  END
+                WHEN DATEDIFF(fecha_vencimiento, CURDATE()) <= :contactDays THEN
+                  CASE
+                    WHEN ultimo_contacto_fecha IS NOT NULL
+                         AND DATE(ultimo_contacto_fecha) >= DATE_SUB(fecha_vencimiento, INTERVAL :contactDaysWindow DAY) THEN 'ESPERA'
+                    ELSE 'CONTACTAR_2D'
+                  END
+                ELSE 'ACTIVO'
               END";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['recupDays' => $recupDays]);
+        $stmt->execute([
+            'recupDays' => $recupDays,
+            'contactDays' => CONTACT_DAYS,
+            'contactDaysWindow' => CONTACT_DAYS,
+        ]);
     }
 
     public function markWhatsappContact(int $id, string $contactType): bool
@@ -389,7 +410,15 @@ class Suscripcion extends BaseModel
                     m.dispositivos,
                     COALESCE(s.precio_venta, m.precio) AS precio_final,
                     COALESCE(s.costo_base, m.costo) AS costo_final,
-                    p.duraciones_disponibles
+                    p.duraciones_disponibles,
+                    (
+                        SELECT GROUP_CONCAT(m2.duracion_meses ORDER BY m2.duracion_meses SEPARATOR \',\')
+                        FROM modalidades m2
+                        WHERE m2.plataforma_id = s.plataforma_id
+                          AND m2.nombre_modalidad = m.nombre_modalidad
+                          AND m2.tipo_cuenta = m.tipo_cuenta
+                          AND m2.dispositivos <=> m.dispositivos
+                    ) AS modalidad_duraciones_disponibles
                  FROM suscripciones s
                  INNER JOIN modalidades m ON m.id = s.modalidad_id
                  INNER JOIN plataformas p ON p.id = s.plataforma_id
@@ -405,8 +434,13 @@ class Suscripcion extends BaseModel
                 return null;
             }
 
+            // Misma fuente que los botones del dashboard: duraciones de la modalidad
+            // y, si no hay, las configuradas en la plataforma.
+            $modalidadDuraciones = trim((string) ($row['modalidad_duraciones_disponibles'] ?? ''));
             $allowedMonths = Plataforma::resolveRenewalMonths(
-                isset($row['duraciones_disponibles']) ? (string) $row['duraciones_disponibles'] : null
+                $modalidadDuraciones !== ''
+                    ? $modalidadDuraciones
+                    : (isset($row['duraciones_disponibles']) ? (string) $row['duraciones_disponibles'] : null)
             );
             if (!in_array($months, $allowedMonths, true)) {
                 $this->db->rollBack();
@@ -556,7 +590,7 @@ class Suscripcion extends BaseModel
         }
 
         $today = new DateTimeImmutable('today');
-        $dueDate = new DateTimeImmutable((string) $row['fecha_vencimiento']);
+        $dueDate = (new DateTimeImmutable((string) $row['fecha_vencimiento']))->setTime(0, 0);
         $daysToDue = (int) $today->diff($dueDate)->format('%r%a');
 
         if ($daysToDue < 0) {
@@ -567,7 +601,27 @@ class Suscripcion extends BaseModel
             return 'VENCIDO';
         }
 
-        return 'ACTIVO';
+        if ($daysToDue > CONTACT_DAYS) {
+            return 'ACTIVO';
+        }
+
+        $lastContactRaw = trim((string) ($row['ultimo_contacto_fecha'] ?? ''));
+        $lastContactDay = $lastContactRaw !== ''
+            ? (new DateTimeImmutable($lastContactRaw))->setTime(0, 0)
+            : null;
+
+        if ($daysToDue === 0) {
+            // El dia del vencimiento se reenvia el mensaje aunque se haya contactado dias antes.
+            return $lastContactDay !== null && $lastContactDay->format('Y-m-d') === $today->format('Y-m-d')
+                ? 'ESPERA'
+                : 'REENVIAR_1D';
+        }
+
+        $windowStart = $dueDate->modify('-' . CONTACT_DAYS . ' days');
+
+        return $lastContactDay !== null && $lastContactDay >= $windowStart
+            ? 'ESPERA'
+            : 'CONTACTAR_2D';
     }
 
     private function resolveTemplate(array $subscription, string $contactType): string
@@ -734,6 +788,29 @@ class Suscripcion extends BaseModel
         return (int) ($stmt->fetch()['total'] ?? 0);
     }
 
+    /**
+     * Estadisticas de la cartera de suscripciones para el tablero de reportes.
+     */
+    public function estadisticas(): array
+    {
+        $row = $this->db->query(
+            "SELECT
+                COUNT(*) AS total,
+                SUM(estado = 'ACTIVO') AS activos,
+                SUM(estado IN ('CONTACTAR_2D', 'REENVIAR_1D')) AS por_contactar,
+                SUM(estado = 'ESPERA') AS en_espera,
+                SUM(estado = 'VENCIDO') AS vencidos,
+                SUM(estado = 'RECUP') AS recuperacion,
+                SUM(flag_no_renovo = 1) AS no_renovaron,
+                SUM(DATEDIFF(fecha_vencimiento, CURDATE()) BETWEEN 0 AND 7) AS vencen_7,
+                SUM(DATEDIFF(fecha_vencimiento, CURDATE()) BETWEEN 0 AND 15) AS vencen_15,
+                SUM(DATEDIFF(fecha_vencimiento, CURDATE()) BETWEEN 0 AND 30) AS vencen_30
+             FROM suscripciones"
+        )->fetch();
+
+        return $row ?: [];
+    }
+
     public function allByCliente(int $clienteId): array
     {
         $stmt = $this->db->prepare(
@@ -763,37 +840,4 @@ class Suscripcion extends BaseModel
         return $stmt->fetchAll();
     }
 
-    public function bulkMarkContacted(array $ids): int
-    {
-        $count = 0;
-        foreach ($ids as $rawId) {
-            $id = (int) $rawId;
-            if ($id <= 0) {
-                continue;
-            }
-
-            $stmt = $this->db->prepare(
-                'SELECT id, estado FROM suscripciones WHERE id = :id LIMIT 1'
-            );
-            $stmt->execute(['id' => $id]);
-            $row = $stmt->fetch();
-            if (!$row) {
-                continue;
-            }
-
-            $estado = (string) ($row['estado'] ?? '');
-            $tipo = match ($estado) {
-                'CONTACTAR_2D' => 'MENOS_2',
-                'REENVIAR_1D' => 'MENOS_1',
-                'VENCIDO', 'RECUP' => 'REC_7',
-                default => 'MENOS_2',
-            };
-
-            if ($this->markWhatsappContact($id, $tipo)) {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
 }

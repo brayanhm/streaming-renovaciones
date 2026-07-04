@@ -41,6 +41,14 @@ function db(): \PDO
             DB_PASS,
             $options
         );
+
+        // CURDATE()/NOW() de MySQL deben usar la misma zona horaria que PHP (APP_TIMEZONE)
+        // para que los estados calculados en SQL y en PHP no diverjan cerca de medianoche.
+        try {
+            $pdo->exec("SET time_zone = '" . date('P') . "'");
+        } catch (\PDOException $tzException) {
+            // No critico: se continua con la zona horaria por defecto del servidor.
+        }
     } catch (\PDOException $exception) {
         $logDir = STORAGE_PATH . '/logs';
         if (!is_dir($logDir)) {

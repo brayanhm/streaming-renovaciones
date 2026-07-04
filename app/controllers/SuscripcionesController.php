@@ -199,6 +199,7 @@ class SuscripcionesController extends Controller
 
         try {
             $this->suscripciones->delete($id);
+            audit('suscripcion.eliminar', 'ID ' . $id);
             flash('success', 'Suscripcion eliminada.');
         } catch (\Throwable $exception) {
             flash('danger', 'No se pudo eliminar la suscripcion: ' . $exception->getMessage());
@@ -219,6 +220,7 @@ class SuscripcionesController extends Controller
             'fecha_vencimiento' => trim((string) ($_POST['fecha_vencimiento'] ?? '')),
             'estado' => strtoupper(trim((string) ($_POST['estado'] ?? 'ACTIVO'))),
             'usuario_proveedor' => trim((string) ($_POST['usuario_proveedor'] ?? '')),
+            'password_cuenta' => trim((string) ($_POST['password_cuenta'] ?? '')),
             'notas' => trim((string) ($_POST['notas'] ?? '')),
             'flag_no_renovo' => isset($_POST['flag_no_renovo']) ? 1 : 0,
         ];

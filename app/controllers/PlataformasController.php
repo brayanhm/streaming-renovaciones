@@ -105,9 +105,13 @@ class PlataformasController extends Controller
 
         try {
             $this->plataformas->delete($id);
+            audit('plataforma.eliminar', 'ID ' . $id);
             flash('success', 'Plataforma eliminada.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo eliminar la plataforma: ' . $exception->getMessage());
+            $isFk = str_contains($exception->getMessage(), '1451') || stripos($exception->getMessage(), 'foreign key') !== false;
+            flash('danger', $isFk
+                ? 'No se puede eliminar esta plataforma porque tiene planes o suscripciones asociados. Elimínalos primero.'
+                : 'No se pudo eliminar la plataforma: ' . $exception->getMessage());
         }
 
         $this->redirect('/plataformas');

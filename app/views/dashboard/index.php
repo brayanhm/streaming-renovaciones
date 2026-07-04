@@ -5,7 +5,7 @@ use App\Models\Modalidad;
 use App\Models\Plataforma;
 
 $states = [
-    'TODOS' => ['label' => 'Todos', 'badge' => 'secondary'],
+    'TODOS' => ['label' => 'Vigentes', 'badge' => 'secondary'],
     'CONTACTAR_2D' => ['label' => 'Contactar (-3 días)', 'badge' => 'warning'],
     'REENVIAR_1D' => ['label' => 'Contactar (día de vencimiento)', 'badge' => 'info'],
     'ESPERA' => ['label' => 'Espera', 'badge' => 'primary'],
@@ -116,12 +116,12 @@ if (!function_exists('renewal_options')) {
     <?php foreach ($states as $key => $meta): ?>
         <?php
         $isActive = ($selectedStatus ?? 'TODOS') === $key;
-        $query = http_build_query([
+        $query = http_build_query(array_filter([
             'estado' => $key,
             'contacto' => $contacto ?? '',
             'usuario' => $usuario ?? '',
             'telefono' => $telefono ?? '',
-        ]);
+        ], static fn (string $value): bool => $value !== ''));
         ?>
         <li class="nav-item me-2">
             <a class="nav-link <?= $isActive ? 'active' : '' ?>" href="<?= e(url('/dashboard?' . $query)) ?>">
@@ -270,23 +270,17 @@ if (!function_exists('renewal_options')) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <a
-                                    class="btn btn-success btn-sm px-3"
-                                    href="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'] . '?tipo=' . $whatsType)) ?>"
-                                    target="_blank"
-                                    rel="noopener"
-                                >
-                                    WhatsApp
-                                </a>
+                                <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="tipo" value="<?= e($whatsType) ?>">
+                                    <button type="submit" class="btn btn-success btn-sm px-3">WhatsApp</button>
+                                </form>
                                 <?php if ($showRecoveryOption): ?>
-                                    <a
-                                        class="btn btn-outline-dark btn-sm px-2 mt-1"
-                                        href="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'] . '?tipo=' . $recupType)) ?>"
-                                        target="_blank"
-                                        rel="noopener"
-                                    >
-                                        Recuperacion
-                                    </a>
+                                    <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener" class="mt-1">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="tipo" value="<?= e($recupType) ?>">
+                                        <button type="submit" class="btn btn-outline-dark btn-sm px-2">Recuperacion</button>
+                                    </form>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -329,11 +323,11 @@ $paginationQuery = http_build_query(array_filter([
     </small>
     <ul class="pagination pagination-sm mb-0">
         <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
-            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . (($page ?? 1) - 1))) ?>">‹ Anterior</a>
+            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . max(1, ($page ?? 1) - 1))) ?>">‹ Anterior</a>
         </li>
         <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
         <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
-            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . (($page ?? 1) + 1))) ?>">Siguiente ›</a>
+            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . min(($totalPages ?? 1), ($page ?? 1) + 1))) ?>">Siguiente ›</a>
         </li>
     </ul>
 </nav>

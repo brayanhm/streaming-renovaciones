@@ -5,34 +5,6 @@ namespace App\Models;
 
 class Movimiento extends BaseModel
 {
-    public function createRenovacion(int $suscripcionId, int $meses, ?float $monto): int
-    {
-        $subscription = $this->db->prepare(
-            'SELECT s.plataforma_id, p.nombre AS plataforma_nombre
-             FROM suscripciones s
-             INNER JOIN plataformas p ON p.id = s.plataforma_id
-             WHERE s.id = :id
-             LIMIT 1'
-        );
-        $subscription->execute(['id' => $suscripcionId]);
-        $row = $subscription->fetch() ?: [];
-
-        $stmt = $this->db->prepare(
-            'INSERT INTO movimientos (suscripcion_id, plataforma_id, plataforma_nombre, tipo, meses, monto)
-             VALUES (:suscripcion_id, :plataforma_id, :plataforma_nombre, :tipo, :meses, :monto)'
-        );
-        $stmt->execute([
-            'suscripcion_id' => $suscripcionId,
-            'plataforma_id' => isset($row['plataforma_id']) ? (int) $row['plataforma_id'] : null,
-            'plataforma_nombre' => isset($row['plataforma_nombre']) ? (string) $row['plataforma_nombre'] : null,
-            'tipo' => 'RENOVACION',
-            'meses' => $meses,
-            'monto' => $monto,
-        ]);
-
-        return (int) $this->db->lastInsertId();
-    }
-
     public function allBySuscripcion(int $suscripcionId): array
     {
         $stmt = $this->db->prepare(
