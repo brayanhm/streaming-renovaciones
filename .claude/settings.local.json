@@ -29,7 +29,9 @@
       "Bash(/c/xampp/php/php.exe -r \":*)",
       "Bash(/c/xampp/mysql/bin/mysql.exe -u root streaming_renovaciones -e \"SELECT id, username, LEFT\\(password_hash,10\\) as hash_preview FROM usuarios;\")",
       "Bash(\"C:/xampp/mysql/bin/mysql.exe\" -u root --database=streaming_renovaciones -e \"SELECT p.nombre FROM plataformas p WHERE p.nombre LIKE '%flujo%' OR p.nombre LIKE '%Flujo%' OR p.nombre LIKE '%FLUJO%';\")",
-      "Bash(C:/xampp/mysql/bin/mysql.exe -u root --database=streaming_renovaciones -e ' *)"
+      "Bash(C:/xampp/mysql/bin/mysql.exe -u root --database=streaming_renovaciones -e ' *)",
+      "Read(//c/xampp/apache/bin/**)",
+      "Bash(./httpd.exe -k start)"
     ]
   }
 }

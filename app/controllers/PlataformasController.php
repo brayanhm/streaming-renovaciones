@@ -124,6 +124,7 @@ class PlataformasController extends Controller
             'tipo_servicio' => strtoupper(trim((string) ($_POST['tipo_servicio'] ?? ''))),
             'duraciones_disponibles' => trim((string) ($_POST['duraciones_disponibles'] ?? '')),
             'dato_renovacion' => strtoupper(trim((string) ($_POST['dato_renovacion'] ?? 'NO_APLICA'))),
+            'usa_cuentas_principales' => isset($_POST['usa_cuentas_principales']) ? 1 : 0,
             'mensaje_menos_2' => trim((string) ($_POST['mensaje_menos_2'] ?? '')),
             'mensaje_menos_1' => trim((string) ($_POST['mensaje_menos_1'] ?? '')),
             'mensaje_rec_7' => trim((string) ($_POST['mensaje_rec_7'] ?? '')),

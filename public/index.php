@@ -36,6 +36,7 @@ spl_autoload_register(static function (string $className): void {
 
 use App\Controllers\AuthController;
 use App\Controllers\ClientesController;
+use App\Controllers\CuentasPrincipalesController;
 use App\Controllers\DashboardController;
 use App\Controllers\ImportacionesController;
 use App\Controllers\PlataformasController;
@@ -106,6 +107,14 @@ $routes = [
 
     ['GET', '#^/reportes$#', [ReportesController::class, 'index']],
     ['GET', '#^/reportes/exportar$#', [ReportesController::class, 'exportarMovimientos']],
+
+    ['GET', '#^/cuentas-principales$#', [CuentasPrincipalesController::class, 'index']],
+    ['POST', '#^/cuentas-principales$#', [CuentasPrincipalesController::class, 'store']],
+    ['GET', '#^/cuentas-principales/editar/(\d+)$#', [CuentasPrincipalesController::class, 'edit']],
+    ['POST', '#^/cuentas-principales/actualizar/(\d+)$#', [CuentasPrincipalesController::class, 'update']],
+    ['POST', '#^/cuentas-principales/eliminar/(\d+)$#', [CuentasPrincipalesController::class, 'destroy']],
+    ['POST', '#^/cuentas-principales/(\d+)/asignar$#', [CuentasPrincipalesController::class, 'asignar']],
+    ['GET', '#^/cuentas-principales/(\d+)$#', [CuentasPrincipalesController::class, 'show']],
 
     ['GET', '#^/importar$#', [ImportacionesController::class, 'hub']],
     ['GET', '#^/importar/flujotv$#', [ImportacionesController::class, 'flujotvForm']],

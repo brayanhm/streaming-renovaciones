@@ -60,43 +60,71 @@ use App\Models\Plataforma;
                                 return substr($value, 0, max(0, $limit - 3)) . '...';
                             };
                             ?>
-                            <?php foreach ($rows as $item): ?>
-                                <?php
-                                $m2 = $truncatePreview((string) ($item['mensaje_menos_2'] ?? ''));
-                                $m1 = $truncatePreview((string) ($item['mensaje_menos_1'] ?? ''));
-                                $r3 = $truncatePreview((string) ($item['mensaje_rec_7'] ?? ''));
-                                $r15 = $truncatePreview((string) ($item['mensaje_rec_15'] ?? ''));
-                                ?>
-                                <tr>
-                                    <td class="fw-semibold"><?= e((string) $item['nombre']) ?></td>
-                                    <td><span class="badge text-bg-dark"><?= e((string) $item['tipo_servicio']) ?></span></td>
-                                    <td>
-                                        <span class="badge text-bg-secondary">
-                                            <?= e(Plataforma::datoRenovacionLabel((string) ($item['dato_renovacion'] ?? 'NO_APLICA'))) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge text-bg-light border">
-                                            <?= e((string) (($item['duraciones_disponibles'] ?? '') !== '' ? $item['duraciones_disponibles'] : 'Libre')) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <small class="d-block text-secondary">-3: <?= e($m2) ?></small>
-                                        <small class="d-block text-secondary">0: <?= e($m1) ?></small>
-                                        <small class="d-block text-secondary">+3: <?= e($r3) ?></small>
-                                        <small class="d-block text-secondary">+15: <?= e($r15) ?></small>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>">Ver tipos</a>
-                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/plataformas/editar/' . (int) $item['id'])) ?>">Editar</a>
-                                            <form method="post" action="<?= e(url('/plataformas/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta plataforma?')">
-                                                <?= csrf_field() ?>
-                                                <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
-                                            </form>
-                                        </div>
+                            <?php
+                            // Separar plataformas de streaming de las de IA (cuentas principales).
+                            $grupos = ['Streaming' => [], 'Inteligencia Artificial' => []];
+                            foreach ($rows as $item) {
+                                $esIa = (int) ($item['usa_cuentas_principales'] ?? 0) === 1;
+                                $grupos[$esIa ? 'Inteligencia Artificial' : 'Streaming'][] = $item;
+                            }
+                            ?>
+                            <?php foreach ($grupos as $titulo => $items): ?>
+                                <?php if (empty($items)) { continue; } ?>
+                                <tr class="table-secondary">
+                                    <td colspan="6" class="fw-semibold text-uppercase" style="font-size:.78rem; letter-spacing:.06em;">
+                                        <?= e($titulo) ?> · <?= e((string) count($items)) ?>
                                     </td>
                                 </tr>
+                                <?php foreach ($items as $item): ?>
+                                    <?php
+                                    $esIa = (int) ($item['usa_cuentas_principales'] ?? 0) === 1;
+                                    $m2 = $truncatePreview((string) ($item['mensaje_menos_2'] ?? ''));
+                                    $m1 = $truncatePreview((string) ($item['mensaje_menos_1'] ?? ''));
+                                    $r3 = $truncatePreview((string) ($item['mensaje_rec_7'] ?? ''));
+                                    $r15 = $truncatePreview((string) ($item['mensaje_rec_15'] ?? ''));
+                                    ?>
+                                    <tr>
+                                        <td class="fw-semibold">
+                                            <?= e((string) $item['nombre']) ?>
+                                            <?php if ($esIa): ?><span class="badge text-bg-success ms-1">IA</span><?php endif; ?>
+                                        </td>
+                                        <td><span class="badge text-bg-dark"><?= e((string) $item['tipo_servicio']) ?></span></td>
+                                        <td>
+                                            <span class="badge text-bg-secondary">
+                                                <?= e(Plataforma::datoRenovacionLabel((string) ($item['dato_renovacion'] ?? 'NO_APLICA'))) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge text-bg-light border">
+                                                <?= e((string) (($item['duraciones_disponibles'] ?? '') !== '' ? $item['duraciones_disponibles'] : 'Libre')) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if ($esIa): ?>
+                                                <small class="text-secondary">Cuentas principales con usuarios asignados.</small>
+                                            <?php else: ?>
+                                                <small class="d-block text-secondary">-3: <?= e($m2) ?></small>
+                                                <small class="d-block text-secondary">0: <?= e($m1) ?></small>
+                                                <small class="d-block text-secondary">+3: <?= e($r3) ?></small>
+                                                <small class="d-block text-secondary">+15: <?= e($r15) ?></small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                                <?php if ($esIa): ?>
+                                                    <a class="btn btn-outline-success btn-sm" href="<?= e(url('/cuentas-principales')) ?>">Cuentas</a>
+                                                <?php else: ?>
+                                                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>">Ver tipos</a>
+                                                <?php endif; ?>
+                                                <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/plataformas/editar/' . (int) $item['id'])) ?>">Editar</a>
+                                                <form method="post" action="<?= e(url('/plataformas/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta plataforma?')">
+                                                    <?= csrf_field() ?>
+                                                    <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -144,6 +172,12 @@ use App\Models\Plataforma;
                             placeholder="Ej: 1,3,7"
                         >
                         <small class="text-secondary">Opcional. Si lo defines, solo estas duraciones estarán permitidas en los tipos de esta plataforma.</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="usa_cuentas_principales" name="usa_cuentas_principales" <?= old('usa_cuentas_principales') === '1' ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="usa_cuentas_principales">Usa <strong>cuentas principales</strong> con usuarios asignados (ej. ChatGPT, Claude)</label>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="mensaje_menos_2">Mensaje renovación (3 días antes)</label>

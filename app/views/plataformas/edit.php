@@ -49,6 +49,12 @@ use App\Models\Plataforma;
                     >
                     <small class="text-secondary">Opcional. Si lo defines, solo se permitirán estas duraciones en los tipos de esta plataforma.</small>
                 </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="usa_cuentas_principales" name="usa_cuentas_principales" <?= (int) ($item['usa_cuentas_principales'] ?? 0) === 1 ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="usa_cuentas_principales">Usa <strong>cuentas principales</strong> con usuarios asignados (ej. ChatGPT Plus, Claude Pro)</label>
+                    </div>
+                </div>
                 <div class="col-md-6">
                     <label class="form-label" for="mensaje_menos_2">Mensaje renovación (3 dias antes)</label>
                     <textarea class="form-control" id="mensaje_menos_2" name="mensaje_menos_2" rows="4"><?= e((string) ($item['mensaje_menos_2'] ?? '')) ?></textarea>

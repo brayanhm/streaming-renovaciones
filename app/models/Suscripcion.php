@@ -175,12 +175,14 @@ class Suscripcion extends BaseModel
                 cliente_id,
                 plataforma_id,
                 modalidad_id,
+                cuenta_principal_id,
                 precio_venta,
                 costo_base,
                 fecha_inicio,
                 fecha_vencimiento,
                 estado,
                 usuario_proveedor,
+                departamento,
                 password_cuenta,
                 notas,
                 flag_no_renovo
@@ -188,12 +190,14 @@ class Suscripcion extends BaseModel
                 :cliente_id,
                 :plataforma_id,
                 :modalidad_id,
+                :cuenta_principal_id,
                 :precio_venta,
                 :costo_base,
                 :fecha_inicio,
                 :fecha_vencimiento,
                 :estado,
                 :usuario_proveedor,
+                :departamento,
                 :password_cuenta,
                 :notas,
                 :flag_no_renovo
@@ -201,16 +205,20 @@ class Suscripcion extends BaseModel
         );
 
         $passwordCuenta = trim((string) ($data['password_cuenta'] ?? ''));
+        $cuentaPrincipalId = (int) ($data['cuenta_principal_id'] ?? 0);
+        $departamento = trim((string) ($data['departamento'] ?? ''));
         $stmt->execute([
             'cliente_id' => $data['cliente_id'],
             'plataforma_id' => $data['plataforma_id'],
             'modalidad_id' => $data['modalidad_id'],
+            'cuenta_principal_id' => $cuentaPrincipalId > 0 ? $cuentaPrincipalId : null,
             'precio_venta' => $data['precio_venta'],
             'costo_base' => $data['costo_base'],
             'fecha_inicio' => $data['fecha_inicio'],
             'fecha_vencimiento' => $data['fecha_vencimiento'],
             'estado' => $estado,
             'usuario_proveedor' => $data['usuario_proveedor'] ?: null,
+            'departamento' => $departamento !== '' ? $departamento : null,
             'password_cuenta' => $passwordCuenta !== '' ? \encrypt_secret($passwordCuenta) : null,
             'notas' => isset($data['notas']) && $data['notas'] !== '' ? $data['notas'] : null,
             'flag_no_renovo' => $data['flag_no_renovo'],

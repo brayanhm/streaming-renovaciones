@@ -25,6 +25,8 @@ if (is_active_menu($currentPath, '/clientes')) {
     $section = 'suscripciones';
 } elseif (is_active_menu($currentPath, '/reportes')) {
     $section = 'reportes';
+} elseif (is_active_menu($currentPath, '/cuentas-principales')) {
+    $section = 'cuentas';
 } elseif (is_active_menu($currentPath, '/importar')) {
     $section = 'importar';
 } elseif (is_active_menu($currentPath, '/usuarios')) {
@@ -40,6 +42,7 @@ $sectionColors = [
     'tipos'         => ['accent' => '#ffc107', 'soft' => '#1a1200', 'head_start' => '#332400', 'head_end' => '#4a3500'],
     'suscripciones' => ['accent' => '#4d9fff', 'soft' => '#001233', 'head_start' => '#001d47', 'head_end' => '#002a60'],
     'reportes'      => ['accent' => '#a855f7', 'soft' => '#150030', 'head_start' => '#2a0060', 'head_end' => '#3d0080'],
+    'cuentas'       => ['accent' => '#10b981', 'soft' => '#04201a', 'head_start' => '#07362b', 'head_end' => '#0a4d3d'],
     'importar'      => ['accent' => '#84cc16', 'soft' => '#0e1a00', 'head_start' => '#1a3300', 'head_end' => '#274d00'],
     'usuarios'      => ['accent' => '#ff6b6b', 'soft' => '#2a0808', 'head_start' => '#4a1010', 'head_end' => '#661515'],
     'auth'          => ['accent' => '#00d4ff', 'soft' => '#001824', 'head_start' => '#002d47', 'head_end' => '#004060'],
@@ -294,6 +297,9 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
                     </li>
                     <li class="nav-item">
                         <a class="nav-link <?= is_active_menu($currentPath, '/suscripciones') ? 'active' : '' ?>" href="<?= e(url('/suscripciones')) ?>">Membresías</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= is_active_menu($currentPath, '/cuentas-principales') ? 'active' : '' ?>" href="<?= e(url('/cuentas-principales')) ?>">Cuentas</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link <?= is_active_menu($currentPath, '/reportes') ? 'active' : '' ?>" href="<?= e(url('/reportes')) ?>">Reportes</a>

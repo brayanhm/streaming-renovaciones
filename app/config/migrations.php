@@ -136,6 +136,44 @@ function run_schema_migrations(): void
         ) ENGINE=InnoDB DEFAULT CHARSET=' . DB_CHARSET . ' COLLATE=' . DB_COLLATION
     );
 
+    // Plataformas con "cuentas principales" y usuarios asignados (ej. ChatGPT, Claude).
+    ensure_column(
+        $pdo,
+        'plataformas',
+        'usa_cuentas_principales',
+        'ALTER TABLE plataformas ADD COLUMN usa_cuentas_principales TINYINT(1) NOT NULL DEFAULT 0 AFTER dato_renovacion'
+    );
+
+    ensure_table(
+        $pdo,
+        'cuentas_principales',
+        'CREATE TABLE cuentas_principales (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            plataforma_id INT NOT NULL,
+            etiqueta VARCHAR(100) NOT NULL,
+            correo VARCHAR(150) NULL,
+            password_cuenta VARCHAR(255) NULL,
+            capacidad INT NOT NULL DEFAULT 1,
+            activo TINYINT(1) NOT NULL DEFAULT 1,
+            notas TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_cp_plataforma (plataforma_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=' . DB_CHARSET . ' COLLATE=' . DB_COLLATION
+    );
+
+    ensure_column(
+        $pdo,
+        'suscripciones',
+        'cuenta_principal_id',
+        'ALTER TABLE suscripciones ADD COLUMN cuenta_principal_id INT NULL AFTER modalidad_id'
+    );
+    ensure_column(
+        $pdo,
+        'suscripciones',
+        'departamento',
+        'ALTER TABLE suscripciones ADD COLUMN departamento VARCHAR(40) NULL AFTER usuario_proveedor'
+    );
+
     ensure_table(
         $pdo,
         'login_intentos',
@@ -155,6 +193,8 @@ function run_schema_migrations(): void
     ensure_foreign_key($pdo, 'suscripciones', 'plataforma_id', 'plataformas', 'id', 'RESTRICT');
     ensure_foreign_key($pdo, 'suscripciones', 'modalidad_id', 'modalidades', 'id', 'RESTRICT');
     ensure_foreign_key($pdo, 'modalidades', 'plataforma_id', 'plataformas', 'id', 'RESTRICT');
+    ensure_foreign_key($pdo, 'cuentas_principales', 'plataforma_id', 'plataformas', 'id', 'RESTRICT');
+    ensure_foreign_key($pdo, 'suscripciones', 'cuenta_principal_id', 'cuentas_principales', 'id', 'SET NULL');
 
     $pdo->exec('UPDATE modalidades SET duracion_meses = 1 WHERE duracion_meses IS NULL OR duracion_meses <= 0');
     $pdo->exec('UPDATE modalidades SET dispositivos = NULL WHERE dispositivos IS NOT NULL AND dispositivos <= 0');
