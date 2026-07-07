@@ -29,9 +29,18 @@ declare(strict_types=1);
                     <small class="text-secondary">Se guarda cifrada. Déjala vacía para no cambiarla.</small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="capacidad">Capacidad (máx. usuarios)</label>
+                    <label class="form-label" for="capacidad">Cantidad de usuarios sugeridos</label>
                     <input type="number" class="form-control" id="capacidad" name="capacidad" min="1" value="<?= e((string) ($cuenta['capacidad'] ?? 1)) ?>" required>
                     <small class="text-secondary">Actualmente asignados: <?= e((string) (int) ($cuenta['ocupados'] ?? 0)) ?>.</small>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="fecha_inicio">Activación de la cuenta</label>
+                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= e((string) ($cuenta['fecha_inicio'] ?? '')) ?>">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="fecha_vencimiento">Vence (pago)</label>
+                    <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" value="<?= e((string) ($cuenta['fecha_vencimiento'] ?? '')) ?>">
+                    <small class="text-secondary">Vacío = 1 mes desde la activación.</small>
                 </div>
                 <div class="col-md-6 d-flex align-items-end">
                     <div class="form-check">

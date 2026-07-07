@@ -28,14 +28,15 @@ foreach (($rows ?? []) as $r) {
 }
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <?php $panelBase = $panelBase ?? '/dashboard'; $panelTipo = $panelTipo ?? 'streaming'; ?>
     <div>
-        <h1 class="h3 mb-1">Contactar hoy</h1>
+        <h1 class="h3 mb-1">Contactar hoy<?= $panelTipo === 'ia' ? ' · IA' : '' ?></h1>
         <p class="text-secondary mb-0">
             <strong><?= e((string) $total) ?></strong> cuenta(s) para contactar, ordenadas por urgencia
             (<?= e((string) $porVencerHoy) ?> vencen hoy).
         </p>
     </div>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Ir al panel</a>
+    <a href="<?= e(url($panelBase)) ?>" class="btn btn-outline-secondary">Ir al panel</a>
 </div>
 
 <div class="card shadow-sm">

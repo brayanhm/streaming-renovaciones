@@ -25,7 +25,26 @@ $lleno = $libres <= 0;
             <small class="text-secondary"><?= $lleno ? 'Sin cupos disponibles' : $libres . ' disponible(s)' ?></small>
         </div></div>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-secondary mb-1">Pago de la cuenta</h2>
+            <?php
+            $venc = (string) ($cuenta['fecha_vencimiento'] ?? '');
+            $diasPago = null;
+            if ($venc !== '') {
+                $diasPago = (int) (new DateTimeImmutable('today'))->diff(new DateTimeImmutable($venc))->format('%r%a');
+            }
+            ?>
+            <div><strong>Activó:</strong> <?= e((string) ($cuenta['fecha_inicio'] ?? '') ?: '—') ?></div>
+            <div><strong>Vence:</strong> <?= e($venc !== '' ? $venc : '—') ?></div>
+            <?php if ($diasPago !== null): ?>
+                <small class="<?= $diasPago < 0 ? 'text-danger' : ($diasPago <= 5 ? 'text-warning' : 'text-secondary') ?>">
+                    <?= $diasPago < 0 ? 'Pago vencido hace ' . abs($diasPago) . 'd' : ($diasPago === 0 ? 'Pagar hoy' : 'Pagar en ' . $diasPago . 'd') ?>
+                </small>
+            <?php endif; ?>
+        </div></div>
+    </div>
+    <div class="col-md-4">
         <div class="card border-0 shadow-sm h-100"><div class="card-body">
             <h2 class="h6 text-secondary mb-1">Acceso de la cuenta</h2>
             <div><strong>Correo:</strong> <?= e((string) ($cuenta['correo'] ?? '') ?: '—') ?></div>
@@ -97,7 +116,8 @@ $lleno = $libres <= 0;
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="numero">Número (celular)</label>
-                        <input type="text" class="form-control" id="numero" name="numero" placeholder="Ej: 79625801" required>
+                        <input type="text" class="form-control" id="numero" name="numero" placeholder="Ej: 79625801" inputmode="numeric" maxlength="8" required>
+                        <small class="text-secondary">Solo los 8 dígitos, sin +591.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="departamento">Departamento</label>

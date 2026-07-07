@@ -161,6 +161,21 @@ function run_schema_migrations(): void
         ) ENGINE=InnoDB DEFAULT CHARSET=' . DB_CHARSET . ' COLLATE=' . DB_COLLATION
     );
 
+    // Fechas propias de la cuenta principal: su activación y su vencimiento de pago
+    // (independientes de la vigencia de cada usuario asignado).
+    ensure_column(
+        $pdo,
+        'cuentas_principales',
+        'fecha_inicio',
+        'ALTER TABLE cuentas_principales ADD COLUMN fecha_inicio DATE NULL AFTER capacidad'
+    );
+    ensure_column(
+        $pdo,
+        'cuentas_principales',
+        'fecha_vencimiento',
+        'ALTER TABLE cuentas_principales ADD COLUMN fecha_vencimiento DATE NULL AFTER fecha_inicio'
+    );
+
     ensure_column(
         $pdo,
         'suscripciones',
@@ -232,6 +247,14 @@ function run_schema_migrations(): void
         "UPDATE plataformas
          SET dato_renovacion = 'NO_APLICA'
          WHERE tipo_servicio <> 'RENOVABLE'"
+    );
+
+    // Telefonos en formato LOCAL (8 digitos): quitar el prefijo 591 ya guardado.
+    // El codigo de pais se agrega automaticamente solo al generar el WhatsApp.
+    // Idempotente: tras la conversion los numeros son de 8 digitos y no vuelven a coincidir.
+    $pdo->exec(
+        "UPDATE clientes SET telefono = SUBSTRING(telefono, 4)
+         WHERE telefono LIKE '591%' AND LENGTH(telefono) = 11"
     );
 }
 

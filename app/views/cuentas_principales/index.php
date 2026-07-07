@@ -102,8 +102,19 @@ declare(strict_types=1);
                         <input type="text" class="form-control" id="password_cuenta" name="password_cuenta" placeholder="Se guarda cifrada" autocomplete="new-password">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="capacidad">Capacidad (máx. usuarios)</label>
+                        <label class="form-label" for="capacidad">Cantidad de usuarios sugeridos</label>
                         <input type="number" class="form-control" id="capacidad" name="capacidad" min="1" value="<?= e(old('capacidad', '1')) ?>" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" for="fecha_inicio">Activación de la cuenta</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= e(old('fecha_inicio', date('Y-m-d'))) ?>">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="fecha_vencimiento">Vence (pago)</label>
+                            <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" value="<?= e(old('fecha_vencimiento')) ?>">
+                        </div>
+                        <div class="col-12"><small class="text-secondary">Fechas de pago de la cuenta (independientes de los usuarios). Si dejas el vencimiento vacío, se calcula 1 mes.</small></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="notas">Notas</label>

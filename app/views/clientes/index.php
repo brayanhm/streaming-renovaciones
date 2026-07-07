@@ -118,15 +118,19 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         >
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="numero">Número</label>
+                        <label class="form-label" for="numero">Número (celular)</label>
                         <input
                             type="text"
                             class="form-control"
                             id="numero"
                             name="numero"
                             value="<?= e(old('numero', old('telefono'))) ?>"
+                            placeholder="Ej: 71234567"
+                            inputmode="numeric"
+                            maxlength="8"
                             required
                         >
+                        <small class="text-secondary">Solo los 8 dígitos, sin +591 (se agrega automáticamente).</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="notas">Notas</label>

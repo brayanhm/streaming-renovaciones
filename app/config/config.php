@@ -637,3 +637,23 @@ function is_valid_whatsapp_phone_bolivia(string $value): bool
 
     return $local[0] === '6' || $local[0] === '7';
 }
+
+/**
+ * Devuelve el número LOCAL de Bolivia (8 dígitos, sin el prefijo 591). El código
+ * de país se maneja automáticamente: aunque el usuario escriba +591 o 591, se
+ * guarda solo el número local. Devuelve '' si no hay número.
+ */
+function local_whatsapp_phone_bolivia(string $value): string
+{
+    $full = normalize_whatsapp_phone_bolivia($value); // '591XXXXXXXX' o ''
+
+    return $full === '' ? '' : substr($full, 3);
+}
+
+/**
+ * Valida el número local (8 dígitos que inician con 6 o 7).
+ */
+function is_valid_local_whatsapp_phone_bolivia(string $local): bool
+{
+    return strlen($local) === 8 && ($local[0] === '6' || $local[0] === '7');
+}

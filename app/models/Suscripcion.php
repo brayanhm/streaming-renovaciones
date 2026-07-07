@@ -31,6 +31,7 @@ class Suscripcion extends BaseModel
                 p.tipo_servicio AS plataforma_tipo_servicio,
                 p.duraciones_disponibles AS plataforma_duraciones_disponibles,
                 p.dato_renovacion AS plataforma_dato_renovacion,
+                p.usa_cuentas_principales AS plataforma_usa_cuentas,
                 m.nombre_modalidad,
                 m.tipo_cuenta,
                 m.duracion_meses,

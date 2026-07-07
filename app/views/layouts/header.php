@@ -25,7 +25,7 @@ if (is_active_menu($currentPath, '/clientes')) {
     $section = 'suscripciones';
 } elseif (is_active_menu($currentPath, '/reportes')) {
     $section = 'reportes';
-} elseif (is_active_menu($currentPath, '/cuentas-principales')) {
+} elseif (is_active_menu($currentPath, '/cuentas-principales') || is_active_menu($currentPath, '/dashboard-ia') || is_active_menu($currentPath, '/contactar-ia')) {
     $section = 'cuentas';
 } elseif (is_active_menu($currentPath, '/importar')) {
     $section = 'importar';
@@ -256,6 +256,105 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
             .app-navbar .navbar-brand { font-size:.88rem; }
             .btn.btn-lg { font-size:.9rem; padding-top:.55rem; padding-bottom:.55rem; }
         }
+
+        /* ── Sidebar layout ── */
+        .app-topbar {
+            position: sticky; top: 0; z-index: 1035;
+            display: flex; align-items: center; gap: .75rem;
+            padding: .45rem 1rem;
+            background: linear-gradient(90deg,#030810 0%,#060e1c 50%,#030810 100%);
+            border-bottom: 2px solid var(--section-accent);
+            box-shadow: 0 2px 22px rgba(0,0,0,.7);
+        }
+        .app-brand img { height: 32px; max-width: 130px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,212,255,.45)); }
+        .app-burger {
+            color: var(--gs-cyan); border: 1px solid rgba(0,212,255,.3); background: transparent;
+            font-size: 1.1rem; line-height: 1; padding: .2rem .55rem; border-radius: 6px;
+        }
+        .app-user-badge { font-family: var(--gs-font); }
+
+        .app-layout { display: flex; align-items: flex-start; }
+        .app-sidebar { background: linear-gradient(180deg,#050b16 0%,#070f1e 100%); border-right: 1px solid var(--gs-border); }
+        @media (min-width: 992px) {
+            .app-sidebar {
+                width: 244px; flex: 0 0 244px;
+                position: sticky; top: 50px; align-self: flex-start;
+                height: calc(100vh - 50px); overflow-y: auto;
+            }
+        }
+        .app-sidebar .offcanvas-header { border-bottom: 1px solid var(--gs-border); }
+        .app-sidebar-body { padding: .8rem .6rem; }
+        .app-main { flex: 1 1 auto; min-width: 0; position: relative; z-index: 1; }
+        .app-content { max-width: 1600px; margin-left: 0; margin-right: auto; }
+
+        .app-nav-group { margin-bottom: .3rem; }
+        .app-nav-toggle {
+            width: 100%; background: transparent; border: 0; cursor: pointer;
+            color: var(--gs-dim); font-family: var(--gs-font); font-weight: 700;
+            font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+            padding: .5rem .6rem; border-radius: 6px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .app-nav-toggle::after { content: '▾'; font-size: .7rem; transition: transform .18s; opacity: .7; }
+        .app-nav-toggle.collapsed::after { transform: rotate(-90deg); }
+        .app-nav-toggle:hover { color: #90b8d8; background: rgba(255,255,255,.03); }
+        .app-nav-link {
+            display: block; text-decoration: none;
+            color: #8fb0d4; font-family: var(--gs-font); font-weight: 600;
+            font-size: .9rem; padding: .48rem .7rem .48rem 1.15rem; margin: .12rem 0;
+            border-radius: 6px; border-left: 2px solid transparent;
+            transition: color .15s, background .15s, border-color .15s;
+        }
+        .app-nav-link:hover { color: #d0e8ff; background: rgba(255,255,255,.04); }
+        .app-nav-link.active {
+            color: var(--section-accent); background: rgba(255,255,255,.06);
+            border-left-color: var(--section-accent);
+            text-shadow: 0 0 10px var(--section-accent); font-weight: 700;
+        }
+
+        /* ── Iconos del menú ── */
+        .app-nav-link { display: flex; align-items: center; }
+        .app-nav-link .ico { display: inline-block; width: 1.4rem; text-align: center; margin-right: .55rem; flex-shrink: 0; font-size: .98rem; }
+
+        /* ── Riel de iconos que se expande al pasar el mouse (escritorio) ── */
+        @media (min-width: 992px) {
+            /* El sidebar reserva SOLO el ancho del riel (64px); su contenido flota y se expande. */
+            .app-sidebar {
+                flex: 0 0 64px !important; width: 64px !important;
+                position: sticky; top: 50px; align-self: flex-start;
+                height: calc(100vh - 50px);
+                overflow: visible !important;
+                z-index: 1041; /* por encima de .app-main para que el menú expandido flote sobre el contenido */
+            }
+            .app-sidebar > .offcanvas-body {
+                display: block;
+                position: absolute; top: 0; left: 0;
+                width: 64px; height: 100%;
+                padding: .8rem .5rem;
+                overflow: hidden;
+                background: linear-gradient(180deg,#050b16 0%,#070f1e 100%);
+                border-right: 1px solid var(--gs-border);
+                transition: width .2s ease, box-shadow .2s ease;
+                z-index: 1040;
+            }
+            /* Al pasar el mouse: el contenido del riel se expande flotando sobre la página */
+            .app-sidebar:hover > .offcanvas-body {
+                width: 244px; overflow-y: auto;
+                box-shadow: 6px 0 34px rgba(0,0,0,.55);
+                border-right-color: var(--section-accent);
+            }
+            /* Riel: todos los items visibles como iconos, sin encabezados ni etiquetas */
+            .app-sidebar .collapse { display: block !important; height: auto !important; }
+            .app-nav-toggle { display: none; pointer-events: none; }
+            .app-nav-link { justify-content: center; }
+            .app-nav-link .ico { margin-right: 0; }
+            .app-nav-link .lbl { display: none; }
+            /* Al hover: menú completo con textos y encabezados */
+            .app-sidebar:hover .app-nav-toggle { display: flex; }
+            .app-sidebar:hover .app-nav-link { justify-content: flex-start; }
+            .app-sidebar:hover .app-nav-link .ico { margin-right: .55rem; }
+            .app-sidebar:hover .app-nav-link .lbl { display: inline; }
+        }
     </style>
 </head>
 <body
@@ -267,64 +366,97 @@ $palette = $sectionColors[$section] ?? $sectionColors['dashboard'];
         --section-head-end: <?= e((string) $palette['head_end']) ?>;
     "
 >
-<?php if ($section !== 'auth'): ?>
-<nav class="navbar app-navbar navbar-expand-lg navbar-dark shadow-sm">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="<?= e(url('/dashboard')) ?>">
-            <img src="<?= e(url('/img/logo.png')) ?>" alt="<?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?>" height="36" style="max-width:140px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,212,255,.45));">
-        </a>
-        <?php if ($isLoggedIn): ?>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Mostrar navegación">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/dashboard') || $currentPath === '/' ? 'active' : '' ?>" href="<?= e(url('/dashboard')) ?>">Ghost Panel</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/contactar') ? 'active' : '' ?>" href="<?= e(url('/contactar')) ?>">Contactar</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/clientes') ? 'active' : '' ?>" href="<?= e(url('/clientes')) ?>">Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/plataformas') ? 'active' : '' ?>" href="<?= e(url('/plataformas')) ?>">Catálogo</a>
-                    </li>
-                    <li class="nav-item">
-                        <?php $tiposActive = is_active_menu($currentPath, '/tipos-suscripcion') || is_active_menu($currentPath, '/modalidades'); ?>
-                        <a class="nav-link <?= $tiposActive ? 'active' : '' ?>" href="<?= e(url('/tipos-suscripcion')) ?>">Planes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/suscripciones') ? 'active' : '' ?>" href="<?= e(url('/suscripciones')) ?>">Membresías</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/cuentas-principales') ? 'active' : '' ?>" href="<?= e(url('/cuentas-principales')) ?>">Cuentas</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/reportes') ? 'active' : '' ?>" href="<?= e(url('/reportes')) ?>">Reportes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/importar') ? 'active' : '' ?>" href="<?= e(url('/importar')) ?>">Importar</a>
-                    </li>
-                    <?php if ((string) ($authUser['rol'] ?? '') === 'admin'): ?>
-                    <li class="nav-item">
-                        <a class="nav-link <?= is_active_menu($currentPath, '/usuarios') ? 'active' : '' ?>" href="<?= e(url('/usuarios')) ?>">Usuarios</a>
-                    </li>
-                    <?php endif; ?>
-                </ul>
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
-                    <a href="<?= e(url('/perfil')) ?>" class="badge text-bg-secondary px-3 py-2 text-decoration-none">
-                        <?= e((string) ($authUser['username'] ?? '')) ?>
-                    </a>
-                    <a class="btn btn-outline-light btn-sm" href="<?= e(url('/logout')) ?>">Salir</a>
-                </div>
-            </div>
-        <?php endif; ?>
-    </div>
-</nav>
-<?php endif; ?>
+<?php
+$navUser = (string) ($authUser['username'] ?? '');
+$isAdmin = (string) ($authUser['rol'] ?? '') === 'admin';
+$actDash      = is_active_menu($currentPath, '/dashboard') || $currentPath === '/';
+$actContactar = $currentPath === '/contactar';
+$actPanelIa   = is_active_menu($currentPath, '/dashboard-ia');
+$actContactIa = $currentPath === '/contactar-ia';
+$actCuentas   = is_active_menu($currentPath, '/cuentas-principales');
+$actClientes  = is_active_menu($currentPath, '/clientes');
+$actMembres   = is_active_menu($currentPath, '/suscripciones');
+$actCatalogo  = is_active_menu($currentPath, '/plataformas');
+$actPlanes    = is_active_menu($currentPath, '/tipos-suscripcion') || is_active_menu($currentPath, '/modalidades');
+$actReportes  = is_active_menu($currentPath, '/reportes');
+$actImportar  = is_active_menu($currentPath, '/importar');
+$actAudit     = $currentPath === '/usuarios/auditoria';
+$actUsuarios  = is_active_menu($currentPath, '/usuarios') && !$actAudit;
+
+$sidebarMenu = [
+    ['Streaming', [
+        ['Panel', url('/dashboard'), $actDash, '📺'],
+        ['Contactar hoy', url('/contactar'), $actContactar, '💬'],
+        ['Importar cuentas', url('/importar'), $actImportar, '📥'],
+    ]],
+    ['Inteligencia Artificial', [
+        ['Panel IA', url('/dashboard-ia'), $actPanelIa, '🤖'],
+        ['Contactar IA', url('/contactar-ia'), $actContactIa, '🗨️'],
+        ['Cuentas IA', url('/cuentas-principales'), $actCuentas, '🔑'],
+    ]],
+    ['Gestión', [
+        ['Clientes', url('/clientes'), $actClientes, '👥'],
+        ['Membresías', url('/suscripciones'), $actMembres, '🎫'],
+        ['Reportes', url('/reportes'), $actReportes, '📊'],
+    ]],
+    ['Catálogo', [
+        ['Plataformas', url('/plataformas'), $actCatalogo, '🗂️'],
+        ['Planes', url('/tipos-suscripcion'), $actPlanes, '🏷️'],
+    ]],
+];
+if ($isAdmin) {
+    $sidebarMenu[] = ['Administración', [
+        ['Usuarios', url('/usuarios'), $actUsuarios, '🛡️'],
+        ['Auditoría', url('/usuarios/auditoria'), $actAudit, '📝'],
+    ]];
+}
+?>
+<?php if ($section === 'auth'): ?>
 <main class="container py-4">
+<?php else: ?>
+<div class="app-topbar">
+    <?php if ($isLoggedIn): ?>
+    <button class="app-burger d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Menú">☰</button>
+    <?php endif; ?>
+    <a class="app-brand d-flex align-items-center" href="<?= e(url('/dashboard')) ?>">
+        <img src="<?= e(url('/img/logo.png')) ?>" alt="<?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?>">
+    </a>
+    <?php if ($isLoggedIn): ?>
+    <div class="ms-auto d-flex align-items-center gap-2">
+        <a href="<?= e(url('/perfil')) ?>" class="badge text-bg-secondary px-3 py-2 text-decoration-none app-user-badge d-none d-sm-inline"><?= e($navUser) ?></a>
+        <a class="btn btn-outline-light btn-sm" href="<?= e(url('/logout')) ?>">Salir</a>
+    </div>
+    <?php endif; ?>
+</div>
+<div class="app-layout">
+    <?php if ($isLoggedIn): ?>
+    <aside class="offcanvas-lg offcanvas-start app-sidebar" id="appSidebar" tabindex="-1" aria-label="Navegación">
+        <div class="offcanvas-header d-lg-none">
+            <span class="fw-semibold text-secondary">Menú</span>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body app-sidebar-body">
+            <nav class="app-nav">
+                <?php foreach ($sidebarMenu as $gi => [$grupo, $items]): ?>
+                    <?php $abierto = false; foreach ($items as $it) { if ($it[2]) { $abierto = true; break; } } ?>
+                    <div class="app-nav-group">
+                        <button class="app-nav-toggle <?= $abierto ? '' : 'collapsed' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#grp<?= (int) $gi ?>" aria-expanded="<?= $abierto ? 'true' : 'false' ?>">
+                            <span class="grp-lbl"><?= e($grupo) ?></span>
+                        </button>
+                        <div class="collapse <?= $abierto ? 'show' : '' ?>" id="grp<?= (int) $gi ?>">
+                            <?php foreach ($items as [$lbl, $href, $act, $ico]): ?>
+                                <a class="app-nav-link <?= $act ? 'active' : '' ?>" href="<?= e($href) ?>" title="<?= e($lbl) ?>"><span class="ico"><?= $ico ?></span><span class="lbl"><?= e($lbl) ?></span></a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </nav>
+        </div>
+    </aside>
+    <?php endif; ?>
+    <main class="app-main">
+        <div class="app-content px-3 px-lg-4 py-4">
+<?php endif; ?>
     <?php foreach ($flashMessages as $flash): ?>
         <?php $type = (string) ($flash['type'] ?? 'info'); ?>
         <div class="alert alert-<?= e($type) ?> alert-dismissible fade show" role="alert">

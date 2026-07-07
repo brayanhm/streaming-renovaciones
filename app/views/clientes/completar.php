@@ -122,8 +122,10 @@ $tiposCuentaOpciones = [
                                             type="text"
                                             class="form-control"
                                             name="numero"
-                                            placeholder="Número"
+                                            placeholder="Número (8 dígitos)"
                                             value="<?= e((string) ($item['telefono'] ?? '')) ?>"
+                                            inputmode="numeric"
+                                            maxlength="8"
                                             required
                                         >
                                     </div>

@@ -115,10 +115,10 @@ class ClientesController extends Controller
             $this->redirect('/clientes');
         }
 
-        $payload['telefono'] = normalize_whatsapp_phone_bolivia($payload['telefono']);
-        if ($payload['telefono'] === '' || !is_valid_whatsapp_phone_bolivia($payload['telefono'])) {
+        $payload['telefono'] = local_whatsapp_phone_bolivia($payload['telefono']);
+        if ($payload['telefono'] === '' || !is_valid_local_whatsapp_phone_bolivia($payload['telefono'])) {
             set_old($payload);
-            flash('danger', 'Número inválido. Para Bolivia usa celular de 8 dígitos (inicia con 6 o 7), con o sin +591.');
+            flash('danger', 'Número inválido. Escribe solo el celular de 8 dígitos (inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->redirect('/clientes');
         }
 
@@ -222,10 +222,10 @@ class ClientesController extends Controller
             $this->redirect('/clientes');
         }
 
-        $payload['numero_antiguo'] = normalize_whatsapp_phone_bolivia($payload['numero_antiguo']);
-        if ($payload['numero_antiguo'] === '' || !is_valid_whatsapp_phone_bolivia($payload['numero_antiguo'])) {
+        $payload['numero_antiguo'] = local_whatsapp_phone_bolivia($payload['numero_antiguo']);
+        if ($payload['numero_antiguo'] === '' || !is_valid_local_whatsapp_phone_bolivia($payload['numero_antiguo'])) {
             set_old($payload);
-            flash('danger', 'Numero invalido. Para Bolivia usa celular de 8 digitos (inicia con 6 o 7), con o sin +591.');
+            flash('danger', 'Numero invalido. Escribe solo el celular de 8 digitos (inicia con 6 o 7); el +591 se agrega solo.');
             $this->redirect('/clientes');
         }
 
@@ -356,9 +356,9 @@ class ClientesController extends Controller
             $this->redirect('/clientes/editar/' . $id);
         }
 
-        $payload['telefono'] = normalize_whatsapp_phone_bolivia($payload['telefono']);
-        if ($payload['telefono'] === '' || !is_valid_whatsapp_phone_bolivia($payload['telefono'])) {
-            flash('danger', 'Número inválido. Para Bolivia usa celular de 8 dígitos (inicia con 6 o 7), con o sin +591.');
+        $payload['telefono'] = local_whatsapp_phone_bolivia($payload['telefono']);
+        if ($payload['telefono'] === '' || !is_valid_local_whatsapp_phone_bolivia($payload['telefono'])) {
+            flash('danger', 'Número inválido. Escribe solo el celular de 8 dígitos (inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
@@ -377,10 +377,10 @@ class ClientesController extends Controller
         }
 
         $contacto = trim((string) ($_POST['contacto'] ?? ''));
-        $numero = normalize_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
+        $numero = local_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
 
-        if ($numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
-            flash('danger', 'Ingresa un número celular válido de Bolivia (8 dígitos, inicia con 6 o 7).');
+        if ($numero === '' || !is_valid_local_whatsapp_phone_bolivia($numero)) {
+            flash('danger', 'Ingresa un número celular válido (8 dígitos, inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->goBack('/clientes/completar');
         }
 

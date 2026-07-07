@@ -16,8 +16,9 @@ declare(strict_types=1);
                     <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e((string) $item['nombre']) ?>">
                 </div>
                 <div class="col-md-6">
-                    <label for="numero" class="form-label">Número</label>
-                    <input type="text" class="form-control" id="numero" name="numero" value="<?= e((string) $item['telefono']) ?>" required>
+                    <label for="numero" class="form-label">Número (celular)</label>
+                    <input type="text" class="form-control" id="numero" name="numero" value="<?= e((string) $item['telefono']) ?>" placeholder="Ej: 71234567" inputmode="numeric" maxlength="8" required>
+                    <small class="text-secondary">Solo los 8 dígitos, sin +591.</small>
                 </div>
                 <div class="col-12">
                     <label for="notas" class="form-label">Notas</label>

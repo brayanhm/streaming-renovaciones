@@ -49,20 +49,57 @@ if (!function_exists('renewal_options')) {
         );
     }
 }
+$panelBase = $panelBase ?? '/dashboard';
+$panelTitulo = $panelTitulo ?? 'Panel operativo Ghost Store';
+$panelSubtitulo = $panelSubtitulo ?? 'Control diario de clientes, vencimientos y renovaciones de la tienda virtual.';
+$panelTipo = $panelTipo ?? 'streaming';
+$cuentasPorPagar = $cuentasPorPagar ?? [];
+$contactarBase = $panelTipo === 'ia' ? '/contactar-ia' : '/contactar';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="h3 mb-1">Panel operativo Ghost Store</h1>
-        <p class="text-secondary mb-0">Control diario de clientes, vencimientos y renovaciones de la tienda virtual.</p>
+        <h1 class="h3 mb-1"><?= e($panelTitulo) ?></h1>
+        <p class="text-secondary mb-0"><?= e($panelSubtitulo) ?></p>
     </div>
     <div class="d-flex gap-2">
+        <a href="<?= e(url($contactarBase)) ?>" class="btn btn-outline-success btn-lg">Contactar hoy</a>
         <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar membresías</a>
     </div>
 </div>
 
+<?php if ($panelTipo === 'ia' && !empty($cuentasPorPagar)): ?>
 <div class="card shadow-sm mb-3">
     <div class="card-body">
-        <form class="row g-2 align-items-end" method="get" action="<?= e(url('/dashboard')) ?>">
+        <h2 class="h6 mb-3">💳 Cuentas principales por pagar (<?= e((string) count($cuentasPorPagar)) ?>)</h2>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-dark"><tr><th>Cuenta</th><th>Plataforma</th><th>Cupos</th><th>Pago vence</th><th class="text-end">Ver</th></tr></thead>
+                <tbody>
+                    <?php foreach ($cuentasPorPagar as $cpp): ?>
+                        <?php $dpp = (int) ($cpp['dias_para_pagar'] ?? 0); ?>
+                        <tr>
+                            <td class="fw-semibold"><?= e((string) $cpp['etiqueta']) ?></td>
+                            <td><?= e((string) ($cpp['plataforma_nombre'] ?? '')) ?></td>
+                            <td><?= e((string) (int) ($cpp['ocupados'] ?? 0)) ?> / <?= e((string) (int) ($cpp['capacidad'] ?? 0)) ?></td>
+                            <td>
+                                <?= e((string) ($cpp['fecha_vencimiento'] ?? '')) ?>
+                                <small class="d-block <?= $dpp < 0 ? 'text-danger' : ($dpp <= 3 ? 'text-warning' : 'text-secondary') ?>">
+                                    <?= $dpp < 0 ? 'Vencido hace ' . abs($dpp) . 'd' : ($dpp === 0 ? 'Pagar hoy' : 'En ' . $dpp . 'd') ?>
+                                </small>
+                            </td>
+                            <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="<?= e(url('/cuentas-principales/' . (int) $cpp['id'])) ?>">Ver</a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form class="row g-2 align-items-end" method="get" action="<?= e(url($panelBase)) ?>">
             <input type="hidden" name="estado" value="<?= e($selectedStatus ?? 'TODOS') ?>">
             <?php
             $clearFiltersQuery = http_build_query([
@@ -105,7 +142,7 @@ if (!function_exists('renewal_options')) {
             <div class="col-12 col-md-3">
                 <div class="d-grid gap-2">
                     <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
-                    <a class="btn btn-outline-secondary" href="<?= e(url('/dashboard?' . $clearFiltersQuery)) ?>">Limpiar filtros</a>
+                    <a class="btn btn-outline-secondary" href="<?= e(url($panelBase . '?' . $clearFiltersQuery)) ?>">Limpiar filtros</a>
                 </div>
             </div>
         </form>
@@ -124,7 +161,7 @@ if (!function_exists('renewal_options')) {
         ], static fn (string $value): bool => $value !== ''));
         ?>
         <li class="nav-item me-2">
-            <a class="nav-link <?= $isActive ? 'active' : '' ?>" href="<?= e(url('/dashboard?' . $query)) ?>">
+            <a class="nav-link <?= $isActive ? 'active' : '' ?>" href="<?= e(url($panelBase . '?' . $query)) ?>">
                 <?= e($meta['label']) ?>
                 <span class="badge text-bg-<?= e($meta['badge']) ?> ms-1"><?= e((string) ($counts[$key] ?? 0)) ?></span>
             </a>
@@ -323,11 +360,11 @@ $paginationQuery = http_build_query(array_filter([
     </small>
     <ul class="pagination pagination-sm mb-0">
         <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
-            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . max(1, ($page ?? 1) - 1))) ?>">‹ Anterior</a>
+            <a class="page-link" href="<?= e(url($panelBase . '?' . $paginationQuery . '&page=' . max(1, ($page ?? 1) - 1))) ?>">‹ Anterior</a>
         </li>
         <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
         <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
-            <a class="page-link" href="<?= e(url('/dashboard?' . $paginationQuery . '&page=' . min(($totalPages ?? 1), ($page ?? 1) + 1))) ?>">Siguiente ›</a>
+            <a class="page-link" href="<?= e(url($panelBase . '?' . $paginationQuery . '&page=' . min(($totalPages ?? 1), ($page ?? 1) + 1))) ?>">Siguiente ›</a>
         </li>
     </ul>
 </nav>

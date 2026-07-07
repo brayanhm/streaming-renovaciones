@@ -59,7 +59,9 @@ if ($method === 'POST' && !verify_csrf_token(isset($_POST['_csrf']) ? (string) $
 $routes = [
     ['GET', '#^/$#', [DashboardController::class, 'index']],
     ['GET', '#^/dashboard$#', [DashboardController::class, 'index']],
+    ['GET', '#^/dashboard-ia$#', [DashboardController::class, 'panelIa']],
     ['GET', '#^/contactar$#', [DashboardController::class, 'contactar']],
+    ['GET', '#^/contactar-ia$#', [DashboardController::class, 'contactarIa']],
     ['POST', '#^/suscripciones/whatsapp/(\d+)$#', [DashboardController::class, 'whatsapp']],
     ['POST', '#^/suscripciones/renovar/(\d+)$#', [DashboardController::class, 'renovar']],
     ['POST', '#^/suscripciones/no-renovo/(\d+)$#', [DashboardController::class, 'noRenovo']],

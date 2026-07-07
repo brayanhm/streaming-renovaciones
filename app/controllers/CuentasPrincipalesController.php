@@ -45,12 +45,15 @@ class CuentasPrincipalesController extends Controller
             $this->redirect('/cuentas-principales');
         }
 
+        [$inicio, $venc] = $this->resolveFechasPago();
         $this->cuentas->create([
             'plataforma_id' => $plataformaId,
             'etiqueta' => $etiqueta,
             'correo' => trim((string) ($_POST['correo'] ?? '')),
             'password_cuenta' => (string) ($_POST['password_cuenta'] ?? ''),
             'capacidad' => $capacidad,
+            'fecha_inicio' => $inicio,
+            'fecha_vencimiento' => $venc,
             'activo' => 1,
             'notas' => trim((string) ($_POST['notas'] ?? '')),
         ]);
@@ -111,11 +114,14 @@ class CuentasPrincipalesController extends Controller
             $this->redirect('/cuentas-principales/editar/' . $id);
         }
 
+        [$inicio, $venc] = $this->resolveFechasPago();
         $this->cuentas->update($id, [
             'etiqueta' => $etiqueta,
             'correo' => trim((string) ($_POST['correo'] ?? '')),
             'password_cuenta' => (string) ($_POST['password_cuenta'] ?? ''),
             'capacidad' => $capacidad,
+            'fecha_inicio' => $inicio,
+            'fecha_vencimiento' => $venc,
             'activo' => isset($_POST['activo']) ? 1 : 0,
             'notas' => trim((string) ($_POST['notas'] ?? '')),
         ]);
@@ -158,7 +164,7 @@ class CuentasPrincipalesController extends Controller
         }
 
         $nombre = trim((string) ($_POST['nombre'] ?? ''));
-        $numero = normalize_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
+        $numero = local_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
         $departamento = trim((string) ($_POST['departamento'] ?? ''));
         $fechaInicioRaw = trim((string) ($_POST['fecha_inicio'] ?? ''));
 
@@ -166,8 +172,8 @@ class CuentasPrincipalesController extends Controller
             flash('danger', 'Indica el nombre del usuario asignado.');
             $this->redirect('/cuentas-principales/' . $id);
         }
-        if ($numero === '' || !is_valid_whatsapp_phone_bolivia($numero)) {
-            flash('danger', 'Número inválido. Usa celular de Bolivia (8 dígitos, inicia con 6 o 7).');
+        if ($numero === '' || !is_valid_local_whatsapp_phone_bolivia($numero)) {
+            flash('danger', 'Número inválido. Escribe solo el celular de 8 dígitos (inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->redirect('/cuentas-principales/' . $id);
         }
         if (!in_array($departamento, CuentaPrincipal::DEPARTAMENTOS, true)) {
@@ -222,6 +228,26 @@ class CuentasPrincipalesController extends Controller
     }
 
     // ── helpers ──
+
+    /**
+     * Fechas de la cuenta principal (activación y pago). Si no se indica el
+     * vencimiento, se calcula un mes desde la activación.
+     *
+     * @return array{0:string,1:string} [fecha_inicio, fecha_vencimiento] en Y-m-d o ''
+     */
+    private function resolveFechasPago(): array
+    {
+        $inicio = parse_ymd_date(trim((string) ($_POST['fecha_inicio'] ?? '')));
+        $venc = parse_ymd_date(trim((string) ($_POST['fecha_vencimiento'] ?? '')));
+        if ($inicio !== null && $venc === null) {
+            $venc = shift_months_clamped($inicio, 1);
+        }
+
+        return [
+            $inicio !== null ? $inicio->format('Y-m-d') : '',
+            $venc !== null ? $venc->format('Y-m-d') : '',
+        ];
+    }
 
     private function plataformasConCuentas(): array
     {

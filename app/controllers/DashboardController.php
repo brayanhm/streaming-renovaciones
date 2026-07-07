@@ -18,6 +18,16 @@ class DashboardController extends Controller
 
     public function index(): void
     {
+        $this->renderPanel(false);
+    }
+
+    public function panelIa(): void
+    {
+        $this->renderPanel(true);
+    }
+
+    private function renderPanel(bool $soloIa): void
+    {
         $this->suscripciones->recalculateStates(RECUP_DAYS);
         $dashboardStates = ['TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
 
@@ -30,6 +40,11 @@ class DashboardController extends Controller
         }
 
         $allRows = $this->suscripciones->all('', '', 'TODOS', $contacto, $usuario, $telefono);
+        // Separar por tipo de plataforma: streaming (0) o IA (1).
+        $allRows = array_values(array_filter(
+            $allRows,
+            static fn (array $r): bool => (int) ($r['plataforma_usa_cuentas'] ?? 0) === ($soloIa ? 1 : 0)
+        ));
         $activeRows = [];
         $noRenewRows = [];
         foreach ($allRows as $row) {
@@ -92,8 +107,8 @@ class DashboardController extends Controller
         $page = max(1, min((int) ($_GET['page'] ?? 1), $totalPages));
         $rows = array_slice($filteredRows, ($page - 1) * $perPage, $perPage);
 
-        $this->render('dashboard/index', [
-            'pageTitle' => 'Ghost Panel',
+        $renderData = [
+            'pageTitle' => $soloIa ? 'Panel IA' : 'Ghost Panel',
             'rows' => $rows,
             'counts' => $counts,
             'contacto' => $contacto,
@@ -106,10 +121,31 @@ class DashboardController extends Controller
             'totalPages' => $totalPages,
             'totalRows' => $totalRows,
             'perPage' => $perPage,
-        ]);
+            'panelBase' => $soloIa ? '/dashboard-ia' : '/dashboard',
+            'panelTitulo' => $soloIa ? 'Panel de cuentas IA' : 'Panel operativo Ghost Store',
+            'panelSubtitulo' => $soloIa
+                ? 'Usuarios asignados a cuentas de IA (ChatGPT, Claude) por vencer y contactar.'
+                : 'Control diario de clientes, vencimientos y renovaciones de la tienda virtual.',
+            'panelTipo' => $soloIa ? 'ia' : 'streaming',
+        ];
+        if ($soloIa) {
+            $renderData['cuentasPorPagar'] = (new \App\Models\CuentaPrincipal())->porPagar(7);
+        }
+
+        $this->render('dashboard/index', $renderData);
     }
 
     public function contactar(): void
+    {
+        $this->renderContactar(false);
+    }
+
+    public function contactarIa(): void
+    {
+        $this->renderContactar(true);
+    }
+
+    private function renderContactar(bool $soloIa): void
     {
         $this->suscripciones->recalculateStates(RECUP_DAYS);
 
@@ -118,6 +154,9 @@ class DashboardController extends Controller
 
         $rows = [];
         foreach ($this->suscripciones->all() as $row) {
+            if ((int) ($row['plataforma_usa_cuentas'] ?? 0) !== ($soloIa ? 1 : 0)) {
+                continue;
+            }
             if ((int) ($row['flag_no_renovo'] ?? 0) === 1) {
                 continue;
             }
@@ -139,8 +178,10 @@ class DashboardController extends Controller
         });
 
         $this->render('dashboard/contactar', [
-            'pageTitle' => 'Contactar hoy',
+            'pageTitle' => $soloIa ? 'Contactar IA' : 'Contactar hoy',
             'rows' => $rows,
+            'panelBase' => $soloIa ? '/dashboard-ia' : '/dashboard',
+            'panelTipo' => $soloIa ? 'ia' : 'streaming',
         ]);
     }
 
