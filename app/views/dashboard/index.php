@@ -279,19 +279,28 @@ $contactarBase = $panelTipo === 'ia' ? '/contactar-ia' : '/contactar';
                                 <small class="<?= e($diasClass) ?>">
                                     <?= e($diasLabel) ?>
                                 </small>
+                                <?php
+                                // En la pestaña Vencidos, este control sirve para REACTIVAR: se muestra
+                                // como acción verde con fecha futura por defecto (hoy + 1 mes).
+                                $esVencidoTab = $showRecoveryOption;
+                                $finValue = $esVencidoTab ? $today->modify('+1 month')->format('Y-m-d') : $vencimiento;
+                                ?>
                                 <details class="mt-2">
-                                    <summary class="small text-primary" role="button">Editar finalizacion</summary>
+                                    <summary class="small <?= $esVencidoTab ? 'text-success fw-semibold' : 'text-primary' ?>" role="button"><?= $esVencidoTab ? '🔄 Reactivar (cambiar fecha fin)' : 'Editar finalizacion' ?></summary>
                                     <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
                                         <?= csrf_field() ?>
                                         <input
                                             type="date"
-                                            class="form-control form-control-sm mb-2"
+                                            class="form-control form-control-sm mb-1"
                                             name="fecha_vencimiento"
-                                            value="<?= e($vencimiento) ?>"
+                                            value="<?= e($finValue) ?>"
                                             min="<?= e((string) ($row['fecha_inicio'] ?? '')) ?>"
                                             required
                                         >
-                                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Guardar</button>
+                                        <?php if ($esVencidoTab): ?>
+                                            <small class="d-block text-secondary mb-2" style="font-size:.72rem">Fecha futura → vuelve a <strong>ACTIVO</strong>. No registra ingreso; para eso usa <em>Renovar</em>.</small>
+                                        <?php endif; ?>
+                                        <button type="submit" class="btn <?= $esVencidoTab ? 'btn-success' : 'btn-outline-primary' ?> btn-sm w-100"><?= $esVencidoTab ? 'Reactivar' : 'Guardar' ?></button>
                                     </form>
                                 </details>
                             </td>
