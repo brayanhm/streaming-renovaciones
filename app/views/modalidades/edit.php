@@ -10,7 +10,7 @@ $returnQuery = $returnPlatformId > 0
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar tipo de suscripción</h1>
-    <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary">Volver a tipos</a>
+    <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a tipos</span></a>
 </div>
 
 <div class="card shadow-sm">
@@ -117,8 +117,8 @@ $returnQuery = $returnPlatformId > 0
                     </div>
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar tipo</button>
-                    <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit"><?= icon('save') ?><span class="button-label">Guardar tipo</span></button>
+                    <a href="<?= e(url('/tipos-suscripcion' . $returnQuery)) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
                 </div>
             </div>
         </form>

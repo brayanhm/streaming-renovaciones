@@ -8,7 +8,7 @@ $mesesNombres = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Se
         <h1 class="h3 mb-1">Reportes financieros</h1>
         <p class="text-secondary mb-0">Resumen de renovaciones, ingresos y ganancias.</p>
     </div>
-    <a href="<?= e(url('/reportes/exportar')) ?>" class="btn btn-outline-primary">Exportar CSV</a>
+    <a href="<?= e(url('/reportes/exportar')) ?>" class="btn btn-outline-primary"><?= icon('download') ?><span class="button-label">Exportar CSV</span></a>
 </div>
 
 <?php
@@ -173,6 +173,10 @@ $churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
     const ganancia = <?= json_encode(array_map(fn($f) => round((float)($f['total_utilidad'] ?? 0), 2), $porMes)) ?>;
     const ingreso  = <?= json_encode(array_map(fn($f) => round((float)($f['total_monto'] ?? 0), 2), $porMes)) ?>;
 
+    const theme = getComputedStyle(document.documentElement);
+    const themeColor = token => theme.getPropertyValue(token).trim();
+    const positiveColor = themeColor('--gs-chart-gain');
+    const negativeColor = themeColor('--gs-chart-loss');
     const ctx = document.getElementById('chartGanancia').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
@@ -182,23 +186,32 @@ $churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
                 {
                     label: 'Ingreso (Bs)',
                     data: ingreso,
-                    backgroundColor: 'rgba(124,58,237,0.25)',
-                    borderColor: 'rgba(124,58,237,0.8)',
+                    backgroundColor: themeColor('--gs-chart-income-fill'),
+                    borderColor: themeColor('--gs-chart-income'),
                     borderWidth: 1,
                 },
                 {
                     label: 'Ganancia (Bs)',
                     data: ganancia,
-                    backgroundColor: ganancia.map(v => v < 0 ? 'rgba(220,53,69,0.7)' : 'rgba(25,135,84,0.7)'),
-                    borderColor: ganancia.map(v => v < 0 ? '#dc3545' : '#198754'),
+                    backgroundColor: ganancia.map(v => themeColor(v < 0 ? '--gs-chart-loss-fill' : '--gs-chart-gain-fill')),
+                    borderColor: ganancia.map(v => v < 0 ? negativeColor : positiveColor),
                     borderWidth: 1,
                 },
             ],
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true } },
+            plugins: {
+                legend: { position: 'top', labels: { color: themeColor('--gs-text') } },
+            },
+            scales: {
+                x: { ticks: { color: themeColor('--gs-dim') }, grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: themeColor('--gs-dim') },
+                    grid: { color: themeColor('--gs-border') },
+                },
+            },
         },
     });
 })();

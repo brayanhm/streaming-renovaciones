@@ -10,11 +10,9 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
     <h1 class="h3 mb-0">Clientes</h1>
     <div class="d-flex gap-2">
         <?php if ((int) ($missingContactCount ?? 0) > 0): ?>
-            <a href="<?= e(url('/clientes/completar')) ?>" class="btn btn-warning">
-                Completar faltantes (<?= (int) $missingContactCount ?>)
-            </a>
+            <a href="<?= e(url('/clientes/completar')) ?>" class="btn btn-warning"><?= icon('users') ?><span class="button-label">Completar faltantes (<?= (int) $missingContactCount ?>)</span></a>
         <?php endif; ?>
-        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
     </div>
 </div>
 
@@ -33,7 +31,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         >
                     </div>
                     <div class="col-12 col-md-3 d-grid">
-                        <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+                        <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
 
@@ -64,11 +62,11 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                     <td><?= e(mb_strimwidth((string) ($item['notas'] ?? ''), 0, 50, '…')) ?></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>">Asignar vigencia</a>
-                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>">Editar</a>
+                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>"><?= icon('plus') ?><span class="button-label">Asignar vigencia</span></a>
+                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                             <form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar este cliente?')">
                                                 <?= csrf_field() ?>
-                                                <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
+                                                <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                             </form>
                                         </div>
                                     </td>
@@ -186,7 +184,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         >
                         <small class="text-secondary js-usuario-help">Se pedirá según la configuración de la plataforma.</small>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>>Guardar cliente</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>><?= icon('save') ?><span class="button-label">Guardar cliente</span></button>
                 </form>
             </div>
         </div>
@@ -264,9 +262,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         <label class="form-label" for="notas_antiguo">Notas</label>
                         <textarea class="form-control" id="notas_antiguo" name="notas_antiguo" rows="2"><?= e(old('notas_antiguo')) ?></textarea>
                     </div>
-                    <button type="submit" class="btn btn-outline-primary w-100" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>>
-                        Guardar cliente antiguo
-                    </button>
+                    <button type="submit" class="btn btn-outline-primary w-100" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>><?= icon('save') ?><span class="button-label">Guardar cliente antiguo</span></button>
                 </form>
             </div>
         </div>

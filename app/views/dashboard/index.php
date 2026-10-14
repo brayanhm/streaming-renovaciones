@@ -61,8 +61,8 @@ $contactarBase = '/contactar';
         <p class="text-secondary mb-0"><?= e($panelSubtitulo) ?></p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url($contactarBase)) ?>" class="btn btn-outline-success btn-lg">Contactar hoy</a>
-        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar membresías</a>
+        <a href="<?= e(url($contactarBase)) ?>" class="btn btn-outline-success btn-lg"><?= icon('message-circle') ?><span class="button-label">Contactar hoy</span></a>
+        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg"><?= icon('calendar-clock') ?><span class="button-label">Gestionar membresías</span></a>
     </div>
 </div>
 
@@ -110,8 +110,8 @@ $contactarBase = '/contactar';
             </div>
             <div class="col-12 col-md-3">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
-                    <a class="btn btn-outline-secondary" href="<?= e(url($panelBase . '?' . $clearFiltersQuery)) ?>">Limpiar filtros</a>
+                    <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
+                    <a class="btn btn-outline-secondary" href="<?= e(url($panelBase . '?' . $clearFiltersQuery)) ?>"><?= icon('funnel-x') ?><span class="button-label">Limpiar filtros</span></a>
                 </div>
             </div>
         </form>
@@ -255,7 +255,7 @@ $contactarBase = '/contactar';
                                 $finValue = $esVencidoTab ? $today->modify('+1 month')->format('Y-m-d') : $vencimiento;
                                 ?>
                                 <details class="mt-2">
-                                    <summary class="small <?= $esVencidoTab ? 'text-success fw-semibold' : 'text-primary' ?>" role="button"><?= $esVencidoTab ? '🔄 Reactivar (cambiar fecha fin)' : 'Editar finalizacion' ?></summary>
+                                    <summary class="small <?= $esVencidoTab ? 'text-success fw-semibold' : 'text-primary' ?>" role="button"><?= icon($esVencidoTab ? 'refresh-cw' : 'square-pen') ?><?= $esVencidoTab ? 'Reactivar (cambiar fecha fin)' : 'Editar finalizacion' ?></summary>
                                     <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
                                         <?= csrf_field() ?>
                                         <input
@@ -269,7 +269,7 @@ $contactarBase = '/contactar';
                                         <?php if ($esVencidoTab): ?>
                                             <small class="d-block text-secondary mb-2" style="font-size:.72rem">Fecha futura → vuelve a <strong>ACTIVO</strong>. No registra ingreso; para eso usa <em>Renovar</em>.</small>
                                         <?php endif; ?>
-                                        <button type="submit" class="btn <?= $esVencidoTab ? 'btn-success' : 'btn-outline-primary' ?> btn-sm w-100"><?= $esVencidoTab ? 'Reactivar' : 'Guardar' ?></button>
+                                        <button type="submit" class="btn <?= $esVencidoTab ? 'btn-success' : 'btn-outline-primary' ?> btn-sm w-100"><?= icon($esVencidoTab ? 'refresh-cw' : 'save') ?><span class="button-label"><?= $esVencidoTab ? 'Reactivar' : 'Guardar' ?></span></button>
                                     </form>
                                 </details>
                             </td>
@@ -288,13 +288,13 @@ $contactarBase = '/contactar';
                                 <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="tipo" value="<?= e($whatsType) ?>">
-                                    <button type="submit" class="btn btn-success btn-sm px-3">WhatsApp</button>
+                                    <button type="submit" class="btn btn-success btn-sm px-3"><?= icon('message-circle') ?><span class="button-label">WhatsApp</span></button>
                                 </form>
                                 <?php if ($showRecoveryOption): ?>
                                     <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener" class="mt-1">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="tipo" value="<?= e($recupType) ?>">
-                                        <button type="submit" class="btn btn-outline-dark btn-sm px-2">Recuperacion</button>
+                                        <button type="submit" class="btn btn-outline-dark btn-sm px-2"><?= icon('refresh-cw') ?><span class="button-label">Recuperacion</span></button>
                                     </form>
                                 <?php endif; ?>
                             </td>
@@ -304,7 +304,7 @@ $contactarBase = '/contactar';
                                         <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="meses" value="<?= e((string) $months) ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm">+<?= e((string) $months) ?>M</button>
+                                            <button type="submit" class="btn btn-primary btn-sm"><?= icon('refresh-cw') ?><span class="button-label">+<?= e((string) $months) ?>M</span></button>
                                         </form>
                                     <?php endforeach; ?>
                                 </div>
@@ -312,7 +312,7 @@ $contactarBase = '/contactar';
                             <td>
                                 <form method="post" action="<?= e(url('/suscripciones/no-renovo/' . (int) $row['id'])) ?>">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">Marcar</button>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"><?= icon('circle-x') ?><span class="button-label">Marcar</span></button>
                                 </form>
                             </td>
                         </tr>

@@ -2,23 +2,27 @@
 declare(strict_types=1);
 
 $canAdmin = $canAdmin ?? false;
+$service = 'chatgpt';
+$unit = 'dispositivos';
 $q = $q ?? $search ?? '';
 $summary = $summary ?? [];
 $chatgptDate = static fn (?string $value): string => $value ? (new DateTimeImmutable($value))->format('d/m/Y') : '—';
 $chatgptMoney = static fn (mixed $value): string => number_format((float) $value, 2, ',', '.');
-$periodLabels = ['PAGADO' => 'Mes pagado', 'GRACIA' => 'Mes de gracia', 'VENCIDO' => 'Vigencia finalizada', 'SIN_PAGO' => 'Fechas pendientes de revisión'];
-$periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'danger', 'SIN_PAGO' => 'secondary'];
+$periodLabels = ['PAGADO' => 'Mes pagado', 'GRACIA' => 'Mes de gracia', 'GRATIS' => 'Gratis', 'SIN_PAGO' => 'Fechas pendientes de revisión'];
+$periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'GRATIS' => 'secondary', 'SIN_PAGO' => 'secondary'];
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="h3 mb-1">ChatGPT</h1>
         <p class="text-secondary mb-0">Cuentas principales, pagos y ventas por dispositivos.</p>
     </div>
-    <?php if ($canAdmin): ?><a href="<?= e(url('/chatgpt/plantillas')) ?>" class="btn btn-outline-primary">Textos de entrega y renovación</a><?php endif; ?>
+    <a href="<?= e(url('/chatgpt/distribucion')) ?>" class="btn btn-primary"><?= icon('copy') ?><span class="button-label">Cuenta en distribución</span></a>
 </div>
 
+<?php require __DIR__ . '/../cuentas_compartidas/actual.php'; ?>
+
 <div class="row row-cols-2 row-cols-lg-5 g-3 mb-4">
-    <?php foreach ([['Cuentas', (int) ($summary['cuentas'] ?? 0)], ['Dispositivos ocupados', (int) ($summary['ocupados'] ?? 0)], ['Hasta lo recomendado', max(0, (int) ($summary['hasta_recomendado'] ?? $summary['libres'] ?? 0))], ['Ventas históricas', 'Bs ' . $chatgptMoney($summary['ventas_bs'] ?? 0)], ['Pagos históricos', 'Bs ' . $chatgptMoney($summary['pagos_bs'] ?? 0)]] as [$label, $value]): ?>
+    <?php foreach ([['Cuentas', (int) ($summary['cuentas'] ?? 0)], ['Dispositivos ocupados', (int) ($summary['ocupados'] ?? 0)], ['Cupos sin ocupar', max(0, (int) ($summary['hasta_recomendado'] ?? $summary['libres'] ?? 0))], ['Ventas históricas', 'Bs ' . $chatgptMoney($summary['ventas_bs'] ?? 0)], ['Pagos históricos', 'Bs ' . $chatgptMoney($summary['pagos_bs'] ?? 0)]] as [$label, $value]): ?>
         <div class="col"><div class="card shadow-sm h-100"><div class="card-body">
             <div class="small text-secondary mb-1"><?= e($label) ?></div>
             <div class="h4 mb-0"><?= e((string) $value) ?></div>
@@ -31,8 +35,8 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
         <form method="get" action="<?= e(url('/chatgpt')) ?>" class="d-flex gap-2 mb-3" role="search">
             <label class="visually-hidden" for="chatgpt-search">Buscar cuenta</label>
             <input type="search" class="form-control" id="chatgpt-search" name="q" value="<?= e((string) ($q ?? '')) ?>" placeholder="Buscar por correo o nombre de cuenta">
-            <button type="submit" class="btn btn-outline-primary">Buscar</button>
-            <?php if (($q ?? '') !== ''): ?><a href="<?= e(url('/chatgpt')) ?>" class="btn btn-outline-secondary">Limpiar</a><?php endif; ?>
+            <button type="submit" class="btn btn-outline-primary"><?= icon('search') ?><span class="button-label">Buscar</span></button>
+            <?php if (($q ?? '') !== ''): ?><a href="<?= e(url('/chatgpt')) ?>" class="btn btn-outline-secondary"><?= icon('funnel-x') ?><span class="button-label">Limpiar</span></a><?php endif; ?>
         </form>
         <div class="card shadow-sm">
             <div class="card-body p-0">
@@ -49,6 +53,8 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
                                     <td>
                                         <a class="fw-semibold text-decoration-none" href="<?= e(url('/chatgpt/' . (int) $row['id'])) ?>"><?= e((string) $row['etiqueta']) ?></a>
                                         <small class="d-block text-secondary text-break"><?= e((string) ($row['correo'] ?? '')) ?></small>
+                                        <span class="badge text-bg-<?= !empty($row['llena']) ? 'warning' : (!empty($row['distribucion_actual']) ? 'primary' : 'secondary') ?> mt-1"><?= e((string) ($row['estado_distribucion'] ?? 'Disponible')) ?></span>
+                                        <?php if (!empty($row['distribucion_actual'])): ?><small class="d-block text-primary">Cuenta seleccionada</small><?php endif; ?>
                                         <?php if ((int) ($row['activo'] ?? 1) !== 1): ?><span class="badge text-bg-secondary mt-1">Inactiva</span><?php endif; ?>
                                     </td>
                                     <td>
@@ -59,12 +65,12 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
                                     </td>
                                     <td>
                                         <strong class="<?= $exceeded > 0 ? 'text-danger' : ($remaining === 0 ? 'text-warning' : '') ?>"><?= $occupied ?> ocupados</strong>
-                                        <small class="d-block text-secondary">Cantidad recomendada: <?= $recommended ?></small>
-                                        <small class="d-block text-secondary">Hasta lo recomendado: <?= $remaining ?></small>
-                                        <?php if ($exceeded > 0): ?><span class="badge text-bg-danger mt-1">+<?= $exceeded ?> sobre lo recomendado</span><?php elseif ($remaining === 0): ?><span class="badge text-bg-warning mt-1">Cantidad recomendada alcanzada</span><?php endif; ?>
+                                        <small class="d-block text-secondary">Capacidad: <?= $recommended ?></small>
+                                        <small class="d-block text-secondary">Libres: <?= $remaining ?></small>
+                                        <?php if ($exceeded > 0): ?><span class="badge text-bg-danger mt-1">+<?= $exceeded ?> adicionales</span><?php elseif ($remaining === 0): ?><span class="badge text-bg-warning mt-1">Capacidad alcanzada</span><?php endif; ?>
                                     </td>
                                     <td class="text-end text-nowrap"><?php if (($row['ultimo_costo_bs'] ?? null) !== null): ?>Bs <?= e($chatgptMoney($row['ultimo_costo_bs'])) ?><?php else: ?><span class="text-secondary">Sin registrar</span><?php endif; ?></td>
-                                    <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="<?= e(url('/chatgpt/' . (int) $row['id'])) ?>">Abrir</a></td>
+                                    <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="<?= e(url('/chatgpt/' . (int) $row['id'])) ?>"><?= icon('arrow-right') ?><span class="button-label">Abrir</span></a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -72,7 +78,7 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
                 </div>
             </div>
         </div>
-        <p class="small text-secondary mt-2 mb-0">Se recomiendan hasta 20 dispositivos por cuenta. Puedes seguir registrando ventas por encima de esa cantidad. Una venta de 2 dispositivos suma 2 al contador.</p>
+        <p class="small text-secondary mt-2 mb-0">Solo se vende en la cuenta seleccionada. Al llenarse, únicamente el administrador puede superar su capacidad.</p>
     </div>
     <?php if ($canAdmin): ?>
     <div class="col-xl-4">
@@ -87,7 +93,7 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
                     <textarea class="form-control" id="correos_existentes" name="correos" rows="6" placeholder="Una cuenta por línea" required><?= e(old('correos')) ?></textarea>
                     <small class="text-secondary">Escribe un correo por línea. Luego abre cada cuenta para completar la contraseña y revisar su vigencia.</small>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">Registrar cuentas existentes</button>
+                <button type="submit" class="btn btn-primary w-100"><?= icon('plus') ?><span class="button-label">Registrar cuentas existentes</span></button>
             </form>
         </div></div>
         <div class="card shadow-sm"><div class="card-body">
@@ -107,7 +113,7 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
                     <label class="form-label" for="password_cuenta">Contraseña</label>
                     <div class="input-group">
                         <input type="password" class="form-control" id="password_cuenta" name="password_cuenta" autocomplete="new-password" required>
-                        <button type="button" class="btn btn-outline-secondary" data-password-target="password_cuenta" aria-pressed="false">Mostrar</button>
+                        <button type="button" class="btn btn-outline-secondary" data-password-target="password_cuenta" aria-pressed="false"><?= icon('eye') ?><span class="button-label">Mostrar</span></button>
                     </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -122,10 +128,14 @@ $periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'dan
                 </div>
                 <p class="small text-secondary">Pago nominal: USD 20. Cada pago inicia un mes calendario pagado y un mes calendario de gracia.</p>
                 <div class="mb-3">
+                    <label class="form-label" for="capacidad">Capacidad en dispositivos</label>
+                    <input type="number" class="form-control" id="capacidad" name="capacidad" value="<?= e(old('capacidad', '20')) ?>" min="1" max="99999" step="1" required>
+                </div>
+                <div class="mb-3">
                     <label class="form-label" for="notas">Notas</label>
                     <textarea class="form-control" id="notas" name="notas" rows="2"><?= e(old('notas')) ?></textarea>
                 </div>
-                <button type="submit" class="btn btn-success w-100">Crear cuenta y registrar pago</button>
+                <button type="submit" class="btn btn-success w-100"><?= icon('plus') ?><span class="button-label">Crear cuenta y registrar pago</span></button>
             </form>
         </div></div>
     </div>

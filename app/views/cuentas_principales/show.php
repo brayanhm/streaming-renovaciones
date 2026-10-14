@@ -12,8 +12,8 @@ $lleno = $libres <= 0;
         <p class="text-secondary mb-0"><?= e((string) ($cuenta['plataforma_nombre'] ?? '')) ?></p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url('/cuentas-principales/editar/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-primary">Editar</a>
-        <a href="<?= e(url('/claude')) ?>" class="btn btn-outline-secondary">Volver a Claude</a>
+        <a href="<?= e(url('/cuentas-principales/editar/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-primary"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
+        <a href="<?= e(url('/claude')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a Claude</span></a>
     </div>
 </div>
 
@@ -89,7 +89,7 @@ $lleno = $libres <= 0;
                                     <td>
                                         <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $a['id'])) ?>" target="_blank" rel="noopener">
                                             <?= csrf_field() ?>
-                                            <button type="submit" class="btn btn-success btn-sm">WhatsApp</button>
+                                            <button type="submit" class="btn btn-success btn-sm"><?= icon('message-circle') ?><span class="button-label">WhatsApp</span></button>
                                         </form>
                                     </td>
                                 </tr>
@@ -133,7 +133,7 @@ $lleno = $libres <= 0;
                         <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= e(date('Y-m-d')) ?>" required>
                         <small class="text-secondary">Duración: 1 mes (el vencimiento se calcula solo).</small>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Asignar usuario</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('plus') ?><span class="button-label">Asignar usuario</span></button>
                 </form>
                 <?php endif; ?>
             </div>

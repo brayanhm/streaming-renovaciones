@@ -15,10 +15,8 @@ $returnQuery = $selectedPlatformId > 0
         <a
             href="<?= e(url('/tipos-suscripcion/precios' . ($selectedPlatformId > 0 ? ('?' . http_build_query(['plataforma_id' => $selectedPlatformId])) : ''))) ?>"
             class="btn btn-outline-primary"
-        >
-            Editar costos/precios por plataforma
-        </a>
-        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+        ><?= icon('square-pen') ?><span class="button-label">Editar costos/precios por plataforma</span></a>
+        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
     </div>
 </div>
 
@@ -27,7 +25,7 @@ $returnQuery = $selectedPlatformId > 0
         <span>
             Mostrando tipos solo para la plataforma: <strong><?= e((string) $selectedPlatform['nombre']) ?></strong>
         </span>
-        <a class="btn btn-sm btn-outline-primary" href="<?= e(url('/tipos-suscripcion')) ?>">Ver todas las plataformas</a>
+        <a class="btn btn-sm btn-outline-primary" href="<?= e(url('/tipos-suscripcion')) ?>"><?= icon('arrow-right') ?><span class="button-label">Ver todas las plataformas</span></a>
     </div>
 <?php endif; ?>
 
@@ -59,7 +57,7 @@ $returnQuery = $selectedPlatformId > 0
                         </select>
                     </div>
                     <div class="col-12 col-md-3 d-grid">
-                        <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+                        <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
 
@@ -96,13 +94,13 @@ $returnQuery = $selectedPlatformId > 0
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>">Editar</a>
+                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                             <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar este tipo de suscripción?')">
                                                 <?= csrf_field() ?>
                                                 <?php if ($selectedPlatformId > 0): ?>
                                                     <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
                                                 <?php endif; ?>
-                                                <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
+                                                <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                             </form>
                                         </div>
                                     </td>
@@ -185,7 +183,7 @@ $returnQuery = $selectedPlatformId > 0
                         Ganancia estimada por plan:
                         <strong class="js-ganancia"><?= e(money((float) 0)) ?></strong>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Guardar tipo</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar tipo</span></button>
                 </form>
             </div>
         </div>

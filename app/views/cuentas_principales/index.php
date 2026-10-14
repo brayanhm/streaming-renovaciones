@@ -6,7 +6,7 @@ declare(strict_types=1);
         <h1 class="h3 mb-0">Cuentas principales</h1>
         <small class="text-secondary">Cuentas compartidas (ChatGPT, Claude…) con usuarios asignados.</small>
     </div>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
 <div class="row g-3">
@@ -55,8 +55,8 @@ declare(strict_types=1);
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/cuentas-principales/' . (int) $c['id'])) ?>">Ver / Asignar</a>
-                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/cuentas-principales/editar/' . (int) $c['id'])) ?>">Editar</a>
+                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/cuentas-principales/' . (int) $c['id'])) ?>"><?= icon('arrow-right') ?><span class="button-label">Ver / Asignar</span></a>
+                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/cuentas-principales/editar/' . (int) $c['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -120,7 +120,7 @@ declare(strict_types=1);
                         <label class="form-label" for="notas">Notas</label>
                         <textarea class="form-control" id="notas" name="notas" rows="2"><?= e(old('notas')) ?></textarea>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Crear cuenta principal</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('plus') ?><span class="button-label">Crear cuenta principal</span></button>
                 </form>
                 <?php endif; ?>
             </div>

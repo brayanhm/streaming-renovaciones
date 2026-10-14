@@ -12,7 +12,7 @@ $isSelf = $uid === (int) ($currentUserId ?? 0);
             <?php if ($isSelf): ?><span class="badge text-bg-primary ms-1">Tú</span><?php endif; ?>
         </small>
     </div>
-    <a href="<?= e(url('/usuarios')) ?>" class="btn btn-outline-secondary">Volver a usuarios</a>
+    <a href="<?= e(url('/usuarios')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a usuarios</span></a>
 </div>
 
 <?php if (!empty($isLastActiveAdmin)): ?>
@@ -43,7 +43,7 @@ $isSelf = $uid === (int) ($currentUserId ?? 0);
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    <button type="submit" class="btn btn-primary"><?= icon('save') ?><span class="button-label">Guardar cambios</span></button>
                 </form>
             </div>
         </div>
@@ -65,7 +65,7 @@ $isSelf = $uid === (int) ($currentUserId ?? 0);
                         <label class="form-label" for="confirm_password">Confirmar contraseña</label>
                         <input type="password" class="form-control" id="confirm_password" name="confirm_password" minlength="6" required autocomplete="new-password">
                     </div>
-                    <button type="submit" class="btn btn-primary">Restablecer contraseña</button>
+                    <button type="submit" class="btn btn-primary"><?= icon('key-round') ?><span class="button-label">Restablecer contraseña</span></button>
                 </form>
             </div>
         </div>

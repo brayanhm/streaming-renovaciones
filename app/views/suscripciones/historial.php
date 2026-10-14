@@ -19,8 +19,8 @@ $duracion = max(1, (int) ($suscripcion['duracion_meses'] ?? 1));
         </p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url('/suscripciones/editar/' . (int) $suscripcion['id'])) ?>" class="btn btn-outline-primary">Editar suscripción</a>
-        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary">Volver</a>
+        <a href="<?= e(url('/suscripciones/editar/' . (int) $suscripcion['id'])) ?>" class="btn btn-outline-primary"><?= icon('square-pen') ?><span class="button-label">Editar suscripción</span></a>
+        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver</span></a>
     </div>
 </div>
 

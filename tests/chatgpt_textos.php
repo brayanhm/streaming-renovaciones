@@ -70,6 +70,7 @@ $failed = 0;
 $defaults = require APP_PATH . '/config/chatgpt_templates.php';
 $controller = (new ReflectionClass(ChatgptController::class))->newInstanceWithoutConstructor();
 $messageContext = new ReflectionMethod(CuentasCompartidasController::class, 'messageContext');
+$messageContext->setAccessible(true);
 $fixture = ['etiqueta' => 'Cuenta fixture de textos', 'correo' => 'delivery-fixture@example.invalid'];
 $fixturePassword = 'fixture-password-for-delivery';
 $contextFor = static function (int $devices, ?array $account = null, ?string $password = null) use (

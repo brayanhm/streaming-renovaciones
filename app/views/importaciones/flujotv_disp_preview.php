@@ -24,7 +24,7 @@ if (!function_exists('modalidad_label_disp')) {
             Nada se ha creado todavía.
         </small>
     </div>
-    <a href="<?= e(url('/importar/flujotv-dispositivos')) ?>" class="btn btn-outline-secondary">Cancelar</a>
+    <a href="<?= e(url('/importar/flujotv-dispositivos')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
 </div>
 
 <div class="row g-3 mb-3">
@@ -102,8 +102,8 @@ if (!function_exists('modalidad_label_disp')) {
               onsubmit="return confirm('¿Crear <?= (int) count($create) ?> cuenta(s) por dispositivos?')">
             <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?= e((string) $token) ?>">
-            <button type="submit" class="btn btn-success btn-lg">Confirmar y crear</button>
+            <button type="submit" class="btn btn-success btn-lg"><?= icon('circle-check') ?><span class="button-label">Confirmar y crear</span></button>
         </form>
     <?php endif; ?>
-    <a href="<?= e(url('/importar/flujotv-dispositivos')) ?>" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+    <a href="<?= e(url('/importar/flujotv-dispositivos')) ?>" class="btn btn-outline-secondary btn-lg"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
 </div>

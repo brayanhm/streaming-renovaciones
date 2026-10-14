@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 $accountId = (int) $cuenta['id'];
+$service = 'chatgpt';
+$unit = 'dispositivos';
 $canAdmin = $canAdmin ?? false;
 $occupied = (int) ($cuenta['ocupados'] ?? 0);
 $recommended = (int) ($cuenta['recomendado'] ?? 20);
@@ -10,11 +12,12 @@ $exceeded = max(0, $occupied - $recommended);
 $occupancyColor = $exceeded > 0 ? 'danger' : ($remaining === 0 ? 'warning' : 'success');
 $today = date('Y-m-d');
 $period = strtoupper((string) ($cuenta['estado_periodo'] ?? 'SIN_PAGO'));
-$periodLabels = ['PAGADO' => 'Mes pagado', 'GRACIA' => 'Mes de gracia', 'VENCIDO' => 'Vigencia finalizada', 'SIN_PAGO' => 'Fechas pendientes de revisión'];
-$periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'VENCIDO' => 'danger', 'SIN_PAGO' => 'secondary'];
+$periodLabels = ['PAGADO' => 'Mes pagado', 'GRACIA' => 'Mes de gracia', 'GRATIS' => 'Gratis', 'SIN_PAGO' => 'Fechas pendientes de revisión'];
+$periodColors = ['PAGADO' => 'success', 'GRACIA' => 'warning', 'GRATIS' => 'secondary', 'SIN_PAGO' => 'secondary'];
 $isActive = (int) ($cuenta['activo'] ?? 1) === 1;
 $credentialsReady = (bool) ($credentialsReady ?? true);
-$canSell = $isActive && $credentialsReady && in_array($period, ['PAGADO', 'GRACIA'], true);
+$canSell = $isActive && $credentialsReady && in_array($period, ['PAGADO', 'GRACIA'], true)
+    && !empty($cuenta['distribucion_actual']) && ($canAdmin || $occupied < $recommended);
 $credentialsNotice = in_array($period, ['PAGADO', 'GRACIA'], true)
     ? 'Completa la contraseña antes de vender y entregar esta cuenta.'
     : 'Completa la contraseña y confirma las fechas antes de vender y entregar esta cuenta.';
@@ -40,10 +43,12 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
         <p class="text-secondary mb-0">ChatGPT · <?= e((string) ($cuenta['correo'] ?? '')) ?></p>
     </div>
     <div class="d-flex flex-wrap gap-2">
-        <?php if ($canAdmin): ?><a href="<?= e(url('/chatgpt/' . $accountId . '/editar')) ?>" class="btn btn-outline-primary">Editar cuenta</a><?php endif; ?>
-        <a href="<?= e(url('/chatgpt')) ?>" class="btn btn-outline-secondary">Volver</a>
+        <?php if ($canAdmin): ?><a href="<?= e(url('/chatgpt/' . $accountId . '/editar')) ?>" class="btn btn-outline-primary"><?= icon('square-pen') ?><span class="button-label">Editar cuenta</span></a><?php endif; ?>
+        <a href="<?= e(url('/chatgpt')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver</span></a>
     </div>
 </div>
+
+<?php require __DIR__ . '/../cuentas_compartidas/distribucion.php'; ?>
 
 <?php if ($lastSaleId > 0): ?>
     <div class="alert alert-success">
@@ -60,9 +65,8 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
 <?php endif; ?>
 
 <?php if ($occupied >= $recommended): ?>
-    <div class="alert alert-<?= $exceeded > 0 ? 'danger' : 'warning' ?>">
-        <?= $exceeded > 0 ? 'Se superó' : 'Se alcanzó' ?> el máximo recomendado de <?= $recommended ?> dispositivos por cuenta. Puedes seguir registrando ventas por encima de esta recomendación.
-        <?php if ($exceeded > 0): ?><span class="badge text-bg-danger ms-1">+<?= $exceeded ?> sobre lo recomendado</span><?php endif; ?>
+    <div class="alert alert-warning">La cuenta está llena. Solo el administrador puede registrar ventas adicionales en la cuenta seleccionada.
+        <?php if ($exceeded > 0): ?><span class="badge text-bg-warning ms-1">+<?= $exceeded ?> adicionales</span><?php endif; ?>
     </div>
 <?php endif; ?>
 
@@ -70,10 +74,10 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Dispositivos</h2>
         <div class="h3 mb-1 text-<?= $occupancyColor ?>"><?= $occupied ?> <span class="h5 text-secondary">ocupados</span></div>
-        <div class="small text-secondary">Cantidad recomendada: <?= $recommended ?></div>
-        <div class="mb-2">Hasta lo recomendado: <?= $remaining ?></div>
-        <div class="progress mb-2" role="progressbar" aria-label="Dispositivos ocupados hasta lo recomendado" aria-valuenow="<?= min($recommended, max(0, $occupied)) ?>" aria-valuemin="0" aria-valuemax="<?= $recommended ?>"><div class="progress-bar bg-<?= $occupancyColor ?>" style="width: <?= min(100, max(0, $occupied * 100 / max(1, $recommended))) ?>%"></div></div>
-        <small class="text-secondary">El administrador libera todos los cupos manualmente.</small>
+        <div class="small text-secondary">Capacidad: <?= $recommended ?></div>
+        <div class="mb-2">Libres: <?= $remaining ?></div>
+        <div class="progress mb-2" role="progressbar" aria-label="Dispositivos ocupados respecto a su capacidad" aria-valuenow="<?= min($recommended, max(0, $occupied)) ?>" aria-valuemin="0" aria-valuemax="<?= $recommended ?>"><div class="progress-bar bg-<?= $occupancyColor ?>" style="width: <?= min(100, max(0, $occupied * 100 / max(1, $recommended))) ?>%"></div></div>
+        <small class="text-secondary">Los cupos se reinician al confirmar un nuevo ciclo.</small>
     </div></div></div>
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Pago y vigencia</h2>
@@ -81,7 +85,7 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
         <div class="small mb-1"><?php if (!empty($cuenta['fecha_inicio'])): ?>Fecha de pago: <strong><?= e($chatgptDate($cuenta['fecha_inicio'])) ?></strong><?php else: ?><span class="text-secondary">Fecha de pago sin confirmar</span><?php endif; ?></div>
         <div class="small mb-1">Fin del mes pagado: <strong><?= e($chatgptDate($paidUntil)) ?></strong></div>
         <div class="small mb-2">Fin del mes de gracia: <strong><?= e($chatgptDate($graceUntil)) ?></strong></div>
-        <?php if ($period === 'PAGADO'): ?><small class="text-success">La gracia comienza en <?= (int) ($cuenta['dias_pagado'] ?? 0) ?> días.</small><?php elseif ($period === 'GRACIA'): ?><small class="text-warning">Quedan <?= (int) ($cuenta['dias_gracia'] ?? 0) ?> días de gracia.</small><?php elseif ($period === 'VENCIDO'): ?><small class="text-danger">La vigencia terminó. Registra un pago para habilitar nuevas ventas.</small><?php endif; ?>
+        <?php if ($period === 'PAGADO'): ?><small class="text-success">La gracia comienza en <?= (int) ($cuenta['dias_pagado'] ?? 0) ?> días.</small><?php elseif ($period === 'GRACIA'): ?><small class="text-warning">Quedan <?= (int) ($cuenta['dias_gracia'] ?? 0) ?> días de gracia.</small><?php elseif ($period === 'GRATIS'): ?><small class="text-danger">La vigencia terminó. Registra un pago para habilitar nuevas ventas.</small><?php endif; ?>
     </div></div></div>
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Totales históricos</h2>
@@ -91,7 +95,7 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
         <?php if ($canAdmin): ?>
             <form method="post" action="<?= e(url('/chatgpt/' . $accountId . '/estado')) ?>" class="mt-2" data-chatgpt-submit>
                 <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($stateToken ?? '')) ?>">
-                <button type="submit" class="btn btn-sm btn-outline-secondary"><?= $isActive ? 'Desactivar cuenta' : 'Activar cuenta' ?></button>
+                <button type="submit" class="btn btn-sm btn-outline-secondary"><?= icon($isActive ? 'circle-x' : 'circle-check') ?><span class="button-label"><?= $isActive ? 'Desactivar cuenta' : 'Activar cuenta' ?></span></button>
             </form>
         <?php endif; ?>
     </div></div></div>
@@ -104,11 +108,11 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
             <div class="row g-3">
                 <div class="col-md-6"><label class="form-label" for="account-email">Correo</label><div class="input-group">
                     <input type="text" class="form-control" id="account-email" value="<?= e((string) ($cuenta['correo'] ?? '')) ?>" readonly>
-                    <button type="button" class="btn btn-outline-secondary" data-copy-source="account-email">Copiar</button>
+                    <button type="button" class="btn btn-outline-secondary" data-copy-source="account-email"><?= icon('copy') ?><span class="button-label">Copiar</span></button>
                 </div></div>
                 <div class="col-md-6"><label class="form-label" for="account-password">Contraseña</label><div class="input-group">
                     <input type="password" class="form-control" id="account-password" value="<?= e((string) ($password ?? '')) ?>" autocomplete="off" readonly>
-                    <button type="button" class="btn btn-outline-secondary" data-password-target="account-password" aria-pressed="false">Mostrar</button>
+                    <button type="button" class="btn btn-outline-secondary" data-password-target="account-password" aria-pressed="false"><?= icon('eye') ?><span class="button-label">Mostrar</span></button>
                 </div></div>
             </div>
             <?php if ($accountNotes !== ''): ?><p class="small text-secondary mt-3 mb-0"><?= nl2br(e($accountNotes)) ?></p><?php endif; ?>
@@ -116,12 +120,12 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
             <h3 class="h6">Renovación</h3>
             <p class="small text-secondary">Busca este correo en WhatsApp para localizar a quienes adquirieron acceso durante el mes anterior.</p>
             <textarea id="renewal-text" hidden><?= e($renewalText) ?></textarea>
-            <button type="button" class="btn btn-outline-primary" data-copy-source="renewal-text" <?= $renewalText === '' ? 'disabled' : '' ?>>Copiar texto de renovación</button>
-            <?php if ($renewalText === ''): ?><small class="d-block text-secondary mt-2">Mensaje pendiente de configurar. <?php if ($canAdmin): ?><a href="<?= e(url('/chatgpt/plantillas')) ?>">Ver textos</a><?php endif; ?></small><?php endif; ?>
+            <button type="button" class="btn btn-outline-primary" data-copy-source="renewal-text" <?= $renewalText === '' ? 'disabled' : '' ?>><?= icon('copy') ?><span class="button-label">Copiar texto de renovación</span></button>
+            <?php if ($renewalText === ''): ?><small class="d-block text-secondary mt-2">Texto de renovación pendiente.</small><?php endif; ?>
         </div></div>
 
         <div class="card shadow-sm" id="chatgpt-copy-box" hidden><div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 class="h6 mb-0">Texto preparado</h2><button type="button" class="btn btn-outline-primary btn-sm" data-copy-source="chatgpt-copy-text">Copiar de nuevo</button></div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 class="h6 mb-0">Texto preparado</h2><button type="button" class="btn btn-outline-primary btn-sm" data-copy-source="chatgpt-copy-text"><?= icon('copy') ?><span class="button-label">Copiar de nuevo</span></button></div>
             <p id="chatgpt-copy-status" class="small mb-2" role="status" aria-live="polite"></p>
             <label class="visually-hidden" for="chatgpt-copy-text">Texto para copiar manualmente</label>
             <textarea class="form-control" id="chatgpt-copy-text" rows="6" readonly></textarea>
@@ -132,20 +136,20 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
         <div class="card shadow-sm"><div class="card-body">
             <h2 class="h5 mb-3">Nueva venta</h2>
             <?php if (!$canSell): ?>
-                <div class="alert alert-warning mb-0"><?php if (!$isActive): ?>La cuenta está inactiva. Actívala para registrar nuevas ventas.<?php elseif (!$credentialsReady): ?><?= e($credentialsNotice) ?><?php elseif ($period === 'SIN_PAGO'): ?>Las fechas están pendientes de revisión. El administrador debe confirmar la vigencia antes de vender.<?php else: ?>La vigencia terminó. Revisa las fechas existentes o registra un nuevo pago para vender.<?php endif; ?></div>
+                <div class="alert alert-warning mb-0"><?= e($saleBlockedMessage) ?></div>
             <?php else: ?>
-                <form method="post" action="<?= e(url('/chatgpt/' . $accountId . '/vender')) ?>" data-chatgpt-submit data-chatgpt-sale data-paid-until="<?= e($paidUntil) ?>" data-grace-until="<?= e($graceUntil) ?>" data-occupied="<?= $occupied ?>" data-recommended="<?= $recommended ?>">
+                <form method="post" action="<?= e(url('/chatgpt/' . $accountId . '/vender')) ?>" data-chatgpt-submit data-chatgpt-sale data-paid-until="<?= e($paidUntil) ?>" data-grace-until="<?= e($graceUntil) ?>" data-occupied="<?= $occupied ?>" data-recommended="<?= $recommended ?>" data-can-exceed="<?= $canAdmin ? '1' : '0' ?>">
                     <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($saleToken ?? '')) ?>">
                     <fieldset class="mb-3">
                         <legend class="form-label fs-6">Dispositivos</legend>
                         <div class="form-check mb-2"><input class="form-check-input" type="radio" name="dispositivos" id="sale-one" value="1" checked><label class="form-check-label" for="sale-one">1 dispositivo · <strong>30 Bs</strong></label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="dispositivos" id="sale-two" value="2"><label class="form-check-label" for="sale-two">2 dispositivos juntos · <strong>55 Bs</strong></label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="dispositivos" id="sale-two" value="2" <?= !$canAdmin && $remaining < 2 ? 'disabled' : '' ?>><label class="form-check-label" for="sale-two">2 dispositivos juntos · <strong>55 Bs</strong></label></div>
                     </fieldset>
                     <div class="mb-3"><label class="form-label" for="fecha_venta">Fecha de venta</label><input type="date" class="form-control" id="fecha_venta" name="fecha_venta" value="<?= e($today) ?>" max="<?= e($today) ?>" required></div>
-                    <p class="small text-secondary">El acceso vence el <strong data-sale-expiry><?= e($chatgptDate($saleEnd)) ?></strong>. Esta venta suma <strong data-sale-devices>1</strong> <span data-sale-device-unit>dispositivo</span> al contador. Cantidad recomendada: <?= $recommended ?> dispositivos por cuenta.</p>
-                    <div class="alert alert-warning small" data-sale-recommendation-warning role="status" aria-live="polite" <?= $occupied + 1 <= $recommended ? 'hidden' : '' ?>>Con esta venta habrá <?= $occupied + 1 ?> dispositivos ocupados: <?= max(0, $occupied + 1 - $recommended) ?> sobre el máximo recomendado de <?= $recommended ?>. Puedes registrarla igualmente.</div>
+                    <p class="small text-secondary">El acceso vence el <strong data-sale-expiry><?= e($chatgptDate($saleEnd)) ?></strong>. Esta venta suma <strong data-sale-devices>1</strong> <span data-sale-device-unit>dispositivo</span> al contador. Capacidad: <?= $recommended ?> dispositivos por cuenta.</p>
+                    <div class="alert alert-warning small" data-sale-recommendation-warning role="status" aria-live="polite" <?= $occupied + 1 <= $recommended ? 'hidden' : '' ?>>Con esta venta habrá <?= $occupied + 1 ?> dispositivos ocupados: <?= max(0, $occupied + 1 - $recommended) ?> por encima de la capacidad de <?= $recommended ?>. Venta adicional autorizada para el administrador.</div>
                     <p class="small text-secondary mb-2" data-sale-template-status><?= trim((string) ($templates['entrega_1'] ?? '')) === '' ? 'Mensaje pendiente de configurar. La venta se registrará y podrás copiarlo después.' : 'Se preparará el texto de entrega al registrar la venta.' ?></p>
-                    <button type="submit" class="btn btn-success w-100" data-sale-button><?= trim((string) ($templates['entrega_1'] ?? '')) === '' ? 'Registrar venta' : 'Registrar venta y copiar' ?></button>
+                    <button type="submit" class="btn btn-success w-100" data-sale-button><?= icon('plus') ?><span class="button-label"><?= trim((string) ($templates['entrega_1'] ?? '')) === '' ? 'Registrar venta' : 'Registrar venta y copiar' ?></span></button>
                     <input type="hidden" data-template-one value="<?= trim((string) ($templates['entrega_1'] ?? '')) !== '' ? '1' : '0' ?>">
                     <input type="hidden" data-template-two value="<?= trim((string) ($templates['entrega_2'] ?? '')) !== '' ? '1' : '0' ?>">
                 </form>
@@ -157,8 +161,11 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
 <?php if ($canAdmin): ?>
 <div class="card shadow-sm mb-3" id="review-existing-period"><div class="card-body">
     <h2 class="h5 mb-2">Revisar vigencia existente</h2>
-    <p class="small text-secondary">Confirma una fecha que conozcas. La fecha del pago inicia un mes calendario pagado y luego un mes de gracia. Si conoces el inicio del mes de gracia, ese mes gratuito comienza en la fecha indicada; la fecha original del pago queda sin confirmar.</p>
+    <p class="small text-secondary">Confirma una fecha que conozcas. La fecha del pago inicia un mes calendario pagado y luego un mes de gracia. Si conoces el inicio de la gracia, ese mes de gracia comienza en la fecha indicada; la fecha original del pago queda sin confirmar.</p>
     <p class="small text-secondary">Esta revisión actualiza la vigencia sin registrar pagos ni modificar los dispositivos ocupados.</p>
+    <?php if (!$restoreAllowed && (int) ($cuenta['revision_vigencia_pendiente'] ?? 0) !== 1): ?>
+    <p class="text-secondary mb-0">La vigencia terminó. Registra un nuevo pago para comenzar otro período.</p>
+    <?php else: ?>
     <form method="post" action="<?= e(url('/chatgpt/' . $accountId . '/vigencia')) ?>" class="row g-2 align-items-end" data-chatgpt-submit>
         <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($periodToken ?? '')) ?>">
         <div class="col-md-4">
@@ -169,30 +176,22 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
             </select>
         </div>
         <div class="col-md-4"><label class="form-label" for="fecha_referencia">Fecha confirmada</label><input type="date" class="form-control" id="fecha_referencia" name="fecha_referencia" value="<?= e(old('fecha_referencia')) ?>" max="<?= e($today) ?>" required></div>
-        <div class="col-md-4"><button type="submit" class="btn btn-primary w-100">Guardar vigencia revisada</button></div>
+        <div class="col-md-4"><button type="submit" class="btn btn-primary w-100"><?= icon('save') ?><span class="button-label">Guardar vigencia revisada</span></button></div>
     </form>
+    <?php endif; ?>
 </div></div>
 <div class="row g-3 mb-3">
-    <div class="col-lg-8"><div class="card shadow-sm"><div class="card-body">
+    <div class="col-12"><div class="card shadow-sm"><div class="card-body">
         <h2 class="h5 mb-2">Registrar pago</h2>
         <p class="small text-secondary">USD 20 nominales. El nuevo período inicia en la fecha que registres e incluye un mes pagado y un mes de gracia. Los dispositivos ocupados se conservan.</p>
         <form method="post" action="<?= e(url('/chatgpt/' . $accountId . '/pagar')) ?>" class="row g-2 align-items-end" data-chatgpt-submit>
             <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($paymentToken ?? '')) ?>">
             <div class="col-sm-4"><label class="form-label" for="fecha_pago">Fecha de pago</label><input type="date" class="form-control" id="fecha_pago" name="fecha_pago" value="<?= e($today) ?>" max="<?= e($today) ?>" required></div>
             <div class="col-sm-4"><label class="form-label" for="monto_bs">Costo real en Bs</label><input type="number" class="form-control" id="monto_bs" name="monto_bs" min="0.01" step="0.01" placeholder="Monto cobrado" required></div>
-            <div class="col-sm-4"><button type="submit" class="btn btn-primary w-100">Registrar pago</button></div>
+            <div class="col-sm-4"><button type="submit" class="btn btn-primary w-100"><?= icon('plus') ?><span class="button-label">Registrar pago</span></button></div>
         </form>
     </div></div></div>
-    <div class="col-lg-4"><div class="card shadow-sm h-100"><div class="card-body">
-        <h2 class="h5 mb-2">Liberar todos los cupos</h2>
-        <p class="small text-secondary">Úsalo después de retirar los accesos anteriores. Las ventas y los pagos permanecen en el historial.</p>
-        <form method="post" action="<?= e(url('/chatgpt/' . $accountId . '/liberar')) ?>" data-chatgpt-submit data-confirm="<?= e('¿Liberar los ' . $occupied . ' dispositivos ocupados de esta cuenta? Confirma que retiraste los accesos anteriores.') ?>">
-            <?= csrf_field() ?>
-            <input type="hidden" name="token_operacion" value="<?= e((string) ($releaseToken ?? '')) ?>">
-            <label class="visually-hidden" for="motivo">Motivo de liberación</label><input type="text" class="form-control mb-2" id="motivo" name="motivo" maxlength="255" placeholder="Motivo (opcional)">
-            <button type="submit" class="btn btn-outline-danger w-100" <?= $occupied <= 0 ? 'disabled' : '' ?>>Liberar <?= $occupied ?> dispositivos</button>
-        </form>
-    </div></div></div>
+
 </div>
 <?php endif; ?>
 
@@ -214,7 +213,7 @@ if ($accountNotes === 'Cuenta existente: fechas y credenciales pendientes de rev
                         <td><?php if (!empty($sale['liberada_at'])): ?><span class="badge text-bg-secondary">Liberados</span><?php else: ?><span class="badge text-bg-primary">Ocupados</span><?php endif; ?></td>
                         <td>
                             <textarea id="sale-text-<?= $saleId ?>" hidden <?= $saleId === $lastSaleId && $saleText !== '' ? 'data-copy-on-load' : '' ?>><?= e($saleText) ?></textarea>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-copy-source="sale-text-<?= $saleId ?>" <?= $saleText === '' ? 'disabled' : '' ?>>Copiar entrega</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-copy-source="sale-text-<?= $saleId ?>" <?= $saleText === '' ? 'disabled' : '' ?>><?= icon('copy') ?><span class="button-label">Copiar entrega</span></button>
                             <?php if ($saleText === ''): ?><small class="d-block text-secondary"><?= !$credentialsReady ? 'Credenciales pendientes de completar' : 'Mensaje pendiente de configurar' ?></small><?php endif; ?>
                         </td>
                     </tr>

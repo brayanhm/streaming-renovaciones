@@ -3,7 +3,7 @@ declare(strict_types=1);
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar cliente</h1>
-    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver a clientes</a>
+    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a clientes</span></a>
 </div>
 
 <div class="card shadow-sm">
@@ -25,8 +25,8 @@ declare(strict_types=1);
                     <textarea class="form-control" id="notas" name="notas" rows="4"><?= e((string) ($item['notas'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
-                    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit"><?= icon('save') ?><span class="button-label">Guardar cambios</span></button>
+                    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
                 </div>
             </div>
         </form>

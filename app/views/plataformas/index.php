@@ -5,7 +5,7 @@ use App\Models\Plataforma;
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Plataformas</h1>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
 <div class="row g-3">
@@ -23,7 +23,7 @@ use App\Models\Plataforma;
                         >
                     </div>
                     <div class="col-12 col-md-3 d-grid">
-                        <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+                        <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
 
@@ -112,14 +112,14 @@ use App\Models\Plataforma;
                                         <td>
                                             <div class="d-flex flex-wrap gap-1 justify-content-end">
                                                 <?php if ($esIa): ?>
-                                                    <a class="btn btn-outline-success btn-sm" href="<?= e(url('/cuentas-principales')) ?>">Cuentas</a>
+                                                    <a class="btn btn-outline-success btn-sm" href="<?= e(url('/cuentas-principales')) ?>"><?= icon('key-round') ?><span class="button-label">Cuentas</span></a>
                                                 <?php else: ?>
-                                                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>">Ver tipos</a>
+                                                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>"><?= icon('arrow-right') ?><span class="button-label">Ver tipos</span></a>
                                                 <?php endif; ?>
-                                                <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/plataformas/editar/' . (int) $item['id'])) ?>">Editar</a>
+                                                <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/plataformas/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                                 <form method="post" action="<?= e(url('/plataformas/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta plataforma?')">
                                                     <?= csrf_field() ?>
-                                                    <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                                 </form>
                                             </div>
                                         </td>
@@ -198,7 +198,7 @@ use App\Models\Plataforma;
                     <div class="alert alert-light border small">
                         Variables disponibles: <code>{NOMBRE}</code>, <code>{PLATAFORMA}</code>, <code>{PLAN}</code>, <code>{FECHA_VENCE}</code>, <code>{PRECIO}</code>.
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Guardar plataforma</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar plataforma</span></button>
                 </form>
             </div>
         </div>

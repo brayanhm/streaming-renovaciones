@@ -25,8 +25,8 @@ if (!function_exists('status_badge_show')) {
         <p class="text-secondary mb-0"><?= e((string) ($item['telefono'] ?? '')) ?></p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>" class="btn btn-outline-primary">Editar cliente</a>
-        <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver a clientes</a>
+        <a href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>" class="btn btn-outline-primary"><?= icon('square-pen') ?><span class="button-label">Editar cliente</span></a>
+        <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a clientes</span></a>
     </div>
 </div>
 
@@ -40,7 +40,7 @@ if (!function_exists('status_badge_show')) {
     <div class="card-body p-0">
         <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
             <h2 class="h6 mb-0">Suscripciones</h2>
-            <a href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>" class="btn btn-sm btn-outline-primary">+ Nueva vigencia</a>
+            <a href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>" class="btn btn-sm btn-outline-primary"><?= icon('plus') ?><span class="button-label">Nueva vigencia</span></a>
         </div>
         <div class="table-responsive">
             <table class="table table-striped align-middle mb-0">
@@ -122,8 +122,8 @@ if (!function_exists('status_badge_show')) {
                             </td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $sus['id'])) ?>">Historial</a>
-                                    <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $sus['id'])) ?>">Editar</a>
+                                    <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $sus['id'])) ?>"><?= icon('scroll-text') ?><span class="button-label">Historial</span></a>
+                                    <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $sus['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                 </div>
                                 <details class="mt-2">
                                     <summary class="small text-primary" role="button">Modificar finalizacion</summary>
@@ -139,7 +139,7 @@ if (!function_exists('status_badge_show')) {
                                             min="<?= e((string) ($sus['fecha_inicio'] ?? '')) ?>"
                                             required
                                         >
-                                        <button class="btn btn-success btn-sm w-100" type="submit">Guardar finalizacion</button>
+                                        <button class="btn btn-success btn-sm w-100" type="submit"><?= icon('save') ?><span class="button-label">Guardar finalizacion</span></button>
                                     </form>
                                 </details>
                             </td>

@@ -160,10 +160,14 @@ function cgeCredentials(ChatgptCuenta $model, PDO $pdo, int $id): void
 
 function cgePaid(ChatgptCuenta | ClaudeCuenta $model, string $date, string $email = ''): int
 {
-    return $model->create(['etiqueta' => 'Cuenta aislada fixture',
+    $id = $model->create(['etiqueta' => 'Cuenta aislada fixture',
         'correo' => $email ?: 'paid-' . bin2hex(random_bytes(5)) . '@example.invalid',
         'password_cuenta' => 'fixture-only-local-secret', 'fecha_pago' => $date,
         'monto_bs' => '185.50', 'notas' => 'Fixture de conservación']);
+    if (in_array($model->find($id)['estado_periodo'], ['PAGADO', 'GRACIA'], true)) {
+        $model->selectDistribution($id);
+    }
+    return $id;
 }
 
 function cgeLegacy(PDO $pdo, int $id): void
@@ -198,7 +202,7 @@ $failed = 0;
 cgeTest('gracia conocida sin inicio pagado usa límites exclusivos', static function (): void {
     $account = ['fecha_inicio' => null, 'fecha_vencimiento' => '2026-01-31', 'fin_gracia' => '2026-02-28'];
     foreach ([['2026-01-30', 'SIN_PAGO'], ['2026-01-31', 'GRACIA'],
-        ['2026-02-27', 'GRACIA'], ['2026-02-28', 'VENCIDO']] as [$date, $state]) {
+        ['2026-02-27', 'GRACIA'], ['2026-02-28', 'GRATIS']] as [$date, $state]) {
         $period = ChatgptCuenta::period($account, new DateTimeImmutable($date));
         cgeEq($period['estado_periodo'], $state, 'Estado incorrecto para una gracia sin inicio pagado.');
         cgeEq($period['dias_pagado'], null, 'No debe inventar días pagados desconocidos.');
@@ -521,6 +525,7 @@ try {
         cgeReject(static fn() => $model->sell($id, 1, $previous, cgeToken()), 'Aceptó una venta anterior al inicio conocido de gracia.');
         cgeReject(static fn() => $model->registerPayment($id, $previous, '199.99', cgeToken()), 'Aceptó un pago que retrocede el inicio conocido de gracia.');
         cgeEq(cgeSnapshot($pdo), $snapshot, 'Las fechas anteriores al ancla dejaron movimientos.');
+        $model->selectDistribution($id);
         $saleId = $model->sell($id, 2, $todayString, cgeToken());
         $sale = array_column($model->sales($id), null, 'id')[$saleId];
         cgeEq($sale['fecha_vencimiento'], shift_months_clamped($today, 1)->format('Y-m-d'), 'La venta en gracia debe vencer al terminar la gracia configurada.');
@@ -533,6 +538,7 @@ try {
         $id = cgePending($model);
         cgeCredentials($model, $pdo, $id);
         $model->configureExistingPeriod($id, 'GRACIA', $recent);
+        $model->selectDistribution($id);
         $model->sell($id, 2, $todayString, cgeToken());
         cgeLegacy($pdo, $id);
         cgeEq(count($model->payments($id)), 0, 'Las fechas manuales no deben inventar pagos previos.');
@@ -564,7 +570,7 @@ try {
         $id = cgePaid($model, $todayString);
         $token = cgeToken();
         $saleId = $model->sell($id, 2, $todayString, $token);
-        cgeEq($model->releaseSlots($id, 'Liberación fixture', 'fixture-runner'), 2, 'Debe liberar los dispositivos fixture.');
+        cgeEq($model->startCycle($id, true, 'fixture-runner', cgeToken()), 2, 'Debe liberar los dispositivos fixture.');
         $pdo->prepare('UPDATE cuentas_principales SET password_cuenta = NULL, correo = :email, activo = 0, fecha_inicio = NULL, fecha_vencimiento = NULL, fin_gracia = NULL, revision_vigencia_pendiente = 1 WHERE id = :id')
             ->execute(['email' => 'invalid-fixture-email', 'id' => $id]);
         $snapshot = cgeSnapshot($pdo);

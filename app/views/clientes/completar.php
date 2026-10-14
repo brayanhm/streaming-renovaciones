@@ -17,7 +17,7 @@ $tiposCuentaOpciones = [
             <span class="fw-semibold"><?= e((string) count($rows ?? [])) ?> pendiente(s)</span> con el filtro actual.
         </small>
     </div>
-    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary">Volver a clientes</a>
+    <a href="<?= e(url('/clientes')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a clientes</span></a>
 </div>
 
 <div class="card shadow-sm">
@@ -59,7 +59,7 @@ $tiposCuentaOpciones = [
                 </select>
             </div>
             <div class="col-12 col-md-2 d-grid">
-                <button class="btn btn-primary btn-lg" type="submit">Filtrar</button>
+                <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Filtrar</span></button>
             </div>
         </form>
 
@@ -130,7 +130,7 @@ $tiposCuentaOpciones = [
                                         >
                                     </div>
                                     <div class="col-12 col-md-4 d-grid d-md-flex justify-content-md-end">
-                                        <button type="submit" class="btn btn-success">Guardar</button>
+                                        <button type="submit" class="btn btn-success"><?= icon('save') ?><span class="button-label">Guardar</span></button>
                                     </div>
                                 </form>
                             </td>

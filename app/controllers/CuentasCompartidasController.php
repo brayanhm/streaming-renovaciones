@@ -45,7 +45,7 @@ abstract class CuentasCompartidasController extends Controller
         }
         $this->render(static::SERVICE . '/index', [
             'pageTitle' => static::LABEL, 'rows' => $rows, 'summary' => $summary,
-            'search' => $search, 'canAdmin' => $this->canAdmin(),
+            'search' => $search, 'canAdmin' => $this->canAdmin(), 'distribucion' => $this->cuentas->currentDistribution(),
             'creationToken' => $this->issueToken('crear', 0),
             'importToken' => static::SERVICE === 'chatgpt' ? $this->issueToken('importar', 0) : '',
         ]);
@@ -55,7 +55,7 @@ abstract class CuentasCompartidasController extends Controller
     {
         $modelClass = static::MODEL;
         $cuenta = $this->account($id);
-        $templates = $this->cuentas->templates();
+        $templates = $this->cuentas->deliveryTemplates();
         $password = decrypt_secret((string) ($cuenta['password_cuenta'] ?? ''));
         $credentialsReady = filter_var((string) ($cuenta['correo'] ?? ''), FILTER_VALIDATE_EMAIL) !== false && trim($password) !== '';
         $sales = $this->cuentas->sales($id);
@@ -94,7 +94,9 @@ abstract class CuentasCompartidasController extends Controller
             'lastSaleId' => $lastSaleId, 'canAdmin' => $this->canAdmin(),
             'credentialsReady' => $credentialsReady,
             'saleToken' => $this->issueToken('vender', $id), 'paymentToken' => $this->issueToken('pagar', $id),
-            'releaseToken' => $this->issueToken('liberar', $id), 'stateToken' => $this->issueToken('estado', $id),
+            'selectionToken' => $this->issueToken('distribuir', $id), 'cycleToken' => $this->issueToken('ciclo', $id),
+            'planToken' => $this->issueToken('plan', $id), 'ciclos' => $this->cuentas->cycles($id),
+            'stateToken' => $this->issueToken('estado', $id),
             'periodToken' => static::SERVICE === 'chatgpt' ? $this->issueToken('vigencia', $id) : '',
         ]);
     }
@@ -117,7 +119,7 @@ abstract class CuentasCompartidasController extends Controller
             $id = $this->cuentas->create($data);
             $_SESSION[static::SERVICE . '_creadas'][$token] = $id;
             audit(static::SERVICE . '.crear', 'Cuenta ' . $id . ' con pago inicial');
-            flash('success', 'Cuenta ' . static::LABEL . ' creada con ' . $this->capacity() . ' ' . static::UNIT . ' y su pago inicial.');
+            flash('success', 'Cuenta ' . static::LABEL . ' creada con ' . (int) $data['capacidad'] . ' ' . static::UNIT . ' y su pago inicial. Selecciónala para distribución cuando esté preparada.');
             $this->redirect($this->path('/' . $id));
         } catch (\Throwable $error) {
             set_old(array_diff_key($data, ['password_cuenta' => true]));
@@ -138,9 +140,9 @@ abstract class CuentasCompartidasController extends Controller
     public function update(int $id): void
     {
         $this->requireAdmin();
-        $this->account($id);
+        $account = $this->account($id);
         try {
-            $this->cuentas->update($id, $this->accountPayload());
+            $this->cuentas->update($id, $this->accountPayload((int) $account['capacidad']));
             audit(static::SERVICE . '.editar', 'Cuenta ' . $id);
             flash('success', 'Datos de la cuenta actualizados.');
         } catch (\Throwable $error) {
@@ -161,8 +163,8 @@ abstract class CuentasCompartidasController extends Controller
             $payment = $this->cuentas->registerPayment($id, $date, (string) ($_POST['monto_bs'] ?? ''), $token);
             audit(static::SERVICE . '.pagar', 'Cuenta ' . $id . ' / pago ' . $payment);
             flash('success', static::SERVICE === 'chatgpt'
-                ? 'Pago registrado: un mes pagado y un mes de gracia desde la fecha del pago. Los cupos se conservan hasta liberarlos manualmente.'
-                : 'Pago registrado: un mes de vigencia desde la fecha del pago. Los cupos se conservan hasta liberarlos manualmente.');
+                ? 'Pago registrado: un mes pagado y un mes de gracia. Los cupos y la selección se conservan; inicia un nuevo ciclo cuando hayas cerrado las sesiones.'
+                : 'Pago registrado: un mes de vigencia. Los cupos y la selección se conservan; inicia un nuevo ciclo cuando hayas cerrado las sesiones.');
         } catch (\Throwable $error) {
             $this->operationError($error);
         }
@@ -176,7 +178,7 @@ abstract class CuentasCompartidasController extends Controller
         try {
             $date = (string) ($_POST['fecha_venta'] ?? date('Y-m-d'));
             $this->validateDate($date);
-            $sale = $this->cuentas->sell($id, (int) ($_POST['dispositivos'] ?? 0), $date, $token);
+            $sale = $this->cuentas->sell($id, (int) ($_POST['dispositivos'] ?? 0), $date, $token, $this->canAdmin());
             audit(static::SERVICE . '.vender', 'Cuenta ' . $id . ' / venta ' . $sale);
             flash('success', 'Venta registrada. Puedes copiar la entrega sin volver a consumir cupos.');
             $this->redirect($this->path('/' . $id) . '?venta=' . $sale);
@@ -186,16 +188,49 @@ abstract class CuentasCompartidasController extends Controller
         }
     }
 
-    public function liberar(int $id): void
+    public function startCycle(int $id): void
     {
         $this->requireAdmin();
         $this->account($id);
-        $token = $this->validateToken('liberar', $id);
+        $token = $this->validateToken('ciclo', $id);
         try {
-            $released = $this->cuentas->releaseSlots($id, trim((string) ($_POST['motivo'] ?? '')), (string) (auth_user()['username'] ?? ''));
+            $released = $this->cuentas->startCycle($id, ($_POST['sesiones_cerradas'] ?? '') === '1', (string) (auth_user()['username'] ?? ''), $token);
+            audit(static::SERVICE . '.ciclo', 'Cuenta ' . $id . ' / ' . $released . ' cupos liberados / cierre de sesiones confirmado');
+            flash('success', 'Nuevo ciclo iniciado y cuenta seleccionada para distribución. Se reiniciaron los cupos; el historial de ventas y pagos se conserva.');
+        } catch (\Throwable $error) {
+            $this->operationError($error);
+        }
+        $this->redirect($this->path('/' . $id));
+    }
+
+    public function selectDistribution(int $id): void
+    {
+        $this->requireAdmin();
+        $token = $this->validateToken('distribuir', $id);
+        try {
+            $this->cuentas->selectDistribution($id);
             unset($_SESSION[static::SERVICE . '_operaciones'][$token]);
-            audit(static::SERVICE . '.liberar', 'Cuenta ' . $id . ' / ' . $released . ' ' . static::UNIT);
-            flash('success', 'Se liberaron ' . $released . ' cupos. El historial de ventas y pagos se conserva.');
+            audit(static::SERVICE . '.distribuir', 'Cuenta ' . $id);
+            flash('success', 'Cuenta seleccionada para distribución. Los cupos y accesos anteriores se conservan.');
+        } catch (\Throwable $error) {
+            $this->operationError($error);
+        }
+        $this->redirect($this->path('/' . $id));
+    }
+
+    public function setPlan(int $id): void
+    {
+        $this->requireAdmin();
+        $token = $this->validateToken('plan', $id);
+        try {
+            $plan = (string) ($_POST['plan'] ?? '');
+            if (!in_array($plan, ['GRATIS', 'RESTAURAR'], true)) {
+                throw new \InvalidArgumentException('Selecciona un estado de plan válido.');
+            }
+            $this->cuentas->setFreePlan($id, $plan === 'GRATIS');
+            unset($_SESSION[static::SERVICE . '_operaciones'][$token]);
+            audit(static::SERVICE . '.plan', 'Cuenta ' . $id . ' / ' . $plan);
+            flash('success', $plan === 'GRATIS' ? 'Cuenta marcada Gratis. Las ventas quedan bloqueadas.' : 'Plan restaurado según las fechas de vigencia registradas.');
         } catch (\Throwable $error) {
             $this->operationError($error);
         }
@@ -220,29 +255,114 @@ abstract class CuentasCompartidasController extends Controller
 
     public function templates(): void
     {
-        $this->requireAdmin();
-        $this->render(static::SERVICE . '/templates', ['pageTitle' => 'Textos ' . static::LABEL, 'templates' => $this->cuentas->templates(), 'canAdmin' => true]);
+        $this->redirect($this->path('/distribucion'));
     }
 
-    public function saveTemplates(): void
+    public function distribution(): void
     {
-        $this->requireAdmin();
-        try {
-            $data = [];
-            $modelClass = static::MODEL;
-            foreach ($modelClass::TEMPLATE_KEYS as $key) {
-                $data[$key] = trim((string) ($_POST[$key] ?? ''));
-                if (mb_strlen($data[$key]) > 10000) {
-                    throw new \InvalidArgumentException('Cada texto puede tener hasta 10.000 caracteres.');
+        $account = $this->cuentas->currentDistribution();
+        $canAdmin = $this->canAdmin();
+        $credentialsReady = $account !== null
+            && filter_var((string) ($account['correo'] ?? ''), FILTER_VALIDATE_EMAIL) !== false
+            && trim(decrypt_secret((string) ($account['password_cuenta'] ?? ''))) !== '';
+        $lastDelivery = null;
+        if ($account !== null && $credentialsReady) {
+            $last = $_SESSION[static::SERVICE . '_ultima_entrega'] ?? [];
+            if ((int) ($last['cuenta'] ?? 0) === (int) $account['id']) {
+                $sale = $this->cuentas->sale((int) $account['id'], (int) ($last['venta'] ?? 0));
+                if ($sale !== null && $sale['liberada_at'] === null) {
+                    $lastDelivery = $this->deliveryData($account, $sale, $canAdmin);
                 }
             }
-            $this->cuentas->saveTemplates($data);
-            audit(static::SERVICE . '.plantillas', 'Textos de entrega y renovación');
-            flash('success', 'Textos guardados. Los campos vacíos quedan pendientes de configurar.');
-        } catch (\Throwable $error) {
-            $this->operationError($error);
         }
-        $this->redirect($this->path('/plantillas'));
+        $modelClass = static::MODEL;
+        $prices = [1 => $modelClass::salePrice(1)];
+        if (static::SERVICE === 'chatgpt') {
+            $prices[2] = $modelClass::salePrice(2);
+        }
+        $this->render('cuentas_compartidas/entrega', [
+            'pageTitle' => 'Distribución de ' . static::LABEL, 'service' => static::SERVICE, 'serviceLabel' => static::LABEL,
+            'unit' => static::UNIT, 'cuenta' => $account, 'canAdmin' => $canAdmin, 'prices' => $prices,
+            'credentialsReady' => $credentialsReady, 'lastDelivery' => $lastDelivery,
+            'deliveryToken' => $account !== null ? $this->issueToken('entregar', (int) $account['id']) : '',
+        ]);
+    }
+
+    public function deliver(int $id): void
+    {
+        $status = 200;
+        $saleId = null;
+        try {
+            $token = $this->operationToken('entregar', $id);
+            $rawDevices = $_POST['dispositivos'] ?? '';
+            if (!is_string($rawDevices) || !in_array($rawDevices, static::SERVICE === 'chatgpt' ? ['1', '2'] : ['1'], true)) {
+                throw new \InvalidArgumentException('Selecciona una cantidad de dispositivos válida para este servicio.');
+            }
+            $devices = (int) $rawDevices;
+            $canAdmin = $this->canAdmin();
+            $date = $_SESSION[static::SERVICE . '_operaciones'][$token]['fecha_entrega'] ?? date('Y-m-d');
+            $_SESSION[static::SERVICE . '_operaciones'][$token]['fecha_entrega'] = $date;
+            $saleId = $this->cuentas->sell($id, $devices, $date, $token, $canAdmin);
+            $account = $this->cuentas->find($id);
+            $sale = $this->cuentas->sale($id, $saleId);
+            if ($account === null || $sale === null || $sale['liberada_at'] !== null) {
+                throw new \RuntimeException('La entrega pertenece a un ciclo anterior. Recarga la pantalla de distribución.');
+            }
+            $payload = $this->deliveryData($account, $sale, $canAdmin);
+            $payload['nextToken'] = $this->issueToken('entregar', $id);
+            $_SESSION[static::SERVICE . '_ultima_entrega'] = ['cuenta' => $id, 'venta' => $saleId];
+            audit(static::SERVICE . '.entregar', 'Cuenta ' . $id . ' / venta ' . $saleId . ' / ' . $devices . ' ' . static::UNIT);
+        } catch (\Throwable $error) {
+            $status = 422;
+            if ($error instanceof \InvalidArgumentException || ($error instanceof \RuntimeException && !$error instanceof \PDOException)) {
+                $message = $error->getMessage();
+            } else {
+                $status = 500;
+                app_log('error', static::LABEL . ' entrega: ' . $error->getMessage());
+                $message = 'No se pudo confirmar la entrega. Reintenta con la misma cantidad para recuperar el resultado sin duplicar cupos.';
+            }
+            $payload = ['ok' => false, 'message' => $message, 'retrySameQuantity' => $saleId !== null || $status === 500];
+        }
+        $this->jsonResponse($payload, $status);
+    }
+
+    private function deliveryData(array $account, array $sale, bool $canAdmin): array
+    {
+        $devices = (int) $sale['dispositivos'];
+        $templates = $this->cuentas->deliveryTemplates();
+        $password = decrypt_secret((string) ($account['password_cuenta'] ?? ''));
+        if (trim($password) === '') {
+            throw new \RuntimeException('La contraseña está pendiente de completar. El administrador debe revisar la cuenta.');
+        }
+        $modelClass = static::MODEL;
+        $text = $modelClass::renderMessage($templates['entrega_' . $devices],
+            $this->messageContext($account, $password, $devices, (string) $sale['fecha_vencimiento'], (string) $sale['monto_bs']));
+        return ['ok' => true, 'saleId' => (int) $sale['id'], 'devices' => $devices, 'text' => $text,
+            'occupied' => (int) $account['ocupados'], 'capacity' => (int) $account['capacidad'],
+            'remaining' => (int) $account['libres'], 'state' => $account['estado_distribucion'], 'canExceed' => $canAdmin,
+            'eligible' => (int) $account['activo'] === 1 && $account['distribucion_actual']
+                && in_array($account['estado_periodo'], ['PAGADO', 'GRACIA'], true)];
+    }
+
+    protected function jsonResponse(array $data, int $status): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    }
+
+    protected function operationToken(string $purpose, int $id): string
+    {
+        $token = $_POST['token_operacion'] ?? '';
+        if (!is_string($token)) {
+            throw new \InvalidArgumentException('El formulario no es válido. Recarga la pantalla de distribución.');
+        }
+        $stored = $_SESSION[static::SERVICE . '_operaciones'][$token] ?? null;
+        if (!is_array($stored) || $stored['accion'] !== $purpose || $stored['cuenta'] !== $id) {
+            throw new \InvalidArgumentException('El formulario expiró. Recarga la pantalla de distribución e intenta otra vez.');
+        }
+        return $token;
     }
 
     protected function account(int $id): array
@@ -255,13 +375,14 @@ abstract class CuentasCompartidasController extends Controller
         return $cuenta;
     }
 
-    private function accountPayload(): array
+    private function accountPayload(?int $currentCapacity = null): array
     {
         return [
             'etiqueta' => trim((string) ($_POST['etiqueta'] ?? '')),
             'correo' => trim((string) ($_POST['correo'] ?? '')),
             'password_cuenta' => (string) ($_POST['password_cuenta'] ?? ''),
             'notas' => trim((string) ($_POST['notas'] ?? '')),
+            'capacidad' => (string) ($_POST['capacidad'] ?? $currentCapacity ?? $this->capacity()),
         ];
     }
 

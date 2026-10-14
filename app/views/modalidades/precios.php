@@ -8,7 +8,7 @@ use App\Models\Modalidad;
         <h1 class="h3 mb-0">Editar costos y precios por plataforma</h1>
         <small class="text-secondary">Cada duracion tiene su propio costo y precio de venta. La ganancia se calcula como venta menos costo.</small>
     </div>
-    <a href="<?= e(url('/tipos-suscripcion')) ?>" class="btn btn-outline-secondary">Volver a planes</a>
+    <a href="<?= e(url('/tipos-suscripcion')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a planes</span></a>
 </div>
 
 <div class="card shadow-sm mb-3">
@@ -29,7 +29,7 @@ use App\Models\Modalidad;
                 </select>
             </div>
             <div class="col-12 col-md-4 d-grid">
-                <button class="btn btn-primary btn-lg" type="submit">Cargar planes</button>
+                <button class="btn btn-primary btn-lg" type="submit"><?= icon('layers') ?><span class="button-label">Cargar planes</span></button>
             </div>
         </form>
     </div>
@@ -111,7 +111,7 @@ use App\Models\Modalidad;
                 </div>
                 <?php if (!empty($rows)): ?>
                     <div class="d-flex justify-content-end mt-3">
-                        <button type="submit" class="btn btn-success btn-lg">Guardar costos y precios</button>
+                        <button type="submit" class="btn btn-success btn-lg"><?= icon('save') ?><span class="button-label">Guardar costos y precios</span></button>
                     </div>
                 <?php endif; ?>
             </form>

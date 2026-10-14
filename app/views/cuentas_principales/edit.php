@@ -3,7 +3,7 @@ declare(strict_types=1);
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar cuenta principal</h1>
-    <a href="<?= e(url('/cuentas-principales/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-secondary">Volver</a>
+    <a href="<?= e(url('/cuentas-principales/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver</span></a>
 </div>
 
 <div class="card shadow-sm">
@@ -53,7 +53,7 @@ declare(strict_types=1);
                     <textarea class="form-control" id="notas" name="notas" rows="2"><?= e((string) ($cuenta['notas'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary btn-lg">Guardar cambios</button>
+                    <button type="submit" class="btn btn-primary btn-lg"><?= icon('save') ?><span class="button-label">Guardar cambios</span></button>
                 </div>
             </div>
         </form>
@@ -61,7 +61,7 @@ declare(strict_types=1);
         <hr>
         <form method="post" action="<?= e(url('/cuentas-principales/eliminar/' . (int) $cuenta['id'])) ?>" onsubmit="return confirm('¿Eliminar esta cuenta principal?')">
             <?= csrf_field() ?>
-            <button type="submit" class="btn btn-outline-danger">Eliminar cuenta principal</button>
+            <button type="submit" class="btn btn-outline-danger"><?= icon('trash') ?><span class="button-label">Eliminar cuenta principal</span></button>
             <small class="text-secondary ms-2">Solo si no tiene usuarios asignados.</small>
         </form>
     </div>

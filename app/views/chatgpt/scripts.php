@@ -7,7 +7,8 @@
             if (!input) return;
             const visible = input.type === 'password';
             input.type = visible ? 'text' : 'password';
-            button.textContent = visible ? 'Ocultar' : 'Mostrar';
+            GhostIcons.setLabel(button, visible ? 'Ocultar' : 'Mostrar');
+            GhostIcons.set(button, visible ? 'eye-off' : 'eye');
             button.setAttribute('aria-pressed', String(visible));
         });
     });
@@ -25,7 +26,7 @@
             form.dataset.submitting = '1';
             form.querySelectorAll('button[type="submit"]').forEach(button => {
                 button.disabled = true;
-                button.textContent = 'Guardando…';
+                GhostIcons.setLabel(button, 'Guardando…');
             });
         });
     });
@@ -86,8 +87,12 @@
             const projected = occupied + Number(devices);
             const recommendationWarning = saleForm.querySelector('[data-sale-recommendation-warning]');
             recommendationWarning.hidden = projected <= recommended;
-            recommendationWarning.textContent = `Con esta venta habrá ${projected} dispositivos ocupados: ${Math.max(0, projected - recommended)} sobre el máximo recomendado de ${recommended}. Puedes registrarla igualmente.`;
-            saleForm.querySelector('[data-sale-button]').textContent = configured ? 'Registrar venta y copiar' : 'Registrar venta';
+            const canExceed = saleForm.dataset.canExceed === '1';
+            recommendationWarning.textContent = canExceed
+                ? `Venta adicional del administrador: quedarán ${projected} dispositivos ocupados, ${projected - recommended} por encima de la capacidad de ${recommended}.`
+                : 'No hay suficientes cupos para esta venta. Selecciona menos dispositivos o consulta al administrador.';
+            saleForm.querySelector('[data-sale-button]').disabled = !canExceed && projected > recommended;
+            GhostIcons.setLabel(saleForm.querySelector('[data-sale-button]'), configured ? 'Registrar venta y copiar' : 'Registrar venta');
             saleForm.querySelector('[data-sale-template-status]').textContent = configured ? 'Se preparará el texto de entrega al registrar la venta.' : 'Mensaje pendiente de configurar. La venta se registrará y podrás copiarlo después.';
             const date = saleForm.querySelector('[name="fecha_venta"]').value;
             const expiry = date < saleForm.dataset.paidUntil ? saleForm.dataset.paidUntil : saleForm.dataset.graceUntil;

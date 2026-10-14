@@ -56,6 +56,13 @@ $path = request_path();
 AuthMiddleware::handle($path);
 
 if ($method === 'POST' && !verify_csrf_token(isset($_POST['_csrf']) ? (string) $_POST['_csrf'] : null)) {
+    if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+        http_response_code(419);
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store');
+        echo json_encode(['ok' => false, 'message' => 'La sesión o el formulario expiró. Recarga la página e intenta otra vez.']);
+        exit;
+    }
     flash('danger', 'La sesion expiro o el formulario no es valido. Intenta nuevamente.');
     redirect($path === '/login' ? '/login' : '/dashboard');
 }
@@ -74,24 +81,30 @@ $routes = [
     ['POST', '#^/chatgpt$#', [ChatgptController::class, 'store']],
     ['POST', '#^/chatgpt/importar-cuentas$#', [ChatgptController::class, 'importPending']],
     ['GET', '#^/chatgpt/plantillas$#', [ChatgptController::class, 'templates']],
-    ['POST', '#^/chatgpt/plantillas$#', [ChatgptController::class, 'saveTemplates']],
+    ['GET', '#^/chatgpt/distribucion$#', [ChatgptController::class, 'distribution']],
+    ['POST', '#^/chatgpt/(\d+)/entregar$#', [ChatgptController::class, 'deliver']],
     ['GET', '#^/chatgpt/(\d+)/editar$#', [ChatgptController::class, 'edit']],
     ['POST', '#^/chatgpt/(\d+)/actualizar$#', [ChatgptController::class, 'update']],
     ['POST', '#^/chatgpt/(\d+)/pagar$#', [ChatgptController::class, 'pagar']],
     ['POST', '#^/chatgpt/(\d+)/vigencia$#', [ChatgptController::class, 'configurePeriod']],
     ['POST', '#^/chatgpt/(\d+)/vender$#', [ChatgptController::class, 'vender']],
-    ['POST', '#^/chatgpt/(\d+)/liberar$#', [ChatgptController::class, 'liberar']],
+    ['POST', '#^/chatgpt/(\d+)/distribuir$#', [ChatgptController::class, 'selectDistribution']],
+    ['POST', '#^/chatgpt/(\d+)/ciclo$#', [ChatgptController::class, 'startCycle']],
+    ['POST', '#^/chatgpt/(\d+)/plan$#', [ChatgptController::class, 'setPlan']],
     ['POST', '#^/chatgpt/(\d+)/estado$#', [ChatgptController::class, 'toggleActive']],
     ['GET', '#^/chatgpt/(\d+)$#', [ChatgptController::class, 'show']],
     ['GET', '#^/claude$#', [ClaudeController::class, 'index']],
     ['POST', '#^/claude$#', [ClaudeController::class, 'store']],
     ['GET', '#^/claude/plantillas$#', [ClaudeController::class, 'templates']],
-    ['POST', '#^/claude/plantillas$#', [ClaudeController::class, 'saveTemplates']],
+    ['GET', '#^/claude/distribucion$#', [ClaudeController::class, 'distribution']],
+    ['POST', '#^/claude/(\d+)/entregar$#', [ClaudeController::class, 'deliver']],
     ['GET', '#^/claude/(\d+)/editar$#', [ClaudeController::class, 'edit']],
     ['POST', '#^/claude/(\d+)/actualizar$#', [ClaudeController::class, 'update']],
     ['POST', '#^/claude/(\d+)/pagar$#', [ClaudeController::class, 'pagar']],
     ['POST', '#^/claude/(\d+)/vender$#', [ClaudeController::class, 'vender']],
-    ['POST', '#^/claude/(\d+)/liberar$#', [ClaudeController::class, 'liberar']],
+    ['POST', '#^/claude/(\d+)/distribuir$#', [ClaudeController::class, 'selectDistribution']],
+    ['POST', '#^/claude/(\d+)/ciclo$#', [ClaudeController::class, 'startCycle']],
+    ['POST', '#^/claude/(\d+)/plan$#', [ClaudeController::class, 'setPlan']],
     ['POST', '#^/claude/(\d+)/estado$#', [ClaudeController::class, 'toggleActive']],
     ['GET', '#^/claude/(\d+)$#', [ClaudeController::class, 'show']],
 

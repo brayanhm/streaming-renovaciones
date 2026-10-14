@@ -11,8 +11,8 @@ $rolBadge = static function (string $rol): string {
         <small class="text-secondary">Gestiona quién puede acceder al panel y sus contraseñas.</small>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= e(url('/usuarios/auditoria')) ?>" class="btn btn-outline-secondary">Auditoría</a>
-        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+        <a href="<?= e(url('/usuarios/auditoria')) ?>" class="btn btn-outline-secondary"><?= icon('scroll-text') ?><span class="button-label">Auditoría</span></a>
+        <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
     </div>
 </div>
 
@@ -59,7 +59,7 @@ $rolBadge = static function (string $rol): string {
                                     <td><small class="text-secondary"><?= e((string) ($item['created_at'] ?? '')) ?></small></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/usuarios/editar/' . $uid)) ?>">Editar</a>
+                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/usuarios/editar/' . $uid)) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
 
                                             <?php if ($isActive): ?>
                                                 <form method="post" action="<?= e(url('/usuarios/estado/' . $uid)) ?>"
@@ -67,15 +67,13 @@ $rolBadge = static function (string $rol): string {
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="activo" value="0">
                                                     <button class="btn btn-outline-warning btn-sm" type="submit"
-                                                        <?= $isSelf || $isLastAdmin ? 'disabled title="No disponible para tu cuenta o el último admin"' : '' ?>>
-                                                        Desactivar
-                                                    </button>
+                                                        <?= $isSelf || $isLastAdmin ? 'disabled title="No disponible para tu cuenta o el último admin"' : '' ?>><?= icon('circle-x') ?><span class="button-label">Desactivar</span></button>
                                                 </form>
                                             <?php else: ?>
                                                 <form method="post" action="<?= e(url('/usuarios/estado/' . $uid)) ?>">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="activo" value="1">
-                                                    <button class="btn btn-outline-success btn-sm" type="submit">Activar</button>
+                                                    <button class="btn btn-outline-success btn-sm" type="submit"><?= icon('circle-check') ?><span class="button-label">Activar</span></button>
                                                 </form>
                                             <?php endif; ?>
 
@@ -83,9 +81,7 @@ $rolBadge = static function (string $rol): string {
                                                   onsubmit="return confirm('¿Eliminar definitivamente a este usuario?')">
                                                 <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit"
-                                                    <?= $isSelf || $isLastAdmin ? 'disabled title="No disponible para tu cuenta o el último admin"' : '' ?>>
-                                                    Eliminar
-                                                </button>
+                                                    <?= $isSelf || $isLastAdmin ? 'disabled title="No disponible para tu cuenta o el último admin"' : '' ?>><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                             </form>
                                         </div>
                                     </td>
@@ -128,7 +124,7 @@ $rolBadge = static function (string $rol): string {
                         <label class="form-label" for="password_confirm">Confirmar contraseña</label>
                         <input type="password" class="form-control" id="password_confirm" name="password_confirm" minlength="6" required autocomplete="new-password">
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Crear usuario</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('plus') ?><span class="button-label">Crear usuario</span></button>
                 </form>
             </div>
         </div>

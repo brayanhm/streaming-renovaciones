@@ -6,7 +6,7 @@ use App\Models\Plataforma;
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar suscripción</h1>
-    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary">Volver a suscripciones</a>
+    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a suscripciones</span></a>
 </div>
 
 <div class="card shadow-sm">
@@ -147,8 +147,8 @@ use App\Models\Plataforma;
                 </div>
 
                 <div class="col-12 d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
-                    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit"><?= icon('save') ?><span class="button-label">Guardar cambios</span></button>
+                    <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
                 </div>
             </div>
         </form>

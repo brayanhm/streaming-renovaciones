@@ -7,6 +7,8 @@ declare(strict_types=1);
  */
 function run_claude_schema_migrations(\PDO $pdo): void
 {
+    require_once __DIR__ . '/distribucion_migrations.php';
+    run_distribucion_schema_migrations($pdo);
     ensure_column(
         $pdo,
         'cuentas_principales',

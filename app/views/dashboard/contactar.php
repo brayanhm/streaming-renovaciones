@@ -36,7 +36,7 @@ foreach (($rows ?? []) as $r) {
             (<?= e((string) $porVencerHoy) ?> vencen hoy).
         </p>
     </div>
-    <a href="<?= e(url($panelBase)) ?>" class="btn btn-outline-secondary">Ir al panel</a>
+    <a href="<?= e(url($panelBase)) ?>" class="btn btn-outline-secondary"><?= icon('layout-dashboard') ?><span class="button-label">Ir al panel</span></a>
 </div>
 
 <div class="card shadow-sm">
@@ -96,7 +96,7 @@ foreach (($rows ?? []) as $r) {
                                 <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="tipo" value="<?= e($whatsType) ?>">
-                                    <button type="submit" class="btn btn-success btn-sm px-3">WhatsApp</button>
+                                    <button type="submit" class="btn btn-success btn-sm px-3"><?= icon('message-circle') ?><span class="button-label">WhatsApp</span></button>
                                 </form>
                             </td>
                         </tr>

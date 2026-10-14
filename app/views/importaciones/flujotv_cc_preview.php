@@ -16,7 +16,7 @@ $nada = count($update) === 0 && count($create) === 0;
             Nada se ha escrito todavía.
         </small>
     </div>
-    <a href="<?= e(url('/importar/flujotv')) ?>" class="btn btn-outline-secondary">Cancelar</a>
+    <a href="<?= e(url('/importar/flujotv')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
 </div>
 
 <div class="row g-3 mb-3">
@@ -137,8 +137,8 @@ $nada = count($update) === 0 && count($create) === 0;
               onsubmit="return confirm('¿Aplicar <?= (int) count($update) ?> actualización(es) y <?= (int) count($create) ?> creación(es)?')">
             <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?= e((string) $token) ?>">
-            <button type="submit" class="btn btn-success btn-lg">Confirmar y aplicar</button>
+            <button type="submit" class="btn btn-success btn-lg"><?= icon('circle-check') ?><span class="button-label">Confirmar y aplicar</span></button>
         </form>
     <?php endif; ?>
-    <a href="<?= e(url('/importar/flujotv')) ?>" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+    <a href="<?= e(url('/importar/flujotv')) ?>" class="btn btn-outline-secondary btn-lg"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
 </div>

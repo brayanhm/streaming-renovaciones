@@ -6,7 +6,7 @@ declare(strict_types=1);
         <h1 class="h3 mb-0">Importaciones</h1>
         <small class="text-secondary">Carga los CSV del proveedor para actualizar y crear cuentas.</small>
     </div>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
 <div class="row g-3">
@@ -18,7 +18,7 @@ declare(strict_types=1);
                     Actualiza los vencimientos de las cuentas existentes y crea las nuevas.
                     El CSV trae usuario y fecha de finalización.
                 </p>
-                <a href="<?= e(url('/importar/flujotv')) ?>" class="btn btn-primary">Abrir importador</a>
+                <a href="<?= e(url('/importar/flujotv')) ?>" class="btn btn-primary"><?= icon('download') ?><span class="button-label">Abrir importador</span></a>
             </div>
         </div>
     </div>
@@ -30,7 +30,7 @@ declare(strict_types=1);
                     Cuentas desechables (no renovables): todas se crean como nuevas.
                     Omite duplicados exactos ya registrados.
                 </p>
-                <a href="<?= e(url('/importar/flujotv-dispositivos')) ?>" class="btn btn-primary">Abrir importador</a>
+                <a href="<?= e(url('/importar/flujotv-dispositivos')) ?>" class="btn btn-primary"><?= icon('download') ?><span class="button-label">Abrir importador</span></a>
             </div>
         </div>
     </div>

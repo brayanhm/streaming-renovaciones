@@ -3,7 +3,7 @@ declare(strict_types=1);
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Mi perfil</h1>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
 <div class="row g-4">
@@ -27,7 +27,7 @@ declare(strict_types=1);
                         >
                         <div class="form-text">Mínimo 3 caracteres.</div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Guardar usuario</button>
+                    <button type="submit" class="btn btn-primary"><?= icon('save') ?><span class="button-label">Guardar usuario</span></button>
                 </form>
             </div>
         </div>
@@ -76,7 +76,7 @@ declare(strict_types=1);
                             required
                         >
                     </div>
-                    <button type="submit" class="btn btn-primary">Actualizar contraseña</button>
+                    <button type="submit" class="btn btn-primary"><?= icon('key-round') ?><span class="button-label">Actualizar contraseña</span></button>
                 </form>
             </div>
         </div>

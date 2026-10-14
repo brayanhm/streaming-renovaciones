@@ -6,7 +6,7 @@ declare(strict_types=1);
         <h1 class="h3 mb-0">Auditoría</h1>
         <small class="text-secondary">Últimas 300 acciones sensibles (borrados, gestión de usuarios, importaciones, accesos).</small>
     </div>
-    <a href="<?= e(url('/usuarios')) ?>" class="btn btn-outline-secondary">Volver a usuarios</a>
+    <a href="<?= e(url('/usuarios')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a usuarios</span></a>
 </div>
 
 <div class="card shadow-sm">

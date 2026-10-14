@@ -6,8 +6,8 @@ use App\Models\Plataforma;
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Editar plataforma</h1>
     <div class="d-flex flex-wrap gap-2">
-        <a href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>" class="btn btn-outline-primary">Ver tipos</a>
-        <a href="<?= e(url('/plataformas')) ?>" class="btn btn-outline-secondary">Volver a plataformas</a>
+        <a href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>" class="btn btn-outline-primary"><?= icon('arrow-right') ?><span class="button-label">Ver tipos</span></a>
+        <a href="<?= e(url('/plataformas')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a plataformas</span></a>
     </div>
 </div>
 
@@ -72,8 +72,8 @@ use App\Models\Plataforma;
                     <textarea class="form-control" id="mensaje_rec_15" name="mensaje_rec_15" rows="3"><?= e((string) ($item['mensaje_rec_15'] ?? '')) ?></textarea>
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit">Guardar cambios</button>
-                    <a href="<?= e(url('/plataformas')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto">Cancelar</a>
+                    <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit"><?= icon('save') ?><span class="button-label">Guardar cambios</span></button>
+                    <a href="<?= e(url('/plataformas')) ?>" class="btn btn-outline-secondary btn-lg w-100 w-sm-auto"><?= icon('arrow-left') ?><span class="button-label">Cancelar</span></a>
                 </div>
             </div>
         </form>

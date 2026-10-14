@@ -95,7 +95,7 @@ function cgToken(): string
     return bin2hex(random_bytes(32));
 }
 
-function cgConcurrentSales(int $id, string $date, array $tokens): array
+function cgConcurrentSales(int $id, string $date, array $tokens, bool $canExceed = false): array
 {
     // La fila se retiene hasta que ambos procesos estén listos para vender.
     $locker = cgPdo();
@@ -105,7 +105,7 @@ function cgConcurrentSales(int $id, string $date, array $tokens): array
     try {
         foreach ($tokens as $token) {
             $pipes = [];
-            $process = proc_open([PHP_BINARY, __FILE__, '--worker', (string) $id, '1', $date, $token], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            $process = proc_open([PHP_BINARY, '-d', 'session.save_path=' . session_save_path(), __FILE__, '--worker', (string) $id, '1', $date, $token, $canExceed ? '--admin' : '--operator'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
             cgCheck(is_resource($process), 'No pudo iniciarse el proceso de venta.');
             fclose($pipes[0]);
             $children[] = [$process, $pipes];
@@ -164,7 +164,7 @@ if ($worker) {
         $model = new ChatgptCuenta(cgPdo());
         echo "READY\n";
         flush();
-        $model->sell((int) $accountId, (int) $devices, $saleDate, $token);
+        $model->sell((int) $accountId, (int) $devices, $saleDate, $token, in_array('--admin', $argv, true));
         echo "SOLD\n";
         exit(0);
     } catch (DomainException | InvalidArgumentException | RuntimeException $exception) {
@@ -210,7 +210,7 @@ cgTest('períodos usan límites exclusivos y contadores exactos', static functio
         ['2026-11-13', 'PAGADO'],
         ['2026-11-14', 'GRACIA'],
         ['2026-12-13', 'GRACIA'],
-        ['2026-12-14', 'VENCIDO'],
+        ['2026-12-14', 'GRATIS'],
     ] as [$date, $state]) {
         $period = ChatgptCuenta::period($account, new DateTimeImmutable($date));
         cgEq($period['estado_periodo'], $state, 'Estado incorrecto en ' . $date . '.');
@@ -240,7 +240,7 @@ if ($pureOnly) {
 
 function cgCreateAccount(ChatgptCuenta $model, string $paymentDate = '2026-10-14'): int
 {
-    return $model->create([
+    $id = $model->create([
         'etiqueta' => 'Cuenta fixture ' . bin2hex(random_bytes(4)),
         'correo' => 'fixture-' . bin2hex(random_bytes(4)) . '@example.invalid',
         'password_cuenta' => 'fixture-local-password',
@@ -248,6 +248,10 @@ function cgCreateAccount(ChatgptCuenta $model, string $paymentDate = '2026-10-14
         'monto_bs' => '185.50',
         'notas' => 'Solo pruebas aisladas',
     ]);
+    if (in_array($model->find($id)['estado_periodo'], ['PAGADO', 'GRACIA'], true)) {
+        $model->selectDistribution($id);
+    }
+    return $id;
 }
 
 function cgFixture(PDO $pdo): void
@@ -335,20 +339,20 @@ try {
         cgEq((int) $model->find($id)['ocupados'], 3, 'Un token inválido cambió la ocupación.');
     });
 
-    cgTest('venta de dos cruza de 19 a 21 dispositivos y admite más ventas y liberación manual', static function () use ($model, $pdo, $paymentDate): void {
+    cgTest('administrador supera la capacidad y reinicia el ciclo sin perder historial', static function () use ($model, $pdo, $paymentDate): void {
         $id = cgCreateAccount($model, $paymentDate);
         for ($sale = 0; $sale < 9; $sale++) {
-            $model->sell($id, 2, $paymentDate, cgToken());
+            $model->sell($id, 2, $paymentDate, cgToken(), true);
         }
-        $model->sell($id, 1, $paymentDate, cgToken());
+        $model->sell($id, 1, $paymentDate, cgToken(), true);
         $before = $model->find($id);
         cgEq($before['ocupados'], 19, 'Debe haber diecinueve dispositivos antes de cruzar la recomendación.');
         cgEq($before['hasta_recomendado'], 1, 'Debe quedar un dispositivo hasta lo recomendado.');
         cgEq($before['excedidos'], 0, 'Diecinueve dispositivos no exceden la recomendación.');
         cgEq($before['supera_recomendado'], false, 'Diecinueve dispositivos están dentro de lo recomendado.');
         $token = cgToken();
-        $crossing = $model->sell($id, 2, $paymentDate, $token);
-        cgEq($model->sell($id, 2, $paymentDate, $token), $crossing, 'Repetir la venta que cruza la recomendación debe ser idempotente.');
+        $crossing = $model->sell($id, 2, $paymentDate, $token, true);
+        cgEq($model->sell($id, 2, $paymentDate, $token, true), $crossing, 'Repetir la venta que cruza la recomendación debe ser idempotente.');
         $account = $model->find($id);
         cgEq($account['ocupados'], 21, 'La venta de dos debe alcanzar veintiún dispositivos.');
         cgEq($account['recomendado'], 20, 'La recomendación debe seguir siendo veinte.');
@@ -361,14 +365,14 @@ try {
         cgEq(count($sales), 11, 'El historial debe incluir la venta que cruza la recomendación una sola vez.');
         cgEq($sales[0]['monto_bs'], '55.00', 'La venta de dos dispositivos sigue costando Bs 55.');
         cgEq($sales[0]['fecha_vencimiento'], $before['fecha_vencimiento'], 'Superar lo recomendado no cambia la vigencia de la venta.');
-        $model->sell($id, 1, $paymentDate, cgToken());
+        $model->sell($id, 1, $paymentDate, cgToken(), true);
         $account = $model->find($id);
         cgEq($account['ocupados'], 22, 'Una cuenta que ya supera veinte debe admitir otra venta.');
         cgEq($account['excedidos'], 2, 'Debe contar todos los dispositivos excedidos.');
         cgEq((string) $account['ventas_bs'], '610.00', 'Debe incluir también las ventas posteriores al exceso.');
         cgEq($account['fecha_inicio'], $before['fecha_inicio'], 'Las ventas no alteran el inicio del período.');
         cgEq($account['fin_gracia'], $before['fin_gracia'], 'Las ventas no alteran la gracia.');
-        cgEq($model->releaseSlots($id, 'Liberar exceso fixture', 'admin-fixture'), 22, 'La liberación debe incluir todos los dispositivos, también los excedidos.');
+        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken()), 22, 'La liberación debe incluir todos los dispositivos, también los excedidos.');
         $released = $model->find($id);
         cgEq($released['ocupados'], 0, 'La liberación debe vaciar la cuenta.');
         cgEq($released['excedidos'], 0, 'La liberación debe eliminar el exceso.');
@@ -380,7 +384,7 @@ try {
         cgCheck(count(array_filter($history, static fn(array $sale): bool => $sale['liberada_at'] === null)) === 0, 'Todas las ventas deben quedar liberadas.');
         $release = $pdo->query('SELECT dispositivos_liberados FROM chatgpt_liberaciones WHERE cuenta_principal_id = ' . $id)->fetchColumn();
         cgEq((int) $release, 22, 'El historial de liberación debe registrar veintidós dispositivos.');
-        cgEq($model->sell($id, 2, $paymentDate, $token), $crossing, 'Repetir la venta liberada debe conservar su identidad.');
+        cgEq($model->sell($id, 2, $paymentDate, $token, true), $crossing, 'Repetir la venta liberada debe conservar su identidad.');
         cgEq($model->find($id)['ocupados'], 0, 'Repetir una venta liberada no debe ocupar dispositivos.');
         cgEq(count($model->sales($id)), 12, 'Repetir una venta liberada no debe duplicar el historial.');
     });
@@ -436,7 +440,7 @@ try {
         $saleToken = cgToken();
         $saleId = $model->sell($id, 1, $paymentDate, $saleToken);
         cgEq((int) $model->find($id)['ocupados'], 3, 'La ocupación debe incluir los dos dispositivos heredados.');
-        $released = $model->releaseSlots($id, 'Reinicio de prueba', 'admin-fixture');
+        $released = $model->startCycle($id, true, 'admin-fixture', cgToken());
         cgEq($released, 3, 'Debe liberar dispositivos heredados y nuevos.');
         cgEq((int) $model->find($id)['ocupados'], 0, 'La liberación manual debe vaciar la cuenta.');
         cgEq((int) $model->find($id)['libres'], 20, 'La liberación manual debe recuperar 20 cupos.');
@@ -449,7 +453,7 @@ try {
         cgEq($model->sell($id, 1, $paymentDate, $saleToken), $saleId, 'Repetir una venta archivada debe devolver el mismo registro.');
         cgEq((int) $model->find($id)['ocupados'], 0, 'Repetir el token de una venta archivada no debe reocupar cupos.');
         cgEq(count($model->payments($id)), 1, 'La liberación debe conservar los pagos.');
-        cgEq($model->releaseSlots($id, 'Segundo reinicio', 'admin-fixture'), 0, 'Liberar de nuevo debe ser inocuo.');
+        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken()), 0, 'Liberar de nuevo debe ser inocuo.');
     });
 
     cgTest('ventas vencen con el período pagado o de gracia y siguen ocupando hasta liberación', static function () use ($model, $pdo, $paymentDate, $today): void {
@@ -465,9 +469,11 @@ try {
         $stmt = $pdo->prepare('UPDATE cuentas_principales SET fecha_inicio = :inicio, fecha_vencimiento = :fin, fin_gracia = :gracia WHERE id = :id');
         $stmt->execute(['inicio' => $expiredDate, 'fin' => $expiredDates['fin_pagado'], 'gracia' => $expiredDates['fin_gracia'], 'id' => $id]);
         $account = $model->find($id);
-        cgEq($account['estado_periodo'], 'VENCIDO', 'El contador debe detectar el período vencido.');
+        cgEq($account['estado_periodo'], 'GRATIS', 'El contador debe detectar el período vencido.');
         cgEq((int) $account['ocupados'], 3, 'El vencimiento no debe liberar dispositivos automáticamente.');
-        cgEq($model->releaseSlots($id, 'Fin del período fixture', 'admin-fixture'), 3, 'El administrador debe poder liberar los cupos vencidos.');
+        cgReject(static fn() => $model->startCycle($id, true, 'admin-fixture', cgToken()), 'No debe iniciar un ciclo Gratis.');
+        $model->registerPayment($id, $today->format('Y-m-d'), '200.00', cgToken());
+        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken()), 3, 'El pago habilita el nuevo ciclo sin borrar historial.');
     });
 
     cgTest('edición conserva contraseña vacía y rechaza correo duplicado', static function () use ($model, $paymentDate): void {
@@ -520,13 +526,24 @@ try {
         cgEq($pdo->query('SELECT servicio, fecha_inicio, fecha_vencimiento, fin_gracia, capacidad FROM cuentas_principales WHERE id = ' . $ids['CLAUDE'])->fetch(), $claude, 'Repetir la migración debe ser inocuo para Claude.');
     });
 
-    cgTest('dos ventas concurrentes cruzan la recomendación y conservan ambos ingresos', static function () use ($model, $paymentDate): void {
+    cgTest('dos vendedores concurrentes no superan el último cupo disponible', static function () use ($model, $paymentDate): void {
+        $id = cgCreateAccount($model, $paymentDate);
+        for ($i = 0; $i < 9; $i++) {
+            $model->sell($id, 2, $paymentDate, cgToken());
+        }
+        $model->sell($id, 1, $paymentDate, cgToken());
+        cgEq(cgConcurrentSales($id, $paymentDate, [cgToken(), cgToken()]), ['REJECTED', 'SOLD'], 'Solo una venta puede consumir el último cupo.');
+        cgEq($model->find($id)['ocupados'], 20, 'No debe exceder la capacidad.');
+        cgEq($model->find($id)['estado_distribucion'], 'Llena', 'Debe pasar automáticamente a Llena.');
+    });
+
+    cgTest('dos ventas concurrentes del administrador superan la capacidad y conservan ingresos', static function () use ($model, $paymentDate): void {
         $id = cgCreateAccount($model, $paymentDate);
         for ($sale = 0; $sale < 9; $sale++) {
             $model->sell($id, 2, $paymentDate, cgToken());
         }
         $model->sell($id, 1, $paymentDate, cgToken());
-        cgEq(cgConcurrentSales($id, $paymentDate, [cgToken(), cgToken()]), ['SOLD', 'SOLD'], 'Ambas ventas deben registrarse aunque crucen lo recomendado.');
+        cgEq(cgConcurrentSales($id, $paymentDate, [cgToken(), cgToken()], true), ['SOLD', 'SOLD'], 'Ambas ventas deben registrarse aunque crucen lo recomendado.');
         $account = $model->find($id);
         cgEq($account['ocupados'], 21, 'Ambas ventas deben alcanzar veintiún dispositivos.');
         cgEq($account['excedidos'], 1, 'La concurrencia debe informar un dispositivo excedido.');
@@ -545,7 +562,7 @@ try {
         cgEq($before['supera_recomendado'], false, 'Alcanzar la recomendación no debe contar como exceso.');
         cgEq($before['hasta_recomendado'], 0, 'Al alcanzar veinte quedan cero hasta lo recomendado.');
         $token = cgToken();
-        cgEq(cgConcurrentSales($id, $paymentDate, [$token, $token]), ['SOLD', 'SOLD'], 'Ambos reintentos deben devolver una venta válida.');
+        cgEq(cgConcurrentSales($id, $paymentDate, [$token, $token], true), ['SOLD', 'SOLD'], 'Ambos reintentos deben devolver una venta válida.');
         $sales = $model->sales($id);
         cgEq(count($sales), 11, 'El mismo token concurrente debe registrar una sola venta.');
         cgEq($model->sell($id, 1, $paymentDate, $token), (int) $sales[0]['id'], 'El token debe devolver el registro concurrente original.');

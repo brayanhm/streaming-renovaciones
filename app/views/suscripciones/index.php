@@ -17,7 +17,7 @@ if (!function_exists('tipo_suscripcion_label')) {
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Suscripciones</h1>
-    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary">Volver al panel</a>
+    <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
 <?php if ((int) ($selectedClientId ?? 0) > 0): ?>
@@ -49,7 +49,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </select>
                     </div>
                     <div class="col-12 col-md-2 d-grid">
-                        <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+                        <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
 
@@ -115,11 +115,11 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
-                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $item['id'])) ?>">Historial</a>
-                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>">Editar</a>
+                                            <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $item['id'])) ?>"><?= icon('scroll-text') ?><span class="button-label">Historial</span></a>
+                                            <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                             <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar esta suscripción?')">
                                                 <?= csrf_field() ?>
-                                                <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
+                                                <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                             </form>
                                         </div>
                                     </td>
@@ -293,7 +293,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </label>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100 btn-lg">Guardar suscripción</button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar suscripción</span></button>
                 </form>
             </div>
         </div>

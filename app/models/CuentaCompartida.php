@@ -28,7 +28,7 @@ abstract class CuentaCompartida extends BaseModel
             $params += ['etiqueta' => '%' . trim($search) . '%', 'correo' => '%' . trim($search) . '%'];
         }
         $expiry = static::TIENE_GRACIA ? 'cp.fin_gracia' : 'cp.fecha_vencimiento';
-        $sql .= ' ORDER BY cp.activo DESC, ' . $expiry . ' IS NULL, ' . $expiry . ' ASC, cp.etiqueta ASC, cp.id ASC';
+        $sql .= ' ORDER BY distribucion_actual DESC, cp.activo DESC, ' . $expiry . ' IS NULL, ' . $expiry . ' ASC, cp.etiqueta ASC, cp.id ASC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return array_map(fn (array $row): array => $this->decorate($row), $stmt->fetchAll());
@@ -45,6 +45,7 @@ abstract class CuentaCompartida extends BaseModel
     public function create(array $data): int
     {
         $fields = static::accountFields($data);
+        $fields['capacidad'] = static::capacityValue($data['capacidad'] ?? static::CAPACIDAD);
         $dates = static::paymentDates((string) ($data['fecha_pago'] ?? ''));
         static::assertNotFuture($dates['fecha_pago']);
         $amount = static::money((string) ($data['monto_bs'] ?? ''));
@@ -61,7 +62,6 @@ abstract class CuentaCompartida extends BaseModel
             $stmt->execute($fields + [
                 'plataforma_id' => $platformId,
                 'servicio' => static::SERVICIO,
-                'capacidad' => static::CAPACIDAD,
                 'password_cuenta' => $password,
                 'fecha_inicio' => $dates['fecha_pago'],
                 'fecha_vencimiento' => $dates['fin_pagado'],
@@ -77,11 +77,12 @@ abstract class CuentaCompartida extends BaseModel
     {
         $fields = static::accountFields($data);
         $password = static::encryptedPassword((string) ($data['password_cuenta'] ?? ''));
-        $this->transaction(function () use ($id, $fields, $password): void {
-            $this->lockAccount($id);
+        $capacity = array_key_exists('capacidad', $data) ? static::capacityValue($data['capacidad']) : null;
+        $this->transaction(function () use ($id, $fields, $password, $capacity): void {
+            $account = $this->lockAccount($id);
             $this->assertUniqueEmail($fields['correo'], $id);
-            $sql = 'UPDATE cuentas_principales SET etiqueta = :etiqueta, correo = :correo, notas = :notas';
-            $params = $fields + ['id' => $id];
+            $sql = 'UPDATE cuentas_principales SET etiqueta = :etiqueta, correo = :correo, notas = :notas, capacidad = :capacidad';
+            $params = $fields + ['id' => $id, 'capacidad' => $capacity ?? (int) $account['capacidad']];
             if ($password !== null) {
                 $sql .= ', password_cuenta = :password_cuenta';
                 $params['password_cuenta'] = $password;
@@ -117,7 +118,7 @@ abstract class CuentaCompartida extends BaseModel
                 $paymentId = $this->insertPayment($id, $dates, $amount, $token);
                 $stmt = $this->db->prepare('UPDATE cuentas_principales SET fecha_inicio = :fecha_inicio,
                     fecha_vencimiento = :fecha_vencimiento, fin_gracia = :fin_gracia,
-                    revision_vigencia_pendiente = 0 WHERE id = :id');
+                    revision_vigencia_pendiente = 0, plan_gratis = 0 WHERE id = :id');
                 $stmt->execute([
                     'id' => $id,
                     'fecha_inicio' => $dates['fecha_pago'],
@@ -138,29 +139,26 @@ abstract class CuentaCompartida extends BaseModel
         }
     }
 
-    public function sell(int $id, int $dispositivos, string $date, string $token): int
+    public function sell(int $id, int $dispositivos, string $date, string $token, bool $canExceed = false): int
     {
         $price = static::salePrice($dispositivos);
         static::date($date);
         static::assertNotFuture($date);
         static::assertToken($token);
         try {
-            return $this->transaction(function () use ($id, $dispositivos, $date, $token, $price): int {
+            return $this->transaction(function () use ($id, $dispositivos, $date, $token, $price, $canExceed): int {
+                $selected = $this->lockDistribution();
                 $account = $this->lockAccount($id);
                 $existing = $this->operation('ventas', $token);
                 if ($existing !== null) {
                     return static::sameSale($existing, $id, $dispositivos, $date);
                 }
-                if (trim(\decrypt_secret((string) ($account['password_cuenta'] ?? ''))) === ''
-                    || !filter_var(trim((string) ($account['correo'] ?? '')), FILTER_VALIDATE_EMAIL)) {
-                    throw new RuntimeException('Completa el correo y la contraseña de la cuenta antes de registrar una venta.');
+                $this->assertReady($account);
+                if ($selected !== $id) {
+                    throw new RuntimeException('Solo se puede vender en la cuenta seleccionada para distribución.');
                 }
-                if ((int) $account['activo'] !== 1) {
-                    throw new RuntimeException('La cuenta está desactivada. Actívala antes de registrar una venta.');
-                }
-                $period = static::period($account);
-                if (in_array($period['estado_periodo'], ['SIN_PAGO', 'VENCIDO'], true)) {
-                    throw new RuntimeException('La cuenta no tiene un período vigente. Registra un pago antes de vender.');
+                if (!$canExceed && $this->occupied($id) + $dispositivos > (int) $account['capacidad']) {
+                    throw new RuntimeException('No hay suficientes cupos. Solo el administrador puede superar la capacidad de la cuenta en distribución.');
                 }
                 $end = static::TIENE_GRACIA ? $account['fin_gracia'] : $account['fecha_vencimiento'];
                 $start = (string) ($account['fecha_inicio'] ?? '');
@@ -192,27 +190,118 @@ abstract class CuentaCompartida extends BaseModel
         }
     }
 
-    public function releaseSlots(int $id, string $motivo, string $usuario): int
+    protected function releaseSlots(int $id, string $motivo, string $usuario): int
     {
         $motivo = trim($motivo) ?: 'Liberación manual de cupos';
         if (static::length($motivo) > 255 || static::length($usuario) > 60) {
             throw new InvalidArgumentException('El motivo o el usuario excede la longitud permitida.');
         }
-        return $this->transaction(function () use ($id, $motivo, $usuario): int {
-            $this->lockAccount($id);
-            $occupied = $this->occupied($id);
-            $stmt = $this->db->prepare('UPDATE ' . $this->table('ventas') . ' SET liberada_at = NOW()
-                WHERE cuenta_principal_id = :id AND liberada_at IS NULL');
-            $stmt->execute(['id' => $id]);
-            $stmt = $this->db->prepare("UPDATE suscripciones SET flag_no_renovo = 1, estado = 'VENCIDO'
-                WHERE cuenta_principal_id = :id AND flag_no_renovo = 0");
-            $stmt->execute(['id' => $id]);
-            $stmt = $this->db->prepare('INSERT INTO ' . $this->table('liberaciones') . '
-                (cuenta_principal_id, dispositivos_liberados, motivo, usuario)
-                VALUES (:id, :ocupados, :motivo, :usuario)');
-            $stmt->execute(['id' => $id, 'ocupados' => $occupied, 'motivo' => $motivo, 'usuario' => trim($usuario) ?: null]);
-            return $occupied;
+        // Se ejecuta dentro de la transacción del nuevo ciclo, con la cuenta bloqueada.
+        $occupied = $this->occupied($id);
+        $stmt = $this->db->prepare('UPDATE ' . $this->table('ventas') . ' SET liberada_at = NOW()
+            WHERE cuenta_principal_id = :id AND liberada_at IS NULL');
+        $stmt->execute(['id' => $id]);
+        $stmt = $this->db->prepare("UPDATE suscripciones SET flag_no_renovo = 1, estado = 'VENCIDO'
+            WHERE cuenta_principal_id = :id AND flag_no_renovo = 0");
+        $stmt->execute(['id' => $id]);
+        $stmt = $this->db->prepare('INSERT INTO ' . $this->table('liberaciones') . '
+            (cuenta_principal_id, dispositivos_liberados, motivo, usuario)
+            VALUES (:id, :ocupados, :motivo, :usuario)');
+        $stmt->execute(['id' => $id, 'ocupados' => $occupied, 'motivo' => $motivo, 'usuario' => trim($usuario) ?: null]);
+        return $occupied;
+    }
+
+    public function selectDistribution(int $id): void
+    {
+        $this->transaction(function () use ($id): void {
+            $this->lockDistribution();
+            $this->assertReady($this->lockAccount($id));
+            $this->setDistribution($id);
         });
+    }
+
+    public function startCycle(int $id, bool $sessionsClosed, string $usuario, string $token): int
+    {
+        if (!$sessionsClosed) {
+            throw new InvalidArgumentException('Confirma que cerraste las sesiones en todos los dispositivos antes de iniciar el nuevo ciclo.');
+        }
+        static::assertToken($token);
+        return $this->transaction(function () use ($id, $usuario, $token): int {
+            $this->lockDistribution();
+            $account = $this->lockAccount($id);
+            $stmt = $this->db->prepare('SELECT * FROM cuentas_ciclos WHERE token_operacion = :token');
+            $stmt->execute(['token' => $token]);
+            $existing = $stmt->fetch();
+            if ($existing) {
+                if ((int) $existing['cuenta_principal_id'] !== $id) {
+                    throw new InvalidArgumentException('Este comprobante ya se usó para otra cuenta. Recarga el formulario.');
+                }
+                return (int) $existing['cupos_liberados'];
+            }
+            $this->assertReady($account);
+            $released = $this->releaseSlots($id, 'Nuevo ciclo: cierre de sesiones confirmado', $usuario);
+            $stmt = $this->db->prepare('INSERT INTO cuentas_ciclos
+                (cuenta_principal_id, cupos_liberados, usuario, token_operacion) VALUES (:id, :cupos, :usuario, :token)');
+            $stmt->execute(['id' => $id, 'cupos' => $released, 'usuario' => trim($usuario) ?: null, 'token' => $token]);
+            $this->setDistribution($id);
+            return $released;
+        });
+    }
+
+    public function setFreePlan(int $id, bool $free): void
+    {
+        $this->transaction(function () use ($id, $free): void {
+            $account = $this->lockAccount($id);
+            if (!$free && !in_array(static::period(array_replace($account, ['plan_gratis' => 0]))['estado_periodo'], ['PAGADO', 'GRACIA'], true)) {
+                throw new RuntimeException('La vigencia terminó o está pendiente. Registra un nuevo pago antes de restaurar el plan.');
+            }
+            $stmt = $this->db->prepare('UPDATE cuentas_principales SET plan_gratis = :gratis WHERE id = :id');
+            $stmt->execute(['gratis' => (int) $free, 'id' => $id]);
+        });
+    }
+
+    public function currentDistribution(): ?array
+    {
+        $stmt = $this->db->prepare('SELECT cuenta_principal_id FROM cuentas_distribucion WHERE servicio = :servicio');
+        $stmt->execute(['servicio' => static::SERVICIO]);
+        $id = (int) $stmt->fetchColumn();
+        return $id > 0 ? $this->find($id) : null;
+    }
+
+    public function cycles(int $id): array
+    {
+        $stmt = $this->db->prepare('SELECT c.* FROM cuentas_ciclos c INNER JOIN cuentas_principales cp ON cp.id = c.cuenta_principal_id
+            WHERE c.cuenta_principal_id = :id AND cp.servicio = :servicio ORDER BY c.id DESC');
+        $stmt->execute(['id' => $id, 'servicio' => static::SERVICIO]);
+        return $stmt->fetchAll();
+    }
+
+    protected function lockDistribution(): int
+    {
+        // Todas las selecciones, ventas y reinicios toman este bloqueo primero.
+        $stmt = $this->db->prepare('SELECT cuenta_principal_id FROM cuentas_distribucion WHERE servicio = :servicio FOR UPDATE');
+        $stmt->execute(['servicio' => static::SERVICIO]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    protected function setDistribution(int $id): void
+    {
+        $stmt = $this->db->prepare('UPDATE cuentas_distribucion SET cuenta_principal_id = :id WHERE servicio = :servicio');
+        $stmt->execute(['id' => $id, 'servicio' => static::SERVICIO]);
+    }
+
+    protected function assertReady(array $account): void
+    {
+        if (trim(\decrypt_secret((string) ($account['password_cuenta'] ?? ''))) === ''
+            || !filter_var(trim((string) ($account['correo'] ?? '')), FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Completa el correo y la contraseña de la cuenta antes de distribuirla.');
+        }
+        if ((int) $account['activo'] !== 1) {
+            throw new RuntimeException('La cuenta está desactivada. Actívala antes de distribuirla.');
+        }
+        if (!in_array(static::period($account)['estado_periodo'], ['PAGADO', 'GRACIA'], true)) {
+            throw new RuntimeException('La cuenta está Gratis o sin vigencia confirmada. Revisa su plan o registra un pago antes de distribuirla.');
+        }
     }
 
     public function toggleActive(int $id): void
@@ -240,6 +329,27 @@ abstract class CuentaCompartida extends BaseModel
             WHERE v.cuenta_principal_id = :id ORDER BY v.fecha_venta DESC, v.id DESC');
         $stmt->execute(['id' => $id, 'servicio' => static::SERVICIO]);
         return $stmt->fetchAll();
+    }
+
+    public function sale(int $accountId, int $saleId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT v.* FROM ' . $this->table('ventas') . ' v
+            INNER JOIN cuentas_principales cp ON cp.id = v.cuenta_principal_id AND cp.servicio = :servicio
+            WHERE v.cuenta_principal_id = :cuenta AND v.id = :venta LIMIT 1');
+        $stmt->execute(['cuenta' => $accountId, 'venta' => $saleId, 'servicio' => static::SERVICIO]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public function deliveryTemplates(): array
+    {
+        $templates = $this->templates();
+        $defaults = require APP_PATH . '/config/' . static::PREFIJO . '_templates.php';
+        foreach ($defaults as $key => $text) {
+            if (trim((string) ($templates[$key] ?? '')) === '') {
+                $templates[$key] = $text;
+            }
+        }
+        return $templates;
     }
 
     public function templates(): array
@@ -284,6 +394,9 @@ abstract class CuentaCompartida extends BaseModel
 
     public static function period(array $account, ?DateTimeImmutable $today = null): array
     {
+        if ((int) ($account['plan_gratis'] ?? 0) === 1) {
+            return ['estado_periodo' => 'GRATIS', 'dias_pagado' => null, 'dias_gracia' => null];
+        }
         if ((int) ($account['revision_vigencia_pendiente'] ?? 0) === 1) {
             return ['estado_periodo' => 'SIN_PAGO', 'dias_pagado' => null, 'dias_gracia' => null];
         }
@@ -302,9 +415,9 @@ abstract class CuentaCompartida extends BaseModel
             return ['estado_periodo' => 'SIN_PAGO', 'dias_pagado' => null, 'dias_gracia' => null];
         }
         $state = $startDate === null
-            ? ($today < $paidDate ? 'SIN_PAGO' : ($today < $graceDate ? 'GRACIA' : 'VENCIDO'))
+            ? ($today < $paidDate ? 'SIN_PAGO' : ($today < $graceDate ? 'GRACIA' : 'GRATIS'))
             : ($today < $startDate ? 'SIN_PAGO'
-                : ($today < $paidDate ? 'PAGADO' : ($graceDate !== null && $today < $graceDate ? 'GRACIA' : 'VENCIDO')));
+                : ($today < $paidDate ? 'PAGADO' : ($graceDate !== null && $today < $graceDate ? 'GRACIA' : 'GRATIS')));
         return [
             'estado_periodo' => $state,
             'dias_pagado' => $startDate !== null ? (int) $today->diff($paidDate)->format('%r%a') : null,
@@ -331,6 +444,7 @@ abstract class CuentaCompartida extends BaseModel
         $sales = $this->table('ventas');
         $legacy = static::legacyOccupation();
         return "SELECT cp.*, p.nombre AS plataforma_nombre,
+            COALESCE(d.cuenta_principal_id = cp.id, 0) AS distribucion_actual,
             COALESCE(v.ocupados, 0) AS ocupados_ventas,
             COALESCE(v.ventas_bs, 0) AS ventas_bs,
             COALESCE(l.ocupados, 0) AS ocupados_anteriores,
@@ -339,6 +453,7 @@ abstract class CuentaCompartida extends BaseModel
                 ORDER BY pago.fecha_pago DESC, pago.id DESC LIMIT 1) AS ultimo_costo_bs
             FROM cuentas_principales cp
             INNER JOIN plataformas p ON p.id = cp.plataforma_id
+            LEFT JOIN cuentas_distribucion d ON d.servicio = cp.servicio
             LEFT JOIN (SELECT cuenta_principal_id,
                 SUM(CASE WHEN liberada_at IS NULL THEN dispositivos ELSE 0 END) AS ocupados,
                 SUM(monto_bs) AS ventas_bs FROM {$sales} GROUP BY cuenta_principal_id) v
@@ -354,16 +469,27 @@ abstract class CuentaCompartida extends BaseModel
 
     protected function decorate(array $row): array
     {
-        $row['capacidad'] = static::CAPACIDAD;
+        $row['capacidad'] = (int) $row['capacidad'];
         $row['ocupados_ventas'] = (int) $row['ocupados_ventas'];
         $row['ocupados_anteriores'] = (int) $row['ocupados_anteriores'];
         $row['ocupados'] = $row['ocupados_ventas'] + $row['ocupados_anteriores'];
-        $row['recomendado'] = static::CAPACIDAD;
+        $row['recomendado'] = $row['capacidad'];
         $row['excedidos'] = max($row['ocupados'] - $row['recomendado'], 0);
         $row['supera_recomendado'] = $row['excedidos'] > 0;
         $row['hasta_recomendado'] = max($row['recomendado'] - $row['ocupados'], 0);
         $row['libres'] = $row['hasta_recomendado'];
+        $row['distribucion_actual'] = (bool) ($row['distribucion_actual'] ?? false);
+        $row['llena'] = $row['ocupados'] >= $row['capacidad'];
+        $row['estado_distribucion'] = $row['llena'] ? 'Llena' : ($row['distribucion_actual'] ? 'En distribución' : 'Disponible');
         return $row + static::period($row);
+    }
+
+    protected static function capacityValue(mixed $value): int
+    {
+        if (!is_scalar($value) || !preg_match('/^[1-9][0-9]{0,4}$/D', (string) $value)) {
+            throw new InvalidArgumentException('La capacidad debe ser un número entero entre 1 y 99999.');
+        }
+        return (int) $value;
     }
 
     protected function occupied(int $id): int

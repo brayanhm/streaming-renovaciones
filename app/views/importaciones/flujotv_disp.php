@@ -6,7 +6,7 @@ declare(strict_types=1);
         <h1 class="h3 mb-0">Importar FlujoTV (Por dispositivos)</h1>
         <small class="text-secondary">Cuentas desechables: todas se crean como nuevas.</small>
     </div>
-    <a href="<?= e(url('/importar')) ?>" class="btn btn-outline-secondary">Volver a importaciones</a>
+    <a href="<?= e(url('/importar')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver a importaciones</span></a>
 </div>
 
 <div class="row g-4">
@@ -21,7 +21,7 @@ declare(strict_types=1);
                         <input class="form-control form-control-lg" type="file" id="archivo" name="archivo" accept=".csv" required>
                         <div class="form-text">Solo archivos <strong>.csv</strong> (máx. 2 MB). Si tienes un Excel, usa "Guardar como CSV".</div>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-lg">Analizar archivo</button>
+                    <button type="submit" class="btn btn-primary btn-lg"><?= icon('search') ?><span class="button-label">Analizar archivo</span></button>
                 </form>
             </div>
         </div>
