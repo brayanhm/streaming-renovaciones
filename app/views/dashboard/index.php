@@ -53,8 +53,7 @@ $panelBase = $panelBase ?? '/dashboard';
 $panelTitulo = $panelTitulo ?? 'Panel operativo Ghost Store';
 $panelSubtitulo = $panelSubtitulo ?? 'Control diario de clientes, vencimientos y renovaciones de la tienda virtual.';
 $panelTipo = $panelTipo ?? 'streaming';
-$cuentasPorPagar = $cuentasPorPagar ?? [];
-$contactarBase = $panelTipo === 'ia' ? '/contactar-ia' : '/contactar';
+$contactarBase = '/contactar';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
@@ -66,36 +65,6 @@ $contactarBase = $panelTipo === 'ia' ? '/contactar-ia' : '/contactar';
         <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg">Gestionar membresías</a>
     </div>
 </div>
-
-<?php if ($panelTipo === 'ia' && !empty($cuentasPorPagar)): ?>
-<div class="card shadow-sm mb-3">
-    <div class="card-body">
-        <h2 class="h6 mb-3">💳 Cuentas principales por pagar (<?= e((string) count($cuentasPorPagar)) ?>)</h2>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead class="table-dark"><tr><th>Cuenta</th><th>Plataforma</th><th>Cupos</th><th>Pago vence</th><th class="text-end">Ver</th></tr></thead>
-                <tbody>
-                    <?php foreach ($cuentasPorPagar as $cpp): ?>
-                        <?php $dpp = (int) ($cpp['dias_para_pagar'] ?? 0); ?>
-                        <tr>
-                            <td class="fw-semibold"><?= e((string) $cpp['etiqueta']) ?></td>
-                            <td><?= e((string) ($cpp['plataforma_nombre'] ?? '')) ?></td>
-                            <td><?= e((string) (int) ($cpp['ocupados'] ?? 0)) ?> / <?= e((string) (int) ($cpp['capacidad'] ?? 0)) ?></td>
-                            <td>
-                                <?= e((string) ($cpp['fecha_vencimiento'] ?? '')) ?>
-                                <small class="d-block <?= $dpp < 0 ? 'text-danger' : ($dpp <= 3 ? 'text-warning' : 'text-secondary') ?>">
-                                    <?= $dpp < 0 ? 'Vencido hace ' . abs($dpp) . 'd' : ($dpp === 0 ? 'Pagar hoy' : 'En ' . $dpp . 'd') ?>
-                                </small>
-                            </td>
-                            <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="<?= e(url('/cuentas-principales/' . (int) $cpp['id'])) ?>">Ver</a></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
 <div class="card shadow-sm mb-3">
     <div class="card-body">

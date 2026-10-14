@@ -25,7 +25,7 @@ if (is_active_menu($currentPath, '/clientes')) {
     $section = 'suscripciones';
 } elseif (is_active_menu($currentPath, '/reportes')) {
     $section = 'reportes';
-} elseif (is_active_menu($currentPath, '/cuentas-principales') || is_active_menu($currentPath, '/dashboard-ia') || is_active_menu($currentPath, '/contactar-ia')) {
+} elseif (is_active_menu($currentPath, '/cuentas-principales') || is_active_menu($currentPath, '/chatgpt') || is_active_menu($currentPath, '/claude')) {
     $section = 'cuentas';
 } elseif (is_active_menu($currentPath, '/importar')) {
     $section = 'importar';
@@ -371,9 +371,8 @@ $navUser = (string) ($authUser['username'] ?? '');
 $isAdmin = (string) ($authUser['rol'] ?? '') === 'admin';
 $actDash      = is_active_menu($currentPath, '/dashboard') || $currentPath === '/';
 $actContactar = $currentPath === '/contactar';
-$actPanelIa   = is_active_menu($currentPath, '/dashboard-ia');
-$actContactIa = $currentPath === '/contactar-ia';
-$actCuentas   = is_active_menu($currentPath, '/cuentas-principales');
+$actChatgpt   = is_active_menu($currentPath, '/chatgpt');
+$actClaude    = is_active_menu($currentPath, '/claude') || is_active_menu($currentPath, '/cuentas-principales');
 $actClientes  = is_active_menu($currentPath, '/clientes');
 $actMembres   = is_active_menu($currentPath, '/suscripciones');
 $actCatalogo  = is_active_menu($currentPath, '/plataformas');
@@ -389,10 +388,13 @@ $sidebarMenu = [
         ['Contactar hoy', url('/contactar'), $actContactar, '💬'],
         ['Importar cuentas', url('/importar'), $actImportar, '📥'],
     ]],
-    ['Inteligencia Artificial', [
-        ['Panel IA', url('/dashboard-ia'), $actPanelIa, '🤖'],
-        ['Contactar IA', url('/contactar-ia'), $actContactIa, '🗨️'],
-        ['Cuentas IA', url('/cuentas-principales'), $actCuentas, '🔑'],
+    ['ChatGPT', [
+        ['Cuentas ChatGPT', url('/chatgpt'), $actChatgpt && $currentPath !== '/chatgpt/plantillas', '🔑'],
+        ...($isAdmin ? [['Textos de entrega', url('/chatgpt/plantillas'), $currentPath === '/chatgpt/plantillas', '📋']] : []),
+    ]],
+    ['Claude', [
+        ['Cuentas Claude', url('/claude'), $actClaude && $currentPath !== '/claude/plantillas', '🔑'],
+        ...($isAdmin ? [['Textos de entrega', url('/claude/plantillas'), $currentPath === '/claude/plantillas', '📋']] : []),
     ]],
     ['Gestión', [
         ['Clientes', url('/clientes'), $actClientes, '👥'],

@@ -8,6 +8,8 @@ if (PHP_SAPI !== 'cli') {
 require_once __DIR__ . '/../app/config/config.php';
 require_once APP_PATH . '/config/db.php';
 require_once APP_PATH . '/config/migrations.php';
+require_once APP_PATH . '/config/chatgpt_migrations.php';
+require_once APP_PATH . '/config/claude_migrations.php';
 
 if (APP_RUN_MIGRATIONS) {
     run_schema_migrations();
@@ -36,6 +38,8 @@ spl_autoload_register(static function (string $className): void {
 
 use App\Controllers\AuthController;
 use App\Controllers\ClientesController;
+use App\Controllers\ChatgptController;
+use App\Controllers\ClaudeController;
 use App\Controllers\CuentasPrincipalesController;
 use App\Controllers\DashboardController;
 use App\Controllers\ImportacionesController;
@@ -59,12 +63,37 @@ if ($method === 'POST' && !verify_csrf_token(isset($_POST['_csrf']) ? (string) $
 $routes = [
     ['GET', '#^/$#', [DashboardController::class, 'index']],
     ['GET', '#^/dashboard$#', [DashboardController::class, 'index']],
-    ['GET', '#^/dashboard-ia$#', [DashboardController::class, 'panelIa']],
+    ['GET', '#^/dashboard-ia$#', [ChatgptController::class, 'legacyIndex']],
     ['GET', '#^/contactar$#', [DashboardController::class, 'contactar']],
-    ['GET', '#^/contactar-ia$#', [DashboardController::class, 'contactarIa']],
+    ['GET', '#^/contactar-ia$#', [ChatgptController::class, 'legacyIndex']],
     ['POST', '#^/suscripciones/whatsapp/(\d+)$#', [DashboardController::class, 'whatsapp']],
     ['POST', '#^/suscripciones/renovar/(\d+)$#', [DashboardController::class, 'renovar']],
     ['POST', '#^/suscripciones/no-renovo/(\d+)$#', [DashboardController::class, 'noRenovo']],
+
+    ['GET', '#^/chatgpt$#', [ChatgptController::class, 'index']],
+    ['POST', '#^/chatgpt$#', [ChatgptController::class, 'store']],
+    ['POST', '#^/chatgpt/importar-cuentas$#', [ChatgptController::class, 'importPending']],
+    ['GET', '#^/chatgpt/plantillas$#', [ChatgptController::class, 'templates']],
+    ['POST', '#^/chatgpt/plantillas$#', [ChatgptController::class, 'saveTemplates']],
+    ['GET', '#^/chatgpt/(\d+)/editar$#', [ChatgptController::class, 'edit']],
+    ['POST', '#^/chatgpt/(\d+)/actualizar$#', [ChatgptController::class, 'update']],
+    ['POST', '#^/chatgpt/(\d+)/pagar$#', [ChatgptController::class, 'pagar']],
+    ['POST', '#^/chatgpt/(\d+)/vigencia$#', [ChatgptController::class, 'configurePeriod']],
+    ['POST', '#^/chatgpt/(\d+)/vender$#', [ChatgptController::class, 'vender']],
+    ['POST', '#^/chatgpt/(\d+)/liberar$#', [ChatgptController::class, 'liberar']],
+    ['POST', '#^/chatgpt/(\d+)/estado$#', [ChatgptController::class, 'toggleActive']],
+    ['GET', '#^/chatgpt/(\d+)$#', [ChatgptController::class, 'show']],
+    ['GET', '#^/claude$#', [ClaudeController::class, 'index']],
+    ['POST', '#^/claude$#', [ClaudeController::class, 'store']],
+    ['GET', '#^/claude/plantillas$#', [ClaudeController::class, 'templates']],
+    ['POST', '#^/claude/plantillas$#', [ClaudeController::class, 'saveTemplates']],
+    ['GET', '#^/claude/(\d+)/editar$#', [ClaudeController::class, 'edit']],
+    ['POST', '#^/claude/(\d+)/actualizar$#', [ClaudeController::class, 'update']],
+    ['POST', '#^/claude/(\d+)/pagar$#', [ClaudeController::class, 'pagar']],
+    ['POST', '#^/claude/(\d+)/vender$#', [ClaudeController::class, 'vender']],
+    ['POST', '#^/claude/(\d+)/liberar$#', [ClaudeController::class, 'liberar']],
+    ['POST', '#^/claude/(\d+)/estado$#', [ClaudeController::class, 'toggleActive']],
+    ['GET', '#^/claude/(\d+)$#', [ClaudeController::class, 'show']],
 
     ['GET', '#^/clientes$#', [ClientesController::class, 'index']],
     ['POST', '#^/clientes$#', [ClientesController::class, 'store']],

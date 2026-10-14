@@ -27,16 +27,19 @@ class CuentasPrincipalesController extends Controller
 
     public function index(): void
     {
-        $this->render('cuentas_principales/index', [
-            'pageTitle' => 'Cuentas principales',
-            'rows' => $this->cuentas->all(),
-            'plataformas' => $this->plataformasConCuentas(),
-        ]);
+        $this->redirect('/chatgpt');
     }
 
     public function store(): void
     {
         $plataformaId = (int) ($_POST['plataforma_id'] ?? 0);
+        $platform = $this->plataformas->find($plataformaId);
+        if ($platform !== null && stripos((string) $platform['nombre'], 'chatgpt') !== false) {
+            $this->redirect('/chatgpt');
+        }
+        if ($platform !== null && stripos((string) $platform['nombre'], 'claude') !== false) {
+            $this->redirect('/claude');
+        }
         $etiqueta = trim((string) ($_POST['etiqueta'] ?? ''));
         $capacidad = (int) ($_POST['capacidad'] ?? 0);
 
@@ -64,6 +67,7 @@ class CuentasPrincipalesController extends Controller
 
     public function show(int $id): void
     {
+        $this->redirectCuentaCompartida($id);
         $cuenta = $this->cuentas->find($id);
         if ($cuenta === null) {
             flash('danger', 'Cuenta principal no encontrada.');
@@ -81,6 +85,7 @@ class CuentasPrincipalesController extends Controller
 
     public function edit(int $id): void
     {
+        $this->redirectCuentaCompartida($id);
         $cuenta = $this->cuentas->find($id);
         if ($cuenta === null) {
             flash('danger', 'Cuenta principal no encontrada.');
@@ -96,6 +101,7 @@ class CuentasPrincipalesController extends Controller
 
     public function update(int $id): void
     {
+        $this->redirectCuentaCompartida($id);
         $cuenta = $this->cuentas->find($id);
         if ($cuenta === null) {
             flash('danger', 'Cuenta principal no encontrada.');
@@ -132,6 +138,7 @@ class CuentasPrincipalesController extends Controller
 
     public function destroy(int $id): void
     {
+        $this->redirectCuentaCompartida($id);
         $cuenta = $this->cuentas->find($id);
         if ($cuenta === null) {
             flash('danger', 'Cuenta principal no encontrada.');
@@ -157,6 +164,7 @@ class CuentasPrincipalesController extends Controller
      */
     public function asignar(int $id): void
     {
+        $this->redirectCuentaCompartida($id);
         $cuenta = $this->cuentas->find($id);
         if ($cuenta === null) {
             flash('danger', 'Cuenta principal no encontrada.');
@@ -225,6 +233,14 @@ class CuentasPrincipalesController extends Controller
         }
 
         $this->redirect('/cuentas-principales/' . $id);
+    }
+
+    private function redirectCuentaCompartida(int $id): void
+    {
+        $cuenta = $this->cuentas->find($id);
+        if ($cuenta !== null && in_array($cuenta['servicio'] ?? '', ['CHATGPT', 'CLAUDE'], true)) {
+            $this->redirect('/' . strtolower((string) $cuenta['servicio']) . '/' . $id);
+        }
     }
 
     // ── helpers ──

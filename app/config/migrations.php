@@ -176,6 +176,11 @@ function run_schema_migrations(): void
         'ALTER TABLE cuentas_principales ADD COLUMN fecha_vencimiento DATE NULL AFTER fecha_inicio'
     );
 
+    require_once __DIR__ . '/chatgpt_migrations.php';
+    run_chatgpt_schema_migrations($pdo);
+    require_once __DIR__ . '/claude_migrations.php';
+    run_claude_schema_migrations($pdo);
+
     ensure_column(
         $pdo,
         'suscripciones',

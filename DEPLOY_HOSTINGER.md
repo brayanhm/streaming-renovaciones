@@ -102,6 +102,18 @@ Usuario admin incluido en el export: **`ghostbhm`** (usa tu contraseña actual).
 
 ## 5) Verificación post-deploy
 
+Si actualizas una instalación anterior a los apartados ChatGPT/Claude y usas
+`APP_RUN_MIGRATIONS=false`, ejecuta desde la raíz del proyecto:
+
+```bash
+php deploy/migrate_chatgpt.php
+```
+
+Para esta actualización sube temporalmente ese archivo y sus dependencias en
+`app/config/`; el comando es exclusivo de CLI. Añade tablas de historial y
+campos de clasificación sin eliminar registros existentes. Conserva la misma
+`APP_KEY` al trasladar cuentas con contraseñas cifradas.
+
 - [ ] Entra al login y accede con `ghostbhm`.
 - [ ] El **logo** carga (dashboard/navbar).
 - [ ] El **dashboard** muestra las suscripciones y los contadores.
@@ -109,6 +121,12 @@ Usuario admin incluido en el export: **`ghostbhm`** (usa tu contraseña actual).
 - [ ] En **Clientes → un cliente** se ve la contraseña de la cuenta descifrada
       (confirma que `APP_KEY` quedó bien).
 - [ ] Prueba una **importación CSV** pequeña (opcional).
+- [ ] Abre **ChatGPT** y comprueba fechas, dispositivos y costo real en Bs.
+- [ ] Configura los textos en **ChatGPT → Textos de entrega** y prueba la copia.
+- [ ] **Claude** aparece como apartado independiente.
+- [ ] Claude recomienda 5 cupos a Bs 85, permite excederlos y vence al mes, sin gracia.
+- [ ] ChatGPT recomienda 20 dispositivos y permite excederlos con una advertencia.
+- [ ] Las cuentas existentes permiten revisar la fecha de pago o el inicio de gracia.
 
 ---
 

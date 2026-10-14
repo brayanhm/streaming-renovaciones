@@ -13,7 +13,7 @@ $lleno = $libres <= 0;
     </div>
     <div class="d-flex gap-2">
         <a href="<?= e(url('/cuentas-principales/editar/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-primary">Editar</a>
-        <a href="<?= e(url('/cuentas-principales')) ?>" class="btn btn-outline-secondary">Volver</a>
+        <a href="<?= e(url('/claude')) ?>" class="btn btn-outline-secondary">Volver a Claude</a>
     </div>
 </div>
 
