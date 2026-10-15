@@ -92,9 +92,10 @@ class ChatgptCuenta extends CuentaCompartida
         }
         $this->transaction(function () use ($id, $fields): void {
             $account = $this->lockAccount($id);
-            if ((int) ($account['revision_vigencia_pendiente'] ?? 0) !== 1
-                && static::period(array_replace($account, ['plan_gratis' => 0]))['estado_periodo'] === 'GRATIS') {
-                throw new \RuntimeException('La vigencia terminó. Registra un nuevo pago para iniciar otro período.');
+            $payments = $this->db->prepare('SELECT id FROM chatgpt_pagos WHERE cuenta_principal_id = :id LIMIT 1');
+            $payments->execute(['id' => $id]);
+            if ((int) ($account['revision_vigencia_pendiente'] ?? 0) !== 1 || $payments->fetchColumn() !== false) {
+                throw new \RuntimeException('La revisión inicial ya fue completada o la cuenta tiene pagos registrados. Para renovar la vigencia, registra un pago.');
             }
             $stmt = $this->db->prepare('UPDATE cuentas_principales SET fecha_inicio = :fecha_inicio,
                 fecha_vencimiento = :fecha_vencimiento, fin_gracia = :fin_gracia,

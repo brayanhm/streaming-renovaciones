@@ -8,6 +8,22 @@ use Exception;
 
 class Suscripcion extends BaseModel
 {
+    public function sharedAccount(int $subscriptionId): ?array
+    {
+        $stmt = $this->db->prepare("SELECT cp.id, cp.servicio FROM suscripciones s
+            INNER JOIN cuentas_principales cp ON cp.id = s.cuenta_principal_id
+            WHERE s.id = :id AND cp.servicio IN ('CHATGPT', 'CLAUDE') LIMIT 1");
+        $stmt->execute(['id' => $subscriptionId]);
+        return $stmt->fetch() ?: null;
+    }
+
+    private function assertGeneralSubscription(int $id): void
+    {
+        if ($this->sharedAccount($id) !== null) {
+            throw new \RuntimeException('Esta asignación se gestiona desde su cuenta de ChatGPT o Claude. Usa ese módulo para administrar las ventas y los cupos.');
+        }
+    }
+
     public const ESTADOS = ['CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO', 'RECUP'];
     public const CONTACTOS = ['MENOS_2', 'MENOS_1', 'REC_7', 'REC_15'];
     public const FILTROS_BUSQUEDA = ['TODOS', 'CONTACTO', 'USUARIO', 'TELEFONO'];
@@ -169,6 +185,12 @@ class Suscripcion extends BaseModel
 
     public function create(array $data): int
     {
+        $accountId = (int) ($data['cuenta_principal_id'] ?? 0);
+        if ($accountId > 0) {
+            $shared = $this->db->prepare("SELECT id FROM cuentas_principales WHERE id = :id AND servicio IN ('CHATGPT', 'CLAUDE')");
+            $shared->execute(['id' => $accountId]);
+            if ($shared->fetchColumn() !== false) throw new \RuntimeException('Registra esta venta desde el módulo de ChatGPT o Claude.');
+        }
         $estado = ((int) ($data['flag_no_renovo'] ?? 0) === 1) ? 'VENCIDO' : (string) $data['estado'];
 
         $stmt = $this->db->prepare(
@@ -230,6 +252,7 @@ class Suscripcion extends BaseModel
 
     public function update(int $id, array $data): bool
     {
+        $this->assertGeneralSubscription($id);
         $estado = ((int) ($data['flag_no_renovo'] ?? 0) === 1) ? 'VENCIDO' : (string) $data['estado'];
 
         $stmt = $this->db->prepare(
@@ -269,6 +292,7 @@ class Suscripcion extends BaseModel
 
     public function updateDueDate(int $id, string $dueDate): bool
     {
+        $this->assertGeneralSubscription($id);
         $subscription = $this->find($id);
         if ($subscription === null) {
             return false;
@@ -300,6 +324,7 @@ class Suscripcion extends BaseModel
 
     public function delete(int $id): bool
     {
+        $this->assertGeneralSubscription($id);
         $stmt = $this->db->prepare('DELETE FROM suscripciones WHERE id = :id');
 
         return $stmt->execute(['id' => $id]);
@@ -340,6 +365,7 @@ class Suscripcion extends BaseModel
 
     public function markWhatsappContact(int $id, string $contactType): bool
     {
+        $this->assertGeneralSubscription($id);
         if (!in_array($contactType, self::CONTACTOS, true)) {
             return false;
         }
@@ -385,6 +411,7 @@ class Suscripcion extends BaseModel
 
     public function markNoRenovo(int $id): bool
     {
+        $this->assertGeneralSubscription($id);
         $stmt = $this->db->prepare(
             'UPDATE suscripciones
              SET flag_no_renovo = 1,
@@ -400,6 +427,7 @@ class Suscripcion extends BaseModel
 
     public function renovar(int $id, int $months): ?string
     {
+        $this->assertGeneralSubscription($id);
         if ($months <= 0) {
             return null;
         }

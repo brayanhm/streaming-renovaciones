@@ -315,16 +315,11 @@ summary > .gs-icon { margin-inline-end: .4rem; }
 @media (min-width: 992px) {
     .app-sidebar { flex: 0 0 64px; width: 64px; position: sticky; top: 50px; align-self: flex-start; height: calc(100vh - 50px); overflow: visible; z-index: 1041; }
     .app-sidebar > .offcanvas-body { display: block; position: absolute; top: 0; left: 0; width: 64px; height: 100%; padding: .8rem .5rem; overflow: hidden; background: var(--gs-nav); border-right: 1px solid #25445c; transition: width .2s ease, box-shadow .2s ease; z-index: 1040; }
-    .app-sidebar:hover > .offcanvas-body, .app-sidebar:focus-within > .offcanvas-body { width: 244px; overflow-y: auto; box-shadow: 6px 0 20px rgba(16, 40, 63, .12); }
     .app-sidebar .collapse { display: block !important; height: auto !important; }
     .app-nav-toggle { display: none; }
     .app-nav-link { justify-content: center; }
     .app-nav-link .ico { margin-right: 0; }
     .app-nav-link .lbl { display: none; }
-    .app-sidebar:hover .app-nav-toggle, .app-sidebar:focus-within .app-nav-toggle { display: flex; }
-    .app-sidebar:hover .app-nav-link, .app-sidebar:focus-within .app-nav-link { justify-content: flex-start; }
-    .app-sidebar:hover .app-nav-link .ico, .app-sidebar:focus-within .app-nav-link .ico { margin-right: .55rem; }
-    .app-sidebar:hover .app-nav-link .lbl, .app-sidebar:focus-within .app-nav-link .lbl { display: inline; }
 }
 
 body.app-auth { display: flex; flex-direction: column; }

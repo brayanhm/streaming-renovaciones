@@ -48,6 +48,7 @@ abstract class CuentasCompartidasController extends Controller
             'search' => $search, 'canAdmin' => $this->canAdmin(), 'distribucion' => $this->cuentas->currentDistribution(),
             'creationToken' => $this->issueToken('crear', 0),
             'importToken' => static::SERVICE === 'chatgpt' ? $this->issueToken('importar', 0) : '',
+            'avisosChatgpt' => static::SERVICE === 'chatgpt' ? (new \App\Models\ChatgptAvisos())->resumen() : null,
         ]);
     }
 
@@ -60,8 +61,11 @@ abstract class CuentasCompartidasController extends Controller
         $credentialsReady = filter_var((string) ($cuenta['correo'] ?? ''), FILTER_VALIDATE_EMAIL) !== false && trim($password) !== '';
         $sales = $this->cuentas->sales($id);
         $saleTexts = [];
+        $saleCopyReasons = [];
         foreach ($sales as $sale) {
-            $saleTexts[(int) $sale['id']] = $credentialsReady ? $modelClass::renderMessage(
+            $reason = $modelClass::deliveryUnavailableReason($cuenta, $sale);
+            $saleCopyReasons[(int) $sale['id']] = $reason ?? (!$credentialsReady ? 'Credenciales pendientes de completar.' : 'Mensaje pendiente de configurar.');
+            $saleTexts[(int) $sale['id']] = $credentialsReady && $reason === null ? $modelClass::renderMessage(
                 $templates['entrega_' . (int) $sale['dispositivos']] ?? '',
                 $this->messageContext($cuenta, $password, (int) $sale['dispositivos'], (string) $sale['fecha_vencimiento'], (string) $sale['monto_bs'])
             ) : '';
@@ -83,21 +87,24 @@ abstract class CuentasCompartidasController extends Controller
             ) : '';
         }
         $lastSaleId = (int) ($_GET['venta'] ?? 0);
-        if (!array_key_exists($lastSaleId, $saleTexts)) {
+        if (empty($saleTexts[$lastSaleId])) {
             $lastSaleId = null;
         }
+        $payments = $this->cuentas->payments($id);
+        $canReviewPeriod = static::SERVICE === 'chatgpt' && (int) ($cuenta['revision_vigencia_pendiente'] ?? 0) === 1 && $payments === [];
         $this->render(static::SERVICE . '/show', [
             'pageTitle' => static::LABEL . ' · ' . $cuenta['etiqueta'], 'cuenta' => $cuenta,
-            'password' => $password, 'pagos' => $this->cuentas->payments($id), 'ventas' => $sales,
+            'password' => $password, 'pagos' => $payments, 'ventas' => $sales,
+            'saleCopyReasons' => $saleCopyReasons, 'canReviewPeriod' => $canReviewPeriod,
             'templates' => $templates, 'saleTexts' => $saleTexts, 'entregaTexts' => $entregaTexts,
             'renewalText' => $modelClass::renderMessage($templates['renovacion'] ?? '', $this->messageContext($cuenta, $password, 0, $currentEnd, '')),
             'lastSaleId' => $lastSaleId, 'canAdmin' => $this->canAdmin(),
             'credentialsReady' => $credentialsReady,
             'saleToken' => $this->issueToken('vender', $id), 'paymentToken' => $this->issueToken('pagar', $id),
-            'selectionToken' => $this->issueToken('distribuir', $id), 'cycleToken' => $this->issueToken('ciclo', $id),
+            'selectionToken' => $this->issueToken('distribuir', $id), 'cycleToken' => $this->issueToken('ciclo', $id, (int) $cuenta['ciclo_actual']),
             'planToken' => $this->issueToken('plan', $id), 'ciclos' => $this->cuentas->cycles($id),
             'stateToken' => $this->issueToken('estado', $id),
-            'periodToken' => static::SERVICE === 'chatgpt' ? $this->issueToken('vigencia', $id) : '',
+            'periodToken' => $canReviewPeriod ? $this->issueToken('vigencia', $id) : '',
         ]);
     }
 
@@ -114,7 +121,7 @@ abstract class CuentasCompartidasController extends Controller
         try {
             $this->validateDate($data['fecha_pago']);
             if (trim($data['password_cuenta']) === '') {
-                throw new \InvalidArgumentException('Ingresa la contraseña de la cuenta.');
+                throw new \App\Core\ValidationException(['password_cuenta' => 'Ingresa la contraseña de la cuenta.']);
             }
             $id = $this->cuentas->create($data);
             $_SESSION[static::SERVICE . '_creadas'][$token] = $id;
@@ -134,6 +141,8 @@ abstract class CuentasCompartidasController extends Controller
         $this->render(static::SERVICE . '/edit', [
             'pageTitle' => 'Editar cuenta ' . static::LABEL, 'cuenta' => $this->account($id),
             'password' => '', 'canAdmin' => true,
+            'occupationToken' => $this->issueToken('ocupacion', $id),
+            'occupationAdjustments' => $this->cuentas->occupationAdjustments($id),
         ]);
     }
 
@@ -141,13 +150,33 @@ abstract class CuentasCompartidasController extends Controller
     {
         $this->requireAdmin();
         $account = $this->account($id);
+        $data = $this->accountPayload((int) $account['capacidad']);
         try {
-            $this->cuentas->update($id, $this->accountPayload((int) $account['capacidad']));
+            $this->cuentas->update($id, $data);
             audit(static::SERVICE . '.editar', 'Cuenta ' . $id);
             flash('success', 'Datos de la cuenta actualizados.');
         } catch (\Throwable $error) {
+            set_old($data);
             $this->operationError($error);
             $this->redirect($this->path('/' . $id) . '/editar');
+        }
+        $this->redirect($this->path('/' . $id));
+    }
+
+    public function adjustOccupation(int $id): void
+    {
+        $this->requireAdmin();
+        $this->account($id);
+        $token = $this->validateToken('ocupacion', $id);
+        try {
+            $result = $this->cuentas->adjustOccupation($id, $_POST['ocupados'] ?? null, $_POST['ocupados_antes'] ?? null,
+                is_string($_POST['motivo'] ?? '') ? ($_POST['motivo'] ?? '') : '',
+                (string) (auth_user()['username'] ?? ''), $token);
+            audit(static::SERVICE . '.ocupacion', 'Cuenta ' . $id . ' / ' . $result['ocupados_antes'] . ' → ' . $result['ocupados_despues']);
+            flash('success', 'Ocupación actualizada de ' . $result['ocupados_antes'] . ' a ' . $result['ocupados_despues'] . '. Las ventas y los pagos se conservan.');
+        } catch (\Throwable $error) {
+            $this->operationError($error);
+            $this->redirect($this->path('/' . $id . '/editar') . '#ocupacion');
         }
         $this->redirect($this->path('/' . $id));
     }
@@ -177,7 +206,7 @@ abstract class CuentasCompartidasController extends Controller
         $token = $this->validateToken('vender', $id);
         try {
             $date = (string) ($_POST['fecha_venta'] ?? date('Y-m-d'));
-            $this->validateDate($date);
+            $this->validateDate($date, 'fecha_venta');
             $sale = $this->cuentas->sell($id, (int) ($_POST['dispositivos'] ?? 0), $date, $token, $this->canAdmin());
             audit(static::SERVICE . '.vender', 'Cuenta ' . $id . ' / venta ' . $sale);
             flash('success', 'Venta registrada. Puedes copiar la entrega sin volver a consumir cupos.');
@@ -194,7 +223,9 @@ abstract class CuentasCompartidasController extends Controller
         $this->account($id);
         $token = $this->validateToken('ciclo', $id);
         try {
-            $released = $this->cuentas->startCycle($id, ($_POST['sesiones_cerradas'] ?? '') === '1', (string) (auth_user()['username'] ?? ''), $token);
+            $expectedCycle = $_SESSION[static::SERVICE . '_operaciones'][$token]['ciclo'] ?? null;
+            if (!is_int($expectedCycle)) throw new \InvalidArgumentException('El formulario de ciclo expiró. Recarga la cuenta.');
+            $released = $this->cuentas->startCycle($id, ($_POST['sesiones_cerradas'] ?? '') === '1', (string) (auth_user()['username'] ?? ''), $token, $expectedCycle);
             audit(static::SERVICE . '.ciclo', 'Cuenta ' . $id . ' / ' . $released . ' cupos liberados / cierre de sesiones confirmado');
             flash('success', 'Nuevo ciclo iniciado y cuenta seleccionada para distribución. Se reiniciaron los cupos; el historial de ventas y pagos se conserva.');
         } catch (\Throwable $error) {
@@ -243,7 +274,9 @@ abstract class CuentasCompartidasController extends Controller
         $this->account($id);
         $token = $this->validateToken('estado', $id);
         try {
-            $this->cuentas->toggleActive($id);
+            $active = $_POST['activo'] ?? null;
+            if (!is_string($active) || !in_array($active, ['0', '1'], true)) throw new \InvalidArgumentException('Selecciona activar o desactivar la cuenta. Recarga el formulario.');
+            $this->cuentas->setActive($id, $active === '1');
             unset($_SESSION[static::SERVICE . '_operaciones'][$token]);
             audit(static::SERVICE . '.estado', 'Cuenta ' . $id);
             flash('success', 'Estado de la cuenta actualizado.');
@@ -260,6 +293,7 @@ abstract class CuentasCompartidasController extends Controller
 
     public function distribution(): void
     {
+        $modelClass = static::MODEL;
         $account = $this->cuentas->currentDistribution();
         $canAdmin = $this->canAdmin();
         $credentialsReady = $account !== null
@@ -270,12 +304,11 @@ abstract class CuentasCompartidasController extends Controller
             $last = $_SESSION[static::SERVICE . '_ultima_entrega'] ?? [];
             if ((int) ($last['cuenta'] ?? 0) === (int) $account['id']) {
                 $sale = $this->cuentas->sale((int) $account['id'], (int) ($last['venta'] ?? 0));
-                if ($sale !== null && $sale['liberada_at'] === null) {
+                if ($sale !== null && $modelClass::deliveryUnavailableReason($account, $sale) === null) {
                     $lastDelivery = $this->deliveryData($account, $sale, $canAdmin);
                 }
             }
         }
-        $modelClass = static::MODEL;
         $prices = [1 => $modelClass::salePrice(1)];
         if (static::SERVICE === 'chatgpt') {
             $prices[2] = $modelClass::salePrice(2);
@@ -328,13 +361,15 @@ abstract class CuentasCompartidasController extends Controller
 
     private function deliveryData(array $account, array $sale, bool $canAdmin): array
     {
+        $modelClass = static::MODEL;
+        $reason = $modelClass::deliveryUnavailableReason($account, $sale);
+        if ($reason !== null) throw new \RuntimeException($reason . ' Recarga la pantalla de distribución.');
         $devices = (int) $sale['dispositivos'];
         $templates = $this->cuentas->deliveryTemplates();
         $password = decrypt_secret((string) ($account['password_cuenta'] ?? ''));
         if (trim($password) === '') {
             throw new \RuntimeException('La contraseña está pendiente de completar. El administrador debe revisar la cuenta.');
         }
-        $modelClass = static::MODEL;
         $text = $modelClass::renderMessage($templates['entrega_' . $devices],
             $this->messageContext($account, $password, $devices, (string) $sale['fecha_vencimiento'], (string) $sale['monto_bs']));
         return ['ok' => true, 'saleId' => (int) $sale['id'], 'devices' => $devices, 'text' => $text,
@@ -423,10 +458,11 @@ abstract class CuentasCompartidasController extends Controller
         }
     }
 
-    protected function issueToken(string $purpose, int $account): string
+    protected function issueToken(string $purpose, int $account, ?int $cycle = null): string
     {
         $token = bin2hex(random_bytes(32));
         $_SESSION[static::SERVICE . '_operaciones'][$token] = ['accion' => $purpose, 'cuenta' => $account];
+        if ($purpose === 'ciclo') $_SESSION[static::SERVICE . '_operaciones'][$token]['ciclo'] = $cycle ?? $this->cuentas->currentCycleId($account);
         while (count($_SESSION[static::SERVICE . '_operaciones']) > 100) {
             $oldest = array_key_first($_SESSION[static::SERVICE . '_operaciones']);
             unset($_SESSION[static::SERVICE . '_operaciones'][$oldest], $_SESSION[static::SERVICE . '_creadas'][$oldest]);
@@ -445,16 +481,17 @@ abstract class CuentasCompartidasController extends Controller
         return $token;
     }
 
-    protected function validateDate(string $value): void
+    protected function validateDate(string $value, string $field = 'fecha_pago'): void
     {
         $date = parse_ymd_date($value);
         if ($date === null || $date > new DateTimeImmutable('today')) {
-            throw new \InvalidArgumentException('Selecciona una fecha válida que no sea futura.');
+            throw new \App\Core\ValidationException([$field => 'Selecciona una fecha válida que no sea futura.']);
         }
     }
 
     protected function operationError(\Throwable $error): void
     {
+        if ($error instanceof \App\Core\ValidationException) set_field_errors($error->fields);
         if ($error instanceof \InvalidArgumentException || ($error instanceof \RuntimeException && !$error instanceof \PDOException)) {
             flash('danger', $error->getMessage());
         } else {

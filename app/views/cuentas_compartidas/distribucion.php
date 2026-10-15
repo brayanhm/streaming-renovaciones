@@ -6,7 +6,7 @@ $saleBlockedMessage = !$isActive ? 'La cuenta está inactiva. El administrador d
     : (!$credentialsReady ? 'Completa el correo y la contraseña antes de vender.'
     : (!in_array($period, ['PAGADO', 'GRACIA'], true) ? 'La cuenta está Gratis o con fechas pendientes. Revisa el plan antes de vender.'
     : (!$selected ? 'Esta cuenta no está seleccionada para distribución. El administrador debe elegirla.'
-    : 'La cuenta está llena. Solo el administrador puede registrar ventas adicionales.')));
+    : 'Cuenta vendida: todos sus cupos están ocupados. Solo el administrador puede registrar ventas adicionales.')));
 $serviceModel = $service === 'chatgpt' ? \App\Models\ChatgptCuenta::class : \App\Models\ClaudeCuenta::class;
 $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_gratis' => 0]))['estado_periodo'], ['PAGADO', 'GRACIA'], true);
 ?>
@@ -14,7 +14,7 @@ $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_g
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div>
             <h2 class="h5 mb-2" id="distribution-title">Distribución</h2>
-            <span class="badge text-bg-<?= $occupied >= $recommended ? 'warning' : ($selected ? 'primary' : 'secondary') ?>"><?= e((string) ($cuenta['estado_distribucion'] ?? 'Disponible')) ?></span>
+            <span class="badge text-bg-<?= $occupied >= $recommended ? 'success' : ($selected ? 'primary' : 'secondary') ?>"><?= e((string) ($cuenta['estado_distribucion'] ?? 'Disponible')) ?></span>
             <?php if ($selected): ?><span class="badge text-bg-primary">Cuenta seleccionada</span><?php endif; ?>
             <p class="small text-secondary mb-0 mt-2"><?= $selected ? ($ready ? 'Las nuevas ventas de este servicio se registran en esta cuenta.' : 'Esta cuenta sigue seleccionada, pero las ventas están bloqueadas.') : 'Seleccionarla conserva los cupos y accesos vendidos en todas las cuentas.' ?></p>
         </div>
@@ -29,17 +29,20 @@ $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_g
     <hr>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
         <p class="small text-secondary mb-0">Si la cuenta pierde su plan de pago, márcala Gratis para bloquear las ventas.</p>
-        <form method="post" action="<?= e(url('/' . $service . '/' . $accountId . '/plan')) ?>" data-chatgpt-submit>
+        <form method="post" action="<?= e(url('/' . $service . '/' . $accountId . '/plan')) ?>" data-chatgpt-submit
+            <?php if ($period !== 'GRATIS'): ?>data-confirm="<?= e('Se bloquearán las nuevas entregas de ' . $cuenta['etiqueta'] . '. Sus cupos e historial se conservan.') ?>" data-confirm-title="¿Marcar esta cuenta Gratis?" data-confirm-button="Marcar Gratis" data-confirm-danger="1"<?php endif; ?>>
             <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($planToken ?? '')) ?>">
             <input type="hidden" name="plan" value="<?= $period === 'GRATIS' ? 'RESTAURAR' : 'GRATIS' ?>">
             <button class="btn btn-sm btn-outline-secondary" type="submit" <?= $period === 'GRATIS' && !$restoreAllowed ? 'disabled' : '' ?>><?= icon($period === 'GRATIS' ? 'refresh-cw' : 'circle-x') ?><span class="button-label"><?= $period === 'GRATIS' ? 'Restaurar plan vigente' : 'Marcar Gratis' ?></span></button>
         </form>
     </div>
     <?php if ($period === 'GRATIS' && !$restoreAllowed): ?><p class="small text-secondary mt-2 mb-0">Registra un nuevo pago para recuperar la vigencia.</p><?php endif; ?>
-    <details class="mt-3">
+    <details class="mt-3" id="nuevo-ciclo">
         <summary class="fw-semibold">Iniciar nuevo ciclo</summary>
         <p class="small mt-2 mb-2">Reinicia los <?= $occupied ?> <?= e($unit) ?> ocupados y selecciona esta cuenta para distribución. Las ventas y los pagos se conservan en el historial.</p>
-        <form method="post" action="<?= e(url('/' . $service . '/' . $accountId . '/ciclo')) ?>" data-chatgpt-submit data-confirm="¿Iniciar un nuevo ciclo y reiniciar los cupos de esta cuenta?">
+        <form method="post" action="<?= e(url('/' . $service . '/' . $accountId . '/ciclo')) ?>" data-chatgpt-submit
+            data-confirm="<?= e('Se reiniciarán los ' . $occupied . ' ' . $unit . ' ocupados de ' . $cuenta['etiqueta'] . '. Las ventas y los pagos se conservan en el historial.') ?>"
+            data-confirm-title="¿Iniciar un nuevo ciclo?" data-confirm-button="Iniciar ciclo" data-confirm-danger="1">
             <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($cycleToken ?? '')) ?>">
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" name="sesiones_cerradas" value="1" id="sessions-closed" required <?= !$ready ? 'disabled' : '' ?>>

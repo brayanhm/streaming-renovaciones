@@ -372,7 +372,7 @@ try {
         cgEq((string) $account['ventas_bs'], '610.00', 'Debe incluir también las ventas posteriores al exceso.');
         cgEq($account['fecha_inicio'], $before['fecha_inicio'], 'Las ventas no alteran el inicio del período.');
         cgEq($account['fin_gracia'], $before['fin_gracia'], 'Las ventas no alteran la gracia.');
-        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken()), 22, 'La liberación debe incluir todos los dispositivos, también los excedidos.');
+        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken(), $model->currentCycleId($id)), 22, 'La liberación debe incluir todos los dispositivos, también los excedidos.');
         $released = $model->find($id);
         cgEq($released['ocupados'], 0, 'La liberación debe vaciar la cuenta.');
         cgEq($released['excedidos'], 0, 'La liberación debe eliminar el exceso.');
@@ -393,7 +393,7 @@ try {
         $id = cgCreateAccount($model, $paymentDate);
         $beforeStart = (new DateTimeImmutable($paymentDate))->modify('-1 day')->format('Y-m-d');
         cgReject(static fn() => $model->sell($id, 1, $beforeStart, cgToken()), 'No debe vender antes del inicio de cuenta.');
-        $model->toggleActive($id);
+        $model->setActive($id, false);
         cgReject(static fn() => $model->sell($id, 1, $paymentDate, cgToken()), 'No debe vender una cuenta inactiva.');
         $expiredDate = shift_months_clamped($today, -3)->format('Y-m-d');
         $expired = cgCreateAccount($model, $expiredDate);
@@ -440,7 +440,7 @@ try {
         $saleToken = cgToken();
         $saleId = $model->sell($id, 1, $paymentDate, $saleToken);
         cgEq((int) $model->find($id)['ocupados'], 3, 'La ocupación debe incluir los dos dispositivos heredados.');
-        $released = $model->startCycle($id, true, 'admin-fixture', cgToken());
+        $released = $model->startCycle($id, true, 'admin-fixture', cgToken(), $model->currentCycleId($id));
         cgEq($released, 3, 'Debe liberar dispositivos heredados y nuevos.');
         cgEq((int) $model->find($id)['ocupados'], 0, 'La liberación manual debe vaciar la cuenta.');
         cgEq((int) $model->find($id)['libres'], 20, 'La liberación manual debe recuperar 20 cupos.');
@@ -453,7 +453,7 @@ try {
         cgEq($model->sell($id, 1, $paymentDate, $saleToken), $saleId, 'Repetir una venta archivada debe devolver el mismo registro.');
         cgEq((int) $model->find($id)['ocupados'], 0, 'Repetir el token de una venta archivada no debe reocupar cupos.');
         cgEq(count($model->payments($id)), 1, 'La liberación debe conservar los pagos.');
-        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken()), 0, 'Liberar de nuevo debe ser inocuo.');
+        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken(), $model->currentCycleId($id)), 0, 'Liberar de nuevo debe ser inocuo.');
     });
 
     cgTest('ventas vencen con el período pagado o de gracia y siguen ocupando hasta liberación', static function () use ($model, $pdo, $paymentDate, $today): void {
@@ -471,9 +471,9 @@ try {
         $account = $model->find($id);
         cgEq($account['estado_periodo'], 'GRATIS', 'El contador debe detectar el período vencido.');
         cgEq((int) $account['ocupados'], 3, 'El vencimiento no debe liberar dispositivos automáticamente.');
-        cgReject(static fn() => $model->startCycle($id, true, 'admin-fixture', cgToken()), 'No debe iniciar un ciclo Gratis.');
+        cgReject(static fn() => $model->startCycle($id, true, 'admin-fixture', cgToken(), $model->currentCycleId($id)), 'No debe iniciar un ciclo Gratis.');
         $model->registerPayment($id, $today->format('Y-m-d'), '200.00', cgToken());
-        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken()), 3, 'El pago habilita el nuevo ciclo sin borrar historial.');
+        cgEq($model->startCycle($id, true, 'admin-fixture', cgToken(), $model->currentCycleId($id)), 3, 'El pago habilita el nuevo ciclo sin borrar historial.');
     });
 
     cgTest('edición conserva contraseña vacía y rechaza correo duplicado', static function () use ($model, $paymentDate): void {
@@ -534,7 +534,7 @@ try {
         $model->sell($id, 1, $paymentDate, cgToken());
         cgEq(cgConcurrentSales($id, $paymentDate, [cgToken(), cgToken()]), ['REJECTED', 'SOLD'], 'Solo una venta puede consumir el último cupo.');
         cgEq($model->find($id)['ocupados'], 20, 'No debe exceder la capacidad.');
-        cgEq($model->find($id)['estado_distribucion'], 'Llena', 'Debe pasar automáticamente a Llena.');
+        cgEq($model->find($id)['estado_distribucion'], 'Vendida', 'Debe pasar automáticamente a Vendida.');
     });
 
     cgTest('dos ventas concurrentes del administrador superan la capacidad y conservan ingresos', static function () use ($model, $paymentDate): void {

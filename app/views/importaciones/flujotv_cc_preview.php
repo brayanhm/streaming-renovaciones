@@ -134,7 +134,7 @@ $nada = count($update) === 0 && count($create) === 0;
 <div class="d-flex flex-wrap gap-2 mt-4">
     <?php if (!$nada): ?>
         <form method="post" action="<?= e(url('/importar/flujotv/aplicar')) ?>"
-              onsubmit="return confirm('¿Aplicar <?= (int) count($update) ?> actualización(es) y <?= (int) count($create) ?> creación(es)?')">
+              data-confirm="¿Aplicar <?= (int) count($update) ?> actualización(es) y <?= (int) count($create) ?> creación(es)?" data-confirm-title="Confirmar importación" data-confirm-button="Aplicar cambios">
             <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?= e((string) $token) ?>">
             <button type="submit" class="btn btn-success btn-lg"><?= icon('circle-check') ?><span class="button-label">Confirmar y aplicar</span></button>

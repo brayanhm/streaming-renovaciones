@@ -6,9 +6,9 @@ use App\Models\Plataforma;
 
 $states = [
     'TODOS' => ['label' => 'Vigentes', 'badge' => 'secondary'],
-    'CONTACTAR_2D' => ['label' => 'Contactar (-3 días)', 'badge' => 'warning'],
-    'REENVIAR_1D' => ['label' => 'Contactar (día de vencimiento)', 'badge' => 'info'],
-    'ESPERA' => ['label' => 'Espera', 'badge' => 'primary'],
+    'CONTACTAR_2D' => ['label' => 'Por vencer', 'badge' => 'warning'],
+    'REENVIAR_1D' => ['label' => 'Vence hoy', 'badge' => 'info'],
+    'ESPERA' => ['label' => 'En espera', 'badge' => 'primary'],
     'ACTIVO' => ['label' => 'Al día', 'badge' => 'success'],
     'VENCIDO' => ['label' => 'Vencidos', 'badge' => 'danger'],
 ];
@@ -35,7 +35,7 @@ if (!function_exists('tipo_suscripcion_dashboard')) {
         $dispositivos = isset($row['dispositivos']) ? (int) $row['dispositivos'] : null;
         $duracion = max(1, (int) ($row['duracion_meses'] ?? 1));
 
-        return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' - ' . $duracion . ' mes(es)';
+        return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' - ' . duration_label($duracion);
     }
 }
 
@@ -62,11 +62,13 @@ $contactarBase = '/contactar';
     </div>
     <div class="d-flex gap-2">
         <a href="<?= e(url($contactarBase)) ?>" class="btn btn-outline-success btn-lg"><?= icon('message-circle') ?><span class="button-label">Contactar hoy</span></a>
-        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg"><?= icon('calendar-clock') ?><span class="button-label">Gestionar membresías</span></a>
+        <a href="<?= e(url('/suscripciones')) ?>" class="btn btn-outline-primary btn-lg"><?= icon('calendar-clock') ?><span class="button-label">Gestionar suscripciones</span></a>
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
+<?php require __DIR__ . '/../chatgpt/resumen_avisos.php'; ?>
+<details class="card shadow-sm mb-3 gs-dashboard-filters" data-dashboard-filters <?= ($contacto ?? '') !== '' || ($usuario ?? '') !== '' || ($telefono ?? '') !== '' ? 'open' : '' ?>>
+    <summary>Buscar por contacto, usuario o teléfono</summary>
     <div class="card-body">
         <form class="row g-2 align-items-end" method="get" action="<?= e(url($panelBase)) ?>">
             <input type="hidden" name="estado" value="<?= e($selectedStatus ?? 'TODOS') ?>">
@@ -116,9 +118,9 @@ $contactarBase = '/contactar';
             </div>
         </form>
     </div>
-</div>
+</details>
 
-<ul class="nav nav-pills flex-nowrap overflow-auto pb-2 mb-3">
+<ul class="nav nav-pills flex-wrap pb-2 mb-3 gs-status-filters">
     <?php foreach ($states as $key => $meta): ?>
         <?php
         $isActive = ($selectedStatus ?? 'TODOS') === $key;
@@ -138,8 +140,8 @@ $contactarBase = '/contactar';
     <?php endforeach; ?>
 </ul>
 
-<div class="row g-3 mb-3">
-    <div class="col-12 col-md-4">
+<div class="row g-3 mb-3 gs-dashboard-stats">
+    <div class="col-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6 text-secondary mb-1">Costo total</h2>
@@ -147,7 +149,7 @@ $contactarBase = '/contactar';
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-4">
+    <div class="col-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6 text-secondary mb-1">Venta total</h2>
@@ -155,7 +157,7 @@ $contactarBase = '/contactar';
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-4">
+    <div class="col-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6 text-secondary mb-1">Ganancia estimada</h2>
@@ -171,27 +173,12 @@ $contactarBase = '/contactar';
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Teléfono</th>
-                        <th>Servicio</th>
-                        <th>Plan</th>
-                        <th>Vencimiento</th>
-                        <th>Costo (Bs)</th>
-                        <th>Precio (Bs)</th>
-                        <th>Ganancia (Bs)</th>
-                        <th>Estado</th>
-                        <th>WhatsApp</th>
-                        <th>Renovar</th>
-                        <th>No renovado</th>
-                    </tr>
-                </thead>
+            <table data-responsive-cards data-mobile-primary="0,1,2,3,4,5" class="table table-striped table-hover align-middle mb-0 gs-dashboard-table">
+                <thead><tr><th>Cliente</th><th>Servicio y plan</th><th>Vencimiento</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="12" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
+                            <td colspan="6" class="text-center py-4 text-secondary">No hay suscripciones para mostrar.</td>
                         </tr>
                     <?php endif; ?>
 
@@ -219,14 +206,13 @@ $contactarBase = '/contactar';
                         }
                         ?>
                         <tr>
-                            <td>
+<td>
                                 <div class="fw-semibold">
                                     <a href="<?= e(url('/clientes/' . (int) ($row['cliente_id'] ?? 0))) ?>" class="text-decoration-none"><?= e((string) ($row['cliente_nombre'] ?? '')) ?></a>
                                 </div>
                                 <small class="text-secondary">#<?= e((string) ($row['id'] ?? '')) ?></small>
-                            </td>
-                            <td><?= e((string) ($row['cliente_telefono'] ?? '')) ?></td>
-                            <td>
+                            <small class="d-block text-secondary"><?= e((string) ($row['cliente_telefono'] ?? '')) ?></small></td>
+<td>
                                 <div class="fw-semibold"><?= e((string) ($row['plataforma_nombre'] ?? '')) ?></div>
                                 <small class="text-secondary"><?= e((string) ($row['nombre_modalidad'] ?? '')) ?></small>
                                 <div>
@@ -234,17 +220,20 @@ $contactarBase = '/contactar';
                                     $renovacionLabel = Plataforma::datoRenovacionLabel((string) ($row['plataforma_dato_renovacion'] ?? 'USUARIO'));
                                     $renewalValue = trim((string) ($row['usuario_proveedor'] ?? ''));
                                     ?>
-                                    <span class="badge text-bg-light border"><?= e((string) ($row['plataforma_tipo_servicio'] ?? '')) ?></span>
+                                    <span class="badge text-bg-light border"><?= e(service_type_label((string) ($row['plataforma_tipo_servicio'] ?? ''))) ?></span>
                                     <?php if ($renewalValue !== ''): ?>
                                         <span class="badge text-bg-secondary"><?= e($renovacionLabel) ?>: <?= e($renewalValue) ?></span>
                                     <?php else: ?>
                                         <span class="badge text-bg-light border text-secondary"><?= e($renovacionLabel) ?>: sin dato</span>
                                     <?php endif; ?>
                                 </div>
-                            </td>
-                            <td><?= e(tipo_suscripcion_dashboard($row)) ?></td>
-                            <td>
-                                <div><?= e($vencimiento) ?></div>
+                            <details class="small mt-2"><summary>Plan e importes</summary>
+                                    <p class="mb-1"><?= e(tipo_suscripcion_dashboard($row)) ?></p>
+                                    <div>Costo: <?= e(money((float) ($row['costo_final'] ?? 0))) ?></div>
+                                    <div>Ganancia estimada: <?= e(money((float) ($row['ganancia_final'] ?? 0))) ?></div>
+                                </details></td>
+<td>
+                                <div><?= e(display_date($vencimiento)) ?></div>
                                 <small class="<?= e($diasClass) ?>">
                                     <?= e($diasLabel) ?>
                                 </small>
@@ -255,36 +244,32 @@ $contactarBase = '/contactar';
                                 $finValue = $esVencidoTab ? $today->modify('+1 month')->format('Y-m-d') : $vencimiento;
                                 ?>
                                 <details class="mt-2">
-                                    <summary class="small <?= $esVencidoTab ? 'text-success fw-semibold' : 'text-primary' ?>" role="button"><?= icon($esVencidoTab ? 'refresh-cw' : 'square-pen') ?><?= $esVencidoTab ? 'Reactivar (cambiar fecha fin)' : 'Editar finalizacion' ?></summary>
+                                    <summary class="small <?= $esVencidoTab ? 'text-success fw-semibold' : 'text-primary' ?>" role="button"><?= icon($esVencidoTab ? 'refresh-cw' : 'square-pen') ?><?= $esVencidoTab ? 'Reactivar (cambiar fecha fin)' : 'Editar vencimiento' ?></summary>
                                     <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $row['id'])) ?>" class="mt-2">
                                         <?= csrf_field() ?>
                                         <input
                                             type="date"
                                             class="form-control form-control-sm mb-1"
-                                            name="fecha_vencimiento"
+                                            name="fecha_vencimiento" aria-label="Nuevo vencimiento de <?= e((string) ($row['cliente_nombre'] ?? 'la suscripción')) ?>"
                                             value="<?= e($finValue) ?>"
                                             min="<?= e((string) ($row['fecha_inicio'] ?? '')) ?>"
                                             required
                                         >
                                         <?php if ($esVencidoTab): ?>
-                                            <small class="d-block text-secondary mb-2" style="font-size:.72rem">Fecha futura → vuelve a <strong>ACTIVO</strong>. No registra ingreso; para eso usa <em>Renovar</em>.</small>
+                                            <small class="d-block text-secondary mb-2" style="font-size:.72rem">Fecha futura → vuelve a <strong>Al día</strong>. No registra ingreso; para eso usa <em>Renovar</em>.</small>
                                         <?php endif; ?>
                                         <button type="submit" class="btn <?= $esVencidoTab ? 'btn-success' : 'btn-outline-primary' ?> btn-sm w-100"><?= icon($esVencidoTab ? 'refresh-cw' : 'save') ?><span class="button-label"><?= $esVencidoTab ? 'Reactivar' : 'Guardar' ?></span></button>
                                     </form>
                                 </details>
                             </td>
-                            <td><?= e(money((float) ($row['costo_final'] ?? $row['modalidad_costo'] ?? 0))) ?></td>
-                            <td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
-                            <td class="<?= (float) (($row['ganancia_final'] ?? 0)) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
-                                <?= e(money((float) ($row['ganancia_final'] ?? 0))) ?>
-                            </td>
-                            <td>
-                                <span class="badge <?= e(status_badge_class($status)) ?>"><?= e($status) ?></span>
+<td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
+<td>
+                                <span class="badge <?= e(status_badge_class($status)) ?>"><?= e(status_label((string) $status)) ?></span>
                                 <?php if ((int) ($row['flag_no_renovo'] ?? 0) === 1): ?>
                                     <div><small class="text-danger fw-semibold">No renovó</small></div>
                                 <?php endif; ?>
                             </td>
-                            <td>
+<td class="gs-table-actions">
                                 <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="tipo" value="<?= e($whatsType) ?>">
@@ -297,24 +282,19 @@ $contactarBase = '/contactar';
                                         <button type="submit" class="btn btn-outline-dark btn-sm px-2"><?= icon('refresh-cw') ?><span class="button-label">Recuperacion</span></button>
                                     </form>
                                 <?php endif; ?>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-wrap gap-1">
-                                    <?php foreach ($renewOptions as $months): ?>
-                                        <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="meses" value="<?= e((string) $months) ?>">
-                                            <button type="submit" class="btn btn-primary btn-sm"><?= icon('refresh-cw') ?><span class="button-label">+<?= e((string) $months) ?>M</span></button>
-                                        </form>
-                                    <?php endforeach; ?>
-                                </div>
-                            </td>
-                            <td>
+                            <form method="post" action="<?= e(url('/suscripciones/renovar/' . (int) $row['id'])) ?>" class="gs-renew-form">
+                                    <?= csrf_field() ?>
+                                    <label class="visually-hidden" for="renovar-<?= (int) $row['id'] ?>">Período de renovación de <?= e((string) ($row['cliente_nombre'] ?? '')) ?></label>
+                                    <select class="form-select form-select-sm" id="renovar-<?= (int) $row['id'] ?>" name="meses">
+                                    <?php foreach ($renewOptions as $months): ?><option value="<?= (int) $months ?>"><?= (int) $months ?> <?= (int) $months === 1 ? 'mes' : 'meses' ?></option><?php endforeach; ?>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-sm"><?= icon('refresh-cw') ?><span class="button-label">Renovar</span></button>
+                                </form><details class="gs-other-actions"><summary>Otras acciones</summary>
                                 <form method="post" action="<?= e(url('/suscripciones/no-renovo/' . (int) $row['id'])) ?>">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="btn btn-outline-danger btn-sm"><?= icon('circle-x') ?><span class="button-label">Marcar</span></button>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"><?= icon('circle-x') ?><span class="button-label">Marcar como no renovado</span></button>
                                 </form>
-                            </td>
+                            </details></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -350,26 +330,26 @@ $paginationQuery = http_build_query(array_filter([
 
 
 <div class="row g-3 mt-1">
-    <div class="col-12 col-md-4">
+    <div class="col-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
-                <h2 class="h6">CONTACTAR_2D</h2>
+                <h2 class="h6">Por vencer</h2>
                 <p class="mb-0 text-secondary">Clientes que deben recibir mensaje de renovación 3 días antes del vencimiento.</p>
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-4">
+    <div class="col-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
-                <h2 class="h6">REENVIAR_1D</h2>
+                <h2 class="h6">Vence hoy</h2>
                 <p class="mb-0 text-secondary">Clientes para mensaje el mismo día de vencimiento si aún no renovaron.</p>
             </div>
         </div>
     </div>
-    <div class="col-12 col-md-4">
+    <div class="col-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
-                <h2 class="h6">VENCIDO (con recuperacion)</h2>
+                <h2 class="h6">Vencidas y recuperación</h2>
                 <p class="mb-0 text-secondary">En VENCIDOS tambien se incluyen casos de recuperacion para enviar su mensaje por WhatsApp.</p>
             </div>
         </div>

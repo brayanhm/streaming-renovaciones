@@ -59,7 +59,7 @@ declare(strict_types=1);
         </form>
 
         <hr>
-        <form method="post" action="<?= e(url('/cuentas-principales/eliminar/' . (int) $cuenta['id'])) ?>" onsubmit="return confirm('¿Eliminar esta cuenta principal?')">
+        <form method="post" action="<?= e(url('/cuentas-principales/eliminar/' . (int) $cuenta['id'])) ?>" data-confirm="¿Eliminar esta cuenta principal?" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar" data-confirm-danger="1">
             <?= csrf_field() ?>
             <button type="submit" class="btn btn-outline-danger"><?= icon('trash') ?><span class="button-label">Eliminar cuenta principal</span></button>
             <small class="text-secondary ms-2">Solo si no tiene usuarios asignados.</small>

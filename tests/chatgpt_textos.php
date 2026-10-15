@@ -87,6 +87,9 @@ textTest('predeterminados contienen solamente entregas configurables', static fu
     textEq($keys, ['entrega_1', 'entrega_2'], 'Cambió el conjunto de entregas predeterminadas.');
     foreach ($defaults as $template) {
         textCheck(is_string($template) && trim($template) !== '', 'Una entrega predeterminada está vacía.');
+        foreach (['*LEER OBLIGATORIO*', '*60 segundos*', '*Importante — Lee antes de usar:*'] as $emphasis) {
+            textCheck(str_contains($template, $emphasis), 'Falta un énfasis de WhatsApp en la entrega.');
+        }
     }
 });
 
@@ -100,9 +103,9 @@ textTest('correo y contraseña son marcadores sin credenciales fijas', static fu
         textEq(substr_count($template, '📧 Correo: '), 1, 'No debe existir un correo adicional fijo.');
         textEq(substr_count($template, '🔑 Contraseña: '), 1, 'No debe existir una contraseña adicional fija.');
         textCheck(preg_match('/(?:^|\R)📧 Correo: \{CORREO\}(?:\R|$)/u', $template) === 1,
-            'El campo correo debe contener únicamente su marcador.');
+            'El campo correo debe contener únicamente su marcador, sin asteriscos de formato.');
         textCheck(preg_match('/(?:^|\R)🔑 Contraseña: \{PASSWORD\}(?:\R|$)/u', $template) === 1,
-            'El campo contraseña debe contener únicamente su marcador.');
+            'El campo contraseña debe contener únicamente su marcador, sin asteriscos de formato.');
         textEq(preg_match('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $template), 0,
             'Un predeterminado contiene un correo fijo.');
         preg_match_all('/\{([A-Z_]+)\}/', $template, $matches);

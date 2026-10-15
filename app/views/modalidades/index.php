@@ -10,7 +10,8 @@ $returnQuery = $selectedPlatformId > 0
     : '';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Tipos de suscripción</h1>
+    <h1 class="h3 mb-0">Planes de suscripción</h1>
+    <a href="<?= e(url('/tipos-suscripcion?nuevo=1')) ?>#nuevo-plan" class="btn btn-primary" data-open-panel="nuevo-plan"><?= icon('plus') ?><span class="button-label">Nuevo plan</span></a>
     <div class="d-flex flex-wrap gap-2">
         <a
             href="<?= e(url('/tipos-suscripcion/precios' . ($selectedPlatformId > 0 ? ('?' . http_build_query(['plataforma_id' => $selectedPlatformId])) : ''))) ?>"
@@ -29,13 +30,14 @@ $returnQuery = $selectedPlatformId > 0
     </div>
 <?php endif; ?>
 
-<div class="row g-3">
+<div class="row g-3 gs-page-layout">
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body">
-                <form method="get" action="<?= e(url('/tipos-suscripcion')) ?>" class="row g-2 mb-3">
+                <form method="get" action="<?= e(url('/tipos-suscripcion')) ?>" class="row g-2 align-items-end mb-3">
                     <div class="col-12 col-md-5">
-                        <input
+                        <label class="form-label" for="buscar-planes">Buscar planes</label>
+                        <input id="buscar-planes"
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
@@ -44,7 +46,8 @@ $returnQuery = $selectedPlatformId > 0
                         >
                     </div>
                     <div class="col-12 col-md-4">
-                        <select class="form-select form-select-lg" name="plataforma_id">
+                        <label class="form-label" for="filtro-plataforma">Plataforma</label>
+                        <select class="form-select form-select-lg" id="filtro-plataforma" name="plataforma_id">
                             <option value="">Todas las plataformas</option>
                             <?php foreach ($platforms as $platform): ?>
                                 <option
@@ -60,9 +63,10 @@ $returnQuery = $selectedPlatformId > 0
                         <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
+                <?php if (($search ?? '') !== '' || $selectedPlatformId > 0): ?><p class="small text-secondary">Filtros activos. <a href="<?= e(url('/tipos-suscripcion')) ?>">Limpiar filtros</a></p><?php endif; ?>
 
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table data-responsive-cards data-mobile-primary="0,1,5,6,8" class="table table-striped align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Plataforma</th>
@@ -78,14 +82,14 @@ $returnQuery = $selectedPlatformId > 0
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="9" class="text-center text-secondary py-4">No hay tipos de suscripción registrados.</td></tr>
+                                <tr><td colspan="9" class="text-center text-secondary py-4"><?= ($search ?? '') !== '' || $selectedPlatformId > 0 ? 'No encontramos planes con estos filtros.' : 'Todavía no hay planes. Usa «Nuevo plan» para comenzar.' ?></td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
                                     <td><?= e((string) $item['plataforma_nombre']) ?></td>
                                     <td class="fw-semibold"><?= e((string) $item['nombre_modalidad']) ?></td>
                                     <td><?= e(Modalidad::tipoCuentaLabel((string) ($item['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($item['dispositivos']) ? (int) $item['dispositivos'] : null)) ?></td>
-                                    <td><?= e((string) max(1, (int) ($item['duracion_meses'] ?? 1))) ?> mes(es)</td>
+                                    <td><?= e(duration_label(max(1, (int) ($item['duracion_meses'] ?? 1)))) ?></td>
                                     <td><?= e((string) ($item['dispositivos'] ?? '-')) ?></td>
                                     <td><?= e(money((float) ($item['costo'] ?? 0))) ?></td>
                                     <td><?= e(money((float) $item['precio'])) ?></td>
@@ -95,7 +99,7 @@ $returnQuery = $selectedPlatformId > 0
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/tipos-suscripcion/editar/' . (int) $item['id'] . $returnQuery)) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
-                                            <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar este tipo de suscripción?')">
+                                            <form method="post" action="<?= e(url('/tipos-suscripcion/eliminar/' . (int) $item['id'])) ?>" class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar el plan «' . $item['nombre_modalidad'] . '» de ' . $item['plataforma_nombre'] . '. Si tiene suscripciones asociadas, la eliminación se bloqueará.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar plan" data-confirm-danger="1">
                                                 <?= csrf_field() ?>
                                                 <?php if ($selectedPlatformId > 0): ?>
                                                     <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
@@ -113,10 +117,10 @@ $returnQuery = $selectedPlatformId > 0
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm">
+    <div class="col-lg-4 gs-create-column">
+        <details class="card gs-form-panel shadow-sm" id="nuevo-plan" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/tipos-suscripcion' ? 'open' : '' ?>>
+            <summary>Nuevo plan</summary>
             <div class="card-body">
-                <h2 class="h5 mb-3">Nuevo tipo de suscripción</h2>
                 <form method="post" action="<?= e(url('/tipos-suscripcion')) ?>" id="create-plan-form">
                     <?= csrf_field() ?>
                     <?php if ($selectedPlatformId > 0): ?>
@@ -138,7 +142,7 @@ $returnQuery = $selectedPlatformId > 0
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="nombre_modalidad">Nombre del tipo de suscripción</label>
+                        <label class="form-label" for="nombre_modalidad">Nombre del plan de suscripción</label>
                         <input type="text" class="form-control" id="nombre_modalidad" name="nombre_modalidad" value="<?= e(old('nombre_modalidad')) ?>" required>
                     </div>
                     <div class="mb-3">
@@ -183,10 +187,10 @@ $returnQuery = $selectedPlatformId > 0
                         Ganancia estimada por plan:
                         <strong class="js-ganancia"><?= e(money((float) 0)) ?></strong>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar tipo</span></button>
+                    <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar plan</span></button>
                 </form>
             </div>
-        </div>
+        </details>
     </div>
 </div>
 

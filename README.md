@@ -49,8 +49,9 @@ independiente.
 
 ChatGPT se administra por cuenta principal, sin registrar clientes en cada venta:
 
-- Se recomiendan 20 **dispositivos** por cuenta. El sistema avisa cuando se alcanza
-  o supera esa cantidad y permite seguir registrando ventas. Una venta de 1 dispositivo
+- Se recomiendan 20 **dispositivos** por cuenta y el administrador configura su capacidad.
+  Al llenarse, solo el administrador puede superar el límite de la cuenta seleccionada.
+  Una venta de 1 dispositivo
   cuesta Bs 30; una venta de 2 dispositivos cuesta Bs 55 y consume dos cupos.
 - El administrador registra la fecha del pago y el costo real en bolivianos.
   El historial conserva también el costo nominal de USD 20; no se calcula
@@ -65,31 +66,48 @@ ChatGPT se administra por cuenta principal, sin registrar clientes en cada venta
   **liberar todos los cupos** de una cuenta; las ventas y pagos quedan en el historial.
 - Las ventas no crean clientes ni suscripciones. Las asignaciones anteriores
   se conservan y sus dispositivos siguen ocupados hasta la liberación manual.
-- `/chatgpt/plantillas` configura entrega de 1 dispositivo, entrega de 2
-  dispositivos y renovación. Las entregas incluyen las instrucciones proporcionadas,
+- `/chatgpt/distribucion` muestra la cuenta activa y permite registrar y copiar
+  entregas de 1 o 2 dispositivos. `/chatgpt/plantillas` redirige a esa pantalla.
+  Las entregas incluyen las instrucciones proporcionadas,
   con correo y contraseña de cada cuenta y concordancia para 1 o 2 dispositivos.
   La renovación general queda pendiente de configurar.
   Variables: `{CUENTA}`, `{CORREO}`, `{PASSWORD}`, `{DISPOSITIVOS}`, `{DISPOSITIVO_LABEL}`, `{PRECIO}`,
   y `{FECHA_VENCE}` (formato `YYYY-MM-DD`). La renovación general utiliza
   correo, nombre de cuenta y vencimiento; los precios se escriben en el texto
   porque el aviso se dirige a compradores de ambos planes.
-- Copiar una entrega o renovación no registra otra venta ni envía mensajes.
-  Al guardar una venta se intenta copiar su entrega; si el navegador lo impide,
-  se muestra el texto para copiar manualmente.
+- **Copiar entrega** en distribución registra una venta y ocupa sus dispositivos.
+  **Volver a copiar** y los botones del historial no registran otra venta ni envían
+  mensajes. Las ventas vencidas o liberadas conservan su historial pero no permiten
+  copiar las credenciales actuales. Si el navegador impide copiar una nueva entrega,
+  se muestra el texto para copiar manualmente sin volver a registrar la venta.
 - El administrador puede importar cuentas existentes pegando correos, uno por línea.
   Se conservan las cuentas ya registradas y las nuevas quedan pendientes de fechas
   y credenciales. Esta importación no crea pagos, ventas ni clientes. Las cuentas
   marcadas para revisión conservan sus fechas anteriores como referencia y requieren
   confirmación del administrador antes de registrar nuevas ventas.
-- En «Revisar vigencia existente» se ingresa la fecha del pago o el inicio de gracia.
+- «Revisar vigencia existente» solo se ofrece una vez para cuentas pendientes sin
+  pagos registrados. Se ingresa la fecha del pago o el inicio de gracia.
   Si solo se conoce el inicio de gracia, la fecha original del pago queda sin confirmar.
   La revisión calcula las fechas siguientes y conserva dispositivos e historial,
-  sin registrar un pago contable ni inventar su costo.
+  sin registrar un pago contable ni inventar su costo. Las renovaciones posteriores
+  requieren registrar un pago.
 - Para vender y copiar entregas se requieren fechas vigentes y credenciales completas.
+- Las entregas estándar de ChatGPT y Claude incluyen `*texto*` para resaltar
+  las partes importantes en WhatsApp. Las versiones estándar anteriores reciben
+  el formato al generar el mensaje, incluida la opción «Volver a copiar».
 
-Los administradores crean/editan cuentas, registran pagos, configuran textos,
+Los administradores crean/editan cuentas, registran pagos, seleccionan la distribución,
 liberan cupos y cambian el estado de las cuentas. Los operadores registran
 ventas y copian los textos. Una cuenta inactiva o vencida no permite nuevas ventas.
+
+En ChatGPT y Claude, el administrador puede usar **Editar dispositivos/cupos
+ocupados** desde el contador de la cuenta o desde su pantalla de edición.
+El ajuste establece el total ocupado, admite cero y cantidades superiores a la
+capacidad y conserva las ventas y los pagos. Las entregas posteriores se suman a
+ese total. Cada ajuste registra el valor anterior, el nuevo, el motivo y el usuario;
+los diez últimos se muestran junto al formulario. Un formulario anterior a una
+venta o a otro ajuste se rechaza para no perder cambios. Iniciar un nuevo ciclo
+reinicia el contador y conserva también el historial de ajustes.
 
 Para actualizar una instalación con las migraciones automáticas desactivadas:
 
@@ -109,9 +127,11 @@ Bs 85**, y cada pago otorga **un mes calendario sin gracia**. El costo real de
 la cuenta se registra manualmente en bolivianos; no se fija un costo en dólares.
 Las ventas vencen con la cuenta y no registran clientes. Los pagos y el vencimiento
 conservan los cupos ocupados hasta que el administrador los libera manualmente.
-Superar los 5 cupos muestra una advertencia y permite continuar vendiendo.
+La capacidad es configurable; solo el administrador puede superarla y únicamente
+en la cuenta seleccionada para distribución.
 
-Los textos de Claude se configuran en `/claude/plantillas`: entrega y renovación.
+`/claude/distribucion` registra y copia entregas de un dispositivo;
+`/claude/plantillas` redirige a esa pantalla. Se conservan los textos existentes.
 Variables de entrega: `{CUENTA}`, `{CORREO}`, `{PASSWORD}`, `{CUPOS}`, `{PRECIO}` y
 `{FECHA_VENCE}`. Para la renovación general se utilizan cuenta, correo y fecha;
 el precio se puede escribir en el texto. Las plantillas quedan pendientes hasta
@@ -122,6 +142,20 @@ apartados, aunque conserva su nombre por compatibilidad.
 
 Pruebas adicionales: `php tests/chatgpt_textos.php` (sin acceso a DB) y
 `php tests/chatgpt_existentes.php` (base temporal aislada).
+
+Las mejoras de interfaz, navegación móvil y alcance de los reportes se describen en
+`docs/mejoras-ui-ux.md`. `php tests/ui_ux.php` verifica los filtros y totales financieros,
+la conservación del historial y la recuperación segura de formularios en una base temporal.
+ChatGPT incluye **Ver próximas fechas** para ordenar los cierres del mes pagado y los pagos
+y cierres del fin de gracia. Cada aviso admite una anticipación configurable por el administrador
+(3 días inicialmente). `php tests/chatgpt_avisos.php` verifica sus límites, permisos, configuración
+y la separación entre vigencia por fechas y la marca manual Gratis en una base temporal aislada.
+En entornos restringidos de Windows se puede indicar una carpeta de sesiones escribible:
+`php -d session.save_path="%TEMP%" -d sys_temp_dir="%TEMP%" tests/chatgpt.php`
+(en PowerShell, sustituir `%TEMP%` por `$env:TEMP`).
+
+Las reglas de ciclos, entregas y protección de las suscripciones antiguas están
+documentadas en [Distribución de cuentas](docs/distribucion-cuentas.md).
 
 ## Base de datos usada
 
@@ -138,6 +172,11 @@ El codigo esta alineado a estas tablas existentes:
 
 1. Copia `.env.example` a `.env`.
 2. Configura credenciales DB y valores de app en `.env`.
+   Define tambien `APP_KEY` antes de guardar contrasenas de cuentas. Para una
+   instalacion nueva sin contrasenas cifradas, genera el valor con
+   `php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"`. Si la base ya tiene
+   contrasenas cifradas, recupera la clave original. Conserva esa misma clave
+   en los respaldos y al trasladar el sistema; no la regeneres.
 3. Para local, URL recomendada:
    - `http://localhost/streaming-renovaciones/public` (o el alias local que uses para Ghost Store)
 
@@ -146,6 +185,7 @@ Variables clave:
 - `APP_ENV` (`development` o `production`)
 - `APP_DEBUG` (`true`/`false`)
 - `APP_RUN_MIGRATIONS` (`true`/`false`)
+- `APP_KEY` (clave privada de cifrado, obligatoria para guardar contrasenas de cuentas)
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`
 
 ## Despliegue en Hostinger

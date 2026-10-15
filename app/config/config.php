@@ -415,6 +415,11 @@ function verify_csrf_token(?string $token): bool
 
 function flash(string $type, string $message): void
 {
+    if ($type === 'danger' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+        && ($_SESSION['_old_action'] ?? '') === request_path()) {
+        $_SESSION['_form_feedback'] = array_replace($_SESSION['_form_feedback'] ?? [],
+            ['action' => url(request_path()), 'message' => $message]);
+    }
     if (!isset($_SESSION['_flash'])) {
         $_SESSION['_flash'] = [];
     }
@@ -444,12 +449,13 @@ function old(string $key, string $default = ''): string
 
 function set_old(array $input): void
 {
-    $_SESSION['_old'] = $input;
+    $_SESSION['_old'] = safe_form_input($input);
+    $_SESSION['_old_action'] = request_path();
 }
 
 function clear_old(): void
 {
-    unset($_SESSION['_old']);
+    unset($_SESSION['_old'], $_SESSION['_old_action'], $_SESSION['_form_feedback']);
 }
 
 function auth_user(): ?array
@@ -657,3 +663,5 @@ function is_valid_local_whatsapp_phone_bolivia(string $local): bool
 {
     return strlen($local) === 8 && ($local[0] === '6' || $local[0] === '7');
 }
+
+require_once APP_PATH . '/core/ui.php';

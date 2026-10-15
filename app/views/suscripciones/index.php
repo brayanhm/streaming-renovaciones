@@ -11,12 +11,13 @@ if (!function_exists('tipo_suscripcion_label')) {
         $dispositivos = isset($item['dispositivos']) ? (int) $item['dispositivos'] : null;
         $duracion = max(1, (int) ($item['duracion_meses'] ?? 1));
 
-        return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' - ' . $duracion . ' mes(es)';
+        return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' - ' . duration_label($duracion);
     }
 }
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Suscripciones</h1>
+    <a href="<?= e(url('/suscripciones?nuevo=1')) ?>#nueva-vigencia" class="btn btn-primary" data-open-panel="nueva-vigencia"><?= icon('plus') ?><span class="button-label">Nueva suscripción</span></a>
     <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
@@ -26,13 +27,14 @@ if (!function_exists('tipo_suscripcion_label')) {
     </div>
 <?php endif; ?>
 
-<div class="row g-3">
+<div class="row g-3 gs-page-layout">
     <div class="col-xl-8">
         <div class="card shadow-sm">
             <div class="card-body">
-                <form method="get" action="<?= e(url('/suscripciones')) ?>" class="row g-2 mb-3">
+                <form method="get" action="<?= e(url('/suscripciones')) ?>" class="row g-2 align-items-end mb-3">
                     <div class="col-12 col-md-7">
-                        <input
+                        <label class="form-label" for="buscar-suscripciones">Buscar suscripciones</label>
+                        <input id="buscar-suscripciones"
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
@@ -41,10 +43,11 @@ if (!function_exists('tipo_suscripcion_label')) {
                         >
                     </div>
                     <div class="col-12 col-md-3">
-                        <select class="form-select form-select-lg" name="estado">
+                        <label class="form-label" for="filtro-estado">Estado</label>
+                        <select class="form-select form-select-lg" id="filtro-estado" name="estado">
                             <option value="">Todos</option>
                             <?php foreach ($estados as $status): ?>
-                                <option value="<?= e($status) ?>" <?= ($estado ?? '') === $status ? 'selected' : '' ?>><?= e($status) ?></option>
+                                <option value="<?= e(status_label((string) $status)) ?>" <?= ($estado ?? '') === $status ? 'selected' : '' ?>><?= e(status_label((string) $status)) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -52,9 +55,10 @@ if (!function_exists('tipo_suscripcion_label')) {
                         <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
+                <?php if (($search ?? '') !== '' || ($estado ?? '') !== ''): ?><p class="small text-secondary">Filtros activos. <a href="<?= e(url('/suscripciones')) ?>">Limpiar filtros</a></p><?php endif; ?>
 
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table data-responsive-cards data-mobile-primary="0,1,5,8,9,10" class="table table-striped align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Cliente</th>
@@ -72,7 +76,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="11" class="text-center text-secondary py-4">No hay suscripciones registradas.</td></tr>
+                                <tr><td colspan="11" class="text-center text-secondary py-4"><?= ($search ?? '') !== '' || ($estado ?? '') !== '' ? 'No encontramos suscripciones con estos filtros.' : 'Todavía no hay suscripciones. Usa «Nueva suscripción» para comenzar.' ?></td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <?php
@@ -105,10 +109,10 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <td class="<?= (float) ($item['ganancia_final'] ?? 0) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
                                         <?= e(money((float) ($item['ganancia_final'] ?? 0))) ?>
                                     </td>
-                                    <td><?= e((string) $item['fecha_inicio']) ?></td>
-                                    <td><?= e((string) $item['fecha_vencimiento']) ?></td>
+                                    <td><?= e(display_date($item['fecha_inicio'])) ?></td>
+                                    <td><?= e(display_date($item['fecha_vencimiento'])) ?></td>
                                     <td>
-                                        <span class="badge text-bg-secondary"><?= e($statusLabel) ?></span>
+                                        <span class="badge text-bg-secondary"><?= e(status_label((string) $statusLabel)) ?></span>
                                         <?php if ($isNoRenew): ?>
                                             <div><small class="text-danger">No renovado</small></div>
                                         <?php endif; ?>
@@ -117,7 +121,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $item['id'])) ?>"><?= icon('scroll-text') ?><span class="button-label">Historial</span></a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
-                                            <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('¿Eliminar esta suscripción?')">
+                                            <form method="post" action="<?= e(url('/suscripciones/eliminar/' . (int) $item['id'])) ?>" class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar la suscripción de «' . $item['cliente_nombre'] . '» en ' . $item['plataforma_nombre'] . '. La suscripción dejará de aparecer en los listados; sus movimientos históricos se conservan.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar suscripción" data-confirm-danger="1">
                                                 <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                             </form>
@@ -134,11 +138,11 @@ if (!function_exists('tipo_suscripcion_label')) {
                     <small class="text-secondary"><?= e((string) ($totalRows ?? 0)) ?> suscripciones en total</small>
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
-                            <a class="page-link" href="<?= e(url('/suscripciones?' . $pqs . '&page=' . (($page ?? 1) - 1))) ?>">‹</a>
+                            <a class="page-link" href="<?= e(url('/suscripciones?' . $pqs . '&page=' . (($page ?? 1) - 1))) ?>" aria-label="Página anterior">‹</a>
                         </li>
                         <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
                         <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
-                            <a class="page-link" href="<?= e(url('/suscripciones?' . $pqs . '&page=' . (($page ?? 1) + 1))) ?>">›</a>
+                            <a class="page-link" href="<?= e(url('/suscripciones?' . $pqs . '&page=' . (($page ?? 1) + 1))) ?>" aria-label="Página siguiente">›</a>
                         </li>
                     </ul>
                 </div>
@@ -147,10 +151,10 @@ if (!function_exists('tipo_suscripcion_label')) {
         </div>
     </div>
 
-    <div class="col-xl-4">
-        <div class="card shadow-sm" id="nueva-vigencia">
+    <div class="col-xl-4 gs-create-column">
+        <details class="card gs-form-panel shadow-sm" id="nueva-vigencia" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/suscripciones' || (int) ($selectedClientId ?? 0) > 0 ? 'open' : '' ?>>
+            <summary>Nueva suscripción</summary>
             <div class="card-body">
-                <h2 class="h5 mb-3">Nueva vigencia de cuenta</h2>
                 <form method="post" action="<?= e(url('/suscripciones')) ?>" id="create-subscription-form">
                     <?= csrf_field() ?>
                     <div class="mb-3">
@@ -174,11 +178,11 @@ if (!function_exists('tipo_suscripcion_label')) {
                             <?php foreach ($plataformas as $plataforma): ?>
                                 <option
                                     value="<?= e((string) $plataforma['id']) ?>"
-                                    data-tipo="<?= e((string) $plataforma['tipo_servicio']) ?>"
+                                    data-tipo="<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>"
                                     data-dato-renovacion="<?= e((string) Plataforma::normalizeDatoRenovacion((string) ($plataforma['dato_renovacion'] ?? ''), (string) ($plataforma['tipo_servicio'] ?? ''))) ?>"
                                     <?= $oldPlat === (string) $plataforma['id'] ? 'selected' : '' ?>
                                 >
-                                    <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
+                                    <?= e((string) $plataforma['nombre']) ?> (<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -201,7 +205,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     -
                                     <?= e((string) $modalidad['nombre_modalidad']) ?>
                                     (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
-                                    <?= e((string) max(1, (int) ($modalidad['duracion_meses'] ?? 1))) ?> mes(es),
+                                    <?= e(duration_label(max(1, (int) ($modalidad['duracion_meses'] ?? 1)))) ?>,
                                     Costo: <?= e(money((float) ($modalidad['costo'] ?? 0))) ?>,
                                     Venta: <?= e(money((float) $modalidad['precio'])) ?>)
                                 </option>
@@ -296,7 +300,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar suscripción</span></button>
                 </form>
             </div>
-        </div>
+        </details>
     </div>
 </div>
 

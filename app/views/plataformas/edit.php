@@ -23,17 +23,17 @@ use App\Models\Plataforma;
                 <div class="col-md-6">
                     <label class="form-label" for="tipo_servicio">Tipo de servicio</label>
                     <select class="form-select" id="tipo_servicio" name="tipo_servicio" required>
-                        <option value="RENOVABLE" <?= (string) $item['tipo_servicio'] === 'RENOVABLE' ? 'selected' : '' ?>>RENOVABLE</option>
-                        <option value="DESECHABLE" <?= (string) $item['tipo_servicio'] === 'DESECHABLE' ? 'selected' : '' ?>>DESECHABLE</option>
+                        <option value="RENOVABLE" <?= (string) $item['tipo_servicio'] === 'RENOVABLE' ? 'selected' : '' ?>>Renovable</option>
+                        <option value="DESECHABLE" <?= (string) $item['tipo_servicio'] === 'DESECHABLE' ? 'selected' : '' ?>>No renovable</option>
                     </select>
                 </div>
                 <div class="col-md-6 js-dato-renovacion-wrap">
                     <label class="form-label" for="dato_renovacion">Dato requerido para renovar</label>
                     <?php $datoRenovacion = Plataforma::normalizeDatoRenovacion((string) ($item['dato_renovacion'] ?? ''), (string) ($item['tipo_servicio'] ?? '')); ?>
                     <select class="form-select js-dato-renovacion" id="dato_renovacion" name="dato_renovacion">
-                        <option value="USUARIO" <?= $datoRenovacion === 'USUARIO' ? 'selected' : '' ?>>USUARIO</option>
-                        <option value="CORREO" <?= $datoRenovacion === 'CORREO' ? 'selected' : '' ?>>CORREO</option>
-                        <option value="NO_APLICA" <?= $datoRenovacion === 'NO_APLICA' ? 'selected' : '' ?>>NO_APLICA</option>
+                        <option value="USUARIO" <?= $datoRenovacion === 'USUARIO' ? 'selected' : '' ?>>Usuario</option>
+                        <option value="CORREO" <?= $datoRenovacion === 'CORREO' ? 'selected' : '' ?>>Correo</option>
+                        <option value="NO_APLICA" <?= $datoRenovacion === 'NO_APLICA' ? 'selected' : '' ?>>No aplica</option>
                     </select>
                     <small class="text-secondary js-dato-renovacion-help">Define si la renovación se realizará por usuario o por correo.</small>
                 </div>

@@ -15,7 +15,7 @@ $duracion = max(1, (int) ($suscripcion['duracion_meses'] ?? 1));
         <h1 class="h3 mb-1">Historial de renovaciones</h1>
         <p class="text-secondary mb-0">
             <?= e($clienteNombre) ?> · <?= e($plataformaNombre) ?> · <?= e($modalidadNombre) ?>
-            (<?= e(Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos)) ?>, <?= e((string) $duracion) ?> mes(es))
+            (<?= e(Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos)) ?>, <?= e(duration_label($duracion)) ?>)
         </p>
     </div>
     <div class="d-flex gap-2">

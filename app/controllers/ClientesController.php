@@ -118,6 +118,7 @@ class ClientesController extends Controller
         $payload['telefono'] = local_whatsapp_phone_bolivia($payload['telefono']);
         if ($payload['telefono'] === '' || !is_valid_local_whatsapp_phone_bolivia($payload['telefono'])) {
             set_old($payload);
+            set_field_errors(['numero' => 'Escribe un celular válido de 8 dígitos.']);
             flash('danger', 'Número inválido. Escribe solo el celular de 8 dígitos (inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->redirect('/clientes');
         }
@@ -125,6 +126,7 @@ class ClientesController extends Controller
         $modalidad = $this->modalidades->find($payload['modalidad_id']);
         if ($modalidad === null || (int) $modalidad['plataforma_id'] !== $payload['plataforma_id']) {
             set_old($payload);
+            set_field_errors(['modalidad_id' => 'Revisa este dato de la suscripción.']);
             flash('danger', 'El plan seleccionado no corresponde a la plataforma elegida.');
             $this->redirect('/clientes');
         }
@@ -132,6 +134,7 @@ class ClientesController extends Controller
         $plataforma = $this->plataformas->find($payload['plataforma_id']);
         if ($plataforma === null) {
             set_old($payload);
+            set_field_errors(['plataforma_id' => 'Revisa este dato de la suscripción.']);
             flash('danger', 'La plataforma seleccionada no existe.');
             $this->redirect('/clientes');
         }
@@ -146,12 +149,14 @@ class ClientesController extends Controller
             if ($payload['usuario_proveedor'] === '') {
                 set_old($payload);
                 $fieldLabel = $datoRenovacion === 'CORREO' ? 'correo' : 'usuario';
+                set_field_errors(['usuario_proveedor' => 'Revisa este dato de la suscripción.']);
                 flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para la suscripción inicial.');
                 $this->redirect('/clientes');
             }
 
             if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
                 set_old($payload);
+                set_field_errors(['usuario_proveedor' => 'Revisa este dato de la suscripción.']);
                 flash('danger', 'Debes ingresar un correo válido para la cuenta de la suscripción inicial.');
                 $this->redirect('/clientes');
             }
@@ -351,18 +356,22 @@ class ClientesController extends Controller
             'notas' => trim((string) ($_POST['notas'] ?? '')),
         ];
 
+        set_old($payload + ['numero' => (string) ($_POST['numero'] ?? $_POST['telefono'] ?? '')]);
         if ($payload['telefono'] === '') {
+            set_field_errors(['numero' => 'Escribe un celular válido de 8 dígitos, comenzando con 6 o 7.']);
             flash('danger', 'El número es obligatorio.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
         $payload['telefono'] = local_whatsapp_phone_bolivia($payload['telefono']);
         if ($payload['telefono'] === '' || !is_valid_local_whatsapp_phone_bolivia($payload['telefono'])) {
+            set_field_errors(['numero' => 'Escribe un celular válido de 8 dígitos, comenzando con 6 o 7.']);
             flash('danger', 'Número inválido. Escribe solo el celular de 8 dígitos (inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->redirect('/clientes/editar/' . $id);
         }
 
         $this->clientes->update($id, $payload);
+        clear_old();
         flash('success', 'Cliente actualizado.');
         $this->redirect('/clientes');
     }

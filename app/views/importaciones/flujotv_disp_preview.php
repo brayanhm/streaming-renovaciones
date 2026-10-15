@@ -99,7 +99,7 @@ if (!function_exists('modalidad_label_disp')) {
 <div class="d-flex flex-wrap gap-2 mt-4">
     <?php if (!$nada): ?>
         <form method="post" action="<?= e(url('/importar/flujotv-dispositivos/aplicar')) ?>"
-              onsubmit="return confirm('¿Crear <?= (int) count($create) ?> cuenta(s) por dispositivos?')">
+              data-confirm="¿Crear <?= (int) count($create) ?> cuenta(s) por dispositivos?" data-confirm-title="Confirmar importación" data-confirm-button="Aplicar cambios">
             <?= csrf_field() ?>
             <input type="hidden" name="token" value="<?= e((string) $token) ?>">
             <button type="submit" class="btn btn-success btn-lg"><?= icon('circle-check') ?><span class="button-label">Confirmar y crear</span></button>

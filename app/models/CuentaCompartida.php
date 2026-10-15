@@ -157,7 +157,9 @@ abstract class CuentaCompartida extends BaseModel
                 if ($selected !== $id) {
                     throw new RuntimeException('Solo se puede vender en la cuenta seleccionada para distribución.');
                 }
-                if (!$canExceed && $this->occupied($id) + $dispositivos > (int) $account['capacidad']) {
+                $baseOccupied = $this->occupied($id, false);
+                $occupied = max(0, $baseOccupied + (int) $account['ajuste_ocupacion']);
+                if (!$canExceed && $occupied + $dispositivos > (int) $account['capacidad']) {
                     throw new RuntimeException('No hay suficientes cupos. Solo el administrador puede superar la capacidad de la cuenta en distribución.');
                 }
                 $end = static::TIENE_GRACIA ? $account['fin_gracia'] : $account['fecha_vencimiento'];
@@ -170,6 +172,11 @@ abstract class CuentaCompartida extends BaseModel
                 }
                 $expiry = !static::TIENE_GRACIA || $date < $account['fecha_vencimiento']
                     ? $account['fecha_vencimiento'] : $account['fin_gracia'];
+                // Si se retiraron accesos heredados, el contador parte de cero antes de sumar la venta.
+                if ($baseOccupied + (int) $account['ajuste_ocupacion'] < 0) {
+                    $this->db->prepare('UPDATE cuentas_principales SET ajuste_ocupacion = :ajuste WHERE id = :id')
+                        ->execute(['ajuste' => -$baseOccupied, 'id' => $id]);
+                }
                 $stmt = $this->db->prepare('INSERT INTO ' . $this->table('ventas') . '
                     (cuenta_principal_id, fecha_venta, dispositivos, monto_bs, fecha_vencimiento, token_operacion)
                     VALUES (:cuenta, :fecha, :dispositivos, :monto, :vencimiento, :token)');
@@ -204,11 +211,62 @@ abstract class CuentaCompartida extends BaseModel
         $stmt = $this->db->prepare("UPDATE suscripciones SET flag_no_renovo = 1, estado = 'VENCIDO'
             WHERE cuenta_principal_id = :id AND flag_no_renovo = 0");
         $stmt->execute(['id' => $id]);
+        $stmt = $this->db->prepare('UPDATE cuentas_principales SET ajuste_ocupacion = 0 WHERE id = :id');
+        $stmt->execute(['id' => $id]);
         $stmt = $this->db->prepare('INSERT INTO ' . $this->table('liberaciones') . '
             (cuenta_principal_id, dispositivos_liberados, motivo, usuario)
             VALUES (:id, :ocupados, :motivo, :usuario)');
         $stmt->execute(['id' => $id, 'ocupados' => $occupied, 'motivo' => $motivo, 'usuario' => trim($usuario) ?: null]);
         return $occupied;
+    }
+
+    public function adjustOccupation(int $id, mixed $value, mixed $expected, string $motivo, string $usuario, string $token): array
+    {
+        $target = static::occupationValue($value);
+        $expected = static::occupationValue($expected, PHP_INT_MAX);
+        $motivo = trim($motivo) ?: 'Ajuste manual de ocupación';
+        $usuario = trim($usuario);
+        if (static::length($motivo) > 255 || static::length($usuario) > 60) {
+            throw new InvalidArgumentException('El motivo o el usuario excede la longitud permitida.');
+        }
+        static::assertToken($token);
+        return $this->transaction(function () use ($id, $target, $expected, $motivo, $usuario, $token): array {
+            // Mismo orden de bloqueo que las ventas y los ciclos.
+            $this->lockDistribution();
+            $account = $this->lockAccount($id);
+            $stmt = $this->db->prepare('SELECT * FROM cuentas_ajustes_ocupacion WHERE token_operacion = :token FOR UPDATE');
+            $stmt->execute(['token' => $token]);
+            $existing = $stmt->fetch();
+            if ($existing) {
+                if ((int) $existing['cuenta_principal_id'] !== $id || (int) $existing['ocupados_despues'] !== $target
+                    || (int) $existing['ocupados_antes'] !== $expected || $existing['motivo'] !== $motivo) {
+                    throw new InvalidArgumentException('Este comprobante ya se usó con otros datos. Recarga la cuenta.');
+                }
+                return $existing;
+            }
+            $baseOccupied = $this->occupied($id, false);
+            $current = max(0, $baseOccupied + (int) $account['ajuste_ocupacion']);
+            if ($current !== $expected) {
+                throw new RuntimeException('La ocupación cambió mientras editabas. Recarga la cuenta y revisa el contador antes de ajustar.');
+            }
+            $stmt = $this->db->prepare('UPDATE cuentas_principales SET ajuste_ocupacion = :ajuste WHERE id = :id');
+            $stmt->execute(['id' => $id, 'ajuste' => $target - $baseOccupied]);
+            $stmt = $this->db->prepare('INSERT INTO cuentas_ajustes_ocupacion
+                (cuenta_principal_id, ocupados_antes, ocupados_despues, motivo, usuario, token_operacion)
+                VALUES (:id, :antes, :despues, :motivo, :usuario, :token)');
+            $stmt->execute(['id' => $id, 'antes' => $current, 'despues' => $target,
+                'motivo' => $motivo, 'usuario' => $usuario ?: null, 'token' => $token]);
+            return ['id' => (int) $this->db->lastInsertId(), 'ocupados_antes' => $current, 'ocupados_despues' => $target];
+        });
+    }
+
+    public function occupationAdjustments(int $id): array
+    {
+        $stmt = $this->db->prepare('SELECT a.* FROM cuentas_ajustes_ocupacion a
+            INNER JOIN cuentas_principales cp ON cp.id = a.cuenta_principal_id
+            WHERE a.cuenta_principal_id = :id AND cp.servicio = :servicio ORDER BY a.id DESC LIMIT 10');
+        $stmt->execute(['id' => $id, 'servicio' => static::SERVICIO]);
+        return $stmt->fetchAll();
     }
 
     public function selectDistribution(int $id): void
@@ -220,16 +278,25 @@ abstract class CuentaCompartida extends BaseModel
         });
     }
 
-    public function startCycle(int $id, bool $sessionsClosed, string $usuario, string $token): int
+    public function currentCycleId(int $id): int
+    {
+        $stmt = $this->db->prepare('SELECT c.id FROM cuentas_ciclos c
+            INNER JOIN cuentas_principales cp ON cp.id = c.cuenta_principal_id
+            WHERE c.cuenta_principal_id = :id AND cp.servicio = :servicio ORDER BY c.id DESC LIMIT 1');
+        $stmt->execute(['id' => $id, 'servicio' => static::SERVICIO]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function startCycle(int $id, bool $sessionsClosed, string $usuario, string $token, int $expectedCycle): int
     {
         if (!$sessionsClosed) {
             throw new InvalidArgumentException('Confirma que cerraste las sesiones en todos los dispositivos antes de iniciar el nuevo ciclo.');
         }
         static::assertToken($token);
-        return $this->transaction(function () use ($id, $usuario, $token): int {
+        return $this->transaction(function () use ($id, $usuario, $token, $expectedCycle): int {
             $this->lockDistribution();
             $account = $this->lockAccount($id);
-            $stmt = $this->db->prepare('SELECT * FROM cuentas_ciclos WHERE token_operacion = :token');
+            $stmt = $this->db->prepare('SELECT * FROM cuentas_ciclos WHERE token_operacion = :token FOR UPDATE');
             $stmt->execute(['token' => $token]);
             $existing = $stmt->fetch();
             if ($existing) {
@@ -237,6 +304,9 @@ abstract class CuentaCompartida extends BaseModel
                     throw new InvalidArgumentException('Este comprobante ya se usó para otra cuenta. Recarga el formulario.');
                 }
                 return (int) $existing['cupos_liberados'];
+            }
+            if ($expectedCycle < 0 || $expectedCycle !== $this->currentCycleId($id)) {
+                throw new RuntimeException('Ya se inició otro ciclo desde que abriste este formulario. Recarga la cuenta antes de continuar.');
             }
             $this->assertReady($account);
             $released = $this->releaseSlots($id, 'Nuevo ciclo: cierre de sesiones confirmado', $usuario);
@@ -304,13 +374,24 @@ abstract class CuentaCompartida extends BaseModel
         }
     }
 
-    public function toggleActive(int $id): void
+    public function setActive(int $id, bool $active): void
     {
-        $this->transaction(function () use ($id): void {
-            $account = $this->lockAccount($id);
+        $this->transaction(function () use ($id, $active): void {
+            $this->lockAccount($id);
             $stmt = $this->db->prepare('UPDATE cuentas_principales SET activo = :activo WHERE id = :id');
-            $stmt->execute(['activo' => (int) $account['activo'] === 1 ? 0 : 1, 'id' => $id]);
+            $stmt->execute(['activo' => (int) $active, 'id' => $id]);
         });
+    }
+
+    public static function deliveryUnavailableReason(array $account, array $sale): ?string
+    {
+        if ((int) ($sale['cuenta_principal_id'] ?? 0) !== (int) ($account['id'] ?? 0)) return 'La entrega no corresponde a esta cuenta.';
+        if (!empty($sale['liberada_at'])) return 'Entrega de un ciclo anterior.';
+        $expiry = \parse_ymd_date((string) ($sale['fecha_vencimiento'] ?? ''));
+        if ($expiry === null || $expiry <= new DateTimeImmutable('today')) return 'El acceso de esta venta ya venció.';
+        if ((int) ($account['activo'] ?? 0) !== 1) return 'La cuenta está desactivada.';
+        if (!in_array(static::period($account)['estado_periodo'], ['PAGADO', 'GRACIA'], true)) return 'La cuenta está Gratis o sin vigencia confirmada.';
+        return null;
     }
 
     public function payments(int $id): array
@@ -344,8 +425,11 @@ abstract class CuentaCompartida extends BaseModel
     {
         $templates = $this->templates();
         $defaults = require APP_PATH . '/config/' . static::PREFIJO . '_templates.php';
+        $plainText = static fn(string $value): string => str_replace(["\r\n", "\r"], "\n", trim(str_replace('*', '', $value)));
         foreach ($defaults as $key => $text) {
-            if (trim((string) ($templates[$key] ?? '')) === '') {
+            $stored = (string) ($templates[$key] ?? '');
+            // Actualizar el formato de las entregas estándar ya instaladas, conservando textos personalizados.
+            if (trim($stored) === '' || $plainText($stored) === $plainText($text)) {
                 $templates[$key] = $text;
             }
         }
@@ -394,32 +478,35 @@ abstract class CuentaCompartida extends BaseModel
 
     public static function period(array $account, ?DateTimeImmutable $today = null): array
     {
-        if ((int) ($account['plan_gratis'] ?? 0) === 1) {
-            return ['estado_periodo' => 'GRATIS', 'dias_pagado' => null, 'dias_gracia' => null];
-        }
+        $manualFree = (int) ($account['plan_gratis'] ?? 0) === 1;
+        $unknown = ['estado_periodo' => $manualFree ? 'GRATIS' : 'SIN_PAGO',
+            'estado_vigencia' => 'SIN_PAGO', 'origen_gratis' => $manualFree ? 'MANUAL' : null,
+            'dias_pagado' => null, 'dias_gracia' => null];
         if ((int) ($account['revision_vigencia_pendiente'] ?? 0) === 1) {
-            return ['estado_periodo' => 'SIN_PAGO', 'dias_pagado' => null, 'dias_gracia' => null];
+            return $unknown;
         }
         $today = ($today ?? new DateTimeImmutable('today'))->setTime(0, 0);
         $start = (string) ($account['fecha_inicio'] ?? '');
         $paid = (string) ($account['fecha_vencimiento'] ?? '');
         $grace = (string) ($account['fin_gracia'] ?? '');
         if (($start === '' && !static::TIENE_GRACIA) || $paid === '' || (static::TIENE_GRACIA && $grace === '')) {
-            return ['estado_periodo' => 'SIN_PAGO', 'dias_pagado' => null, 'dias_gracia' => null];
+            return $unknown;
         }
         try {
             $startDate = $start !== '' ? static::date($start) : null;
             $paidDate = static::date($paid);
             $graceDate = static::TIENE_GRACIA ? static::date($grace) : null;
         } catch (InvalidArgumentException $exception) {
-            return ['estado_periodo' => 'SIN_PAGO', 'dias_pagado' => null, 'dias_gracia' => null];
+            return $unknown;
         }
         $state = $startDate === null
             ? ($today < $paidDate ? 'SIN_PAGO' : ($today < $graceDate ? 'GRACIA' : 'GRATIS'))
             : ($today < $startDate ? 'SIN_PAGO'
                 : ($today < $paidDate ? 'PAGADO' : ($graceDate !== null && $today < $graceDate ? 'GRACIA' : 'GRATIS')));
         return [
-            'estado_periodo' => $state,
+            'estado_periodo' => $manualFree ? 'GRATIS' : $state,
+            'estado_vigencia' => $state,
+            'origen_gratis' => $manualFree ? 'MANUAL' : ($state === 'GRATIS' ? 'VENCIMIENTO' : null),
             'dias_pagado' => $startDate !== null ? (int) $today->diff($paidDate)->format('%r%a') : null,
             'dias_gracia' => $graceDate !== null ? (int) $today->diff($graceDate)->format('%r%a') : null,
         ];
@@ -444,6 +531,7 @@ abstract class CuentaCompartida extends BaseModel
         $sales = $this->table('ventas');
         $legacy = static::legacyOccupation();
         return "SELECT cp.*, p.nombre AS plataforma_nombre,
+            COALESCE((SELECT MAX(c.id) FROM cuentas_ciclos c WHERE c.cuenta_principal_id = cp.id), 0) AS ciclo_actual,
             COALESCE(d.cuenta_principal_id = cp.id, 0) AS distribucion_actual,
             COALESCE(v.ocupados, 0) AS ocupados_ventas,
             COALESCE(v.ventas_bs, 0) AS ventas_bs,
@@ -470,9 +558,11 @@ abstract class CuentaCompartida extends BaseModel
     protected function decorate(array $row): array
     {
         $row['capacidad'] = (int) $row['capacidad'];
+        $row['ciclo_actual'] = (int) $row['ciclo_actual'];
         $row['ocupados_ventas'] = (int) $row['ocupados_ventas'];
         $row['ocupados_anteriores'] = (int) $row['ocupados_anteriores'];
-        $row['ocupados'] = $row['ocupados_ventas'] + $row['ocupados_anteriores'];
+        $row['ajuste_ocupacion'] = (int) ($row['ajuste_ocupacion'] ?? 0);
+        $row['ocupados'] = max(0, $row['ocupados_ventas'] + $row['ocupados_anteriores'] + $row['ajuste_ocupacion']);
         $row['recomendado'] = $row['capacidad'];
         $row['excedidos'] = max($row['ocupados'] - $row['recomendado'], 0);
         $row['supera_recomendado'] = $row['excedidos'] > 0;
@@ -480,19 +570,26 @@ abstract class CuentaCompartida extends BaseModel
         $row['libres'] = $row['hasta_recomendado'];
         $row['distribucion_actual'] = (bool) ($row['distribucion_actual'] ?? false);
         $row['llena'] = $row['ocupados'] >= $row['capacidad'];
-        $row['estado_distribucion'] = $row['llena'] ? 'Llena' : ($row['distribucion_actual'] ? 'En distribución' : 'Disponible');
-        return $row + static::period($row);
+        $row += static::period($row);
+        $row['motivo_bloqueo'] = (int) $row['activo'] !== 1 ? 'Cuenta inactiva.'
+            : (!in_array($row['estado_periodo'], ['PAGADO', 'GRACIA'], true) ? ((int) ($row['plan_gratis'] ?? 0) === 1 ? 'Plan marcado Gratis.' : ($row['estado_periodo'] === 'GRATIS' ? 'Vigencia finalizada.' : 'Vigencia pendiente de revisión.'))
+            : (!filter_var((string) ($row['correo'] ?? ''), FILTER_VALIDATE_EMAIL) || trim(\decrypt_secret((string) ($row['password_cuenta'] ?? ''))) === '' ? 'Credenciales pendientes de completar.' : ''));
+        $row['ventas_habilitadas'] = $row['motivo_bloqueo'] === '' && $row['distribucion_actual'];
+        $row['cupos_vendibles'] = $row['ventas_habilitadas'] ? $row['libres'] : 0;
+        $row['estado_distribucion'] = $row['llena'] ? 'Vendida'
+            : ($row['motivo_bloqueo'] !== '' ? 'Ventas bloqueadas' : ($row['distribucion_actual'] ? 'En distribución' : 'En reserva'));
+        return $row;
     }
 
     protected static function capacityValue(mixed $value): int
     {
         if (!is_scalar($value) || !preg_match('/^[1-9][0-9]{0,4}$/D', (string) $value)) {
-            throw new InvalidArgumentException('La capacidad debe ser un número entero entre 1 y 99999.');
+            throw new \App\Core\ValidationException(['capacidad' => 'La capacidad debe ser un número entero entre 1 y 99999.']);
         }
         return (int) $value;
     }
 
-    protected function occupied(int $id): int
+    protected function occupied(int $id, bool $withAdjustment = true): int
     {
         $stmt = $this->db->prepare('SELECT COALESCE(SUM(dispositivos), 0) FROM ' . $this->table('ventas') . '
             WHERE cuenta_principal_id = :id AND liberada_at IS NULL');
@@ -502,7 +599,20 @@ abstract class CuentaCompartida extends BaseModel
             FROM suscripciones s LEFT JOIN modalidades m ON m.id = s.modalidad_id
             WHERE s.cuenta_principal_id = :id AND s.flag_no_renovo = 0');
         $stmt->execute(['id' => $id]);
-        return $sales + (int) $stmt->fetchColumn();
+        $legacy = (int) $stmt->fetchColumn();
+        if (!$withAdjustment) return $sales + $legacy;
+        $stmt = $this->db->prepare('SELECT ajuste_ocupacion FROM cuentas_principales WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+        return max(0, $sales + $legacy + (int) $stmt->fetchColumn());
+    }
+
+    protected static function occupationValue(mixed $value, int $maximum = 99999): int
+    {
+        if ((!is_int($value) && !is_string($value)) || !preg_match('/^(0|[1-9][0-9]{0,9})$/D', (string) $value)
+            || (float) $value > $maximum) {
+            throw new InvalidArgumentException('Los ocupados deben ser un número entero entre 0 y ' . $maximum . '.');
+        }
+        return (int) $value;
     }
 
     protected function ensurePlatform(): int
@@ -548,7 +658,7 @@ abstract class CuentaCompartida extends BaseModel
         $stmt = $this->db->prepare($sql . ' LIMIT 1 FOR UPDATE');
         $stmt->execute($params);
         if ($stmt->fetch()) {
-            throw new InvalidArgumentException('Ya existe una cuenta de ' . static::ETIQUETA . ' con ese correo.');
+            throw new \App\Core\ValidationException(['correo' => 'Ya existe una cuenta de ' . static::ETIQUETA . ' con ese correo.']);
         }
     }
 
@@ -637,12 +747,12 @@ abstract class CuentaCompartida extends BaseModel
     {
         $value = str_replace(',', '.', trim($value));
         if (!preg_match('/^\d{1,8}(?:\.\d{1,2})?$/D', $value)) {
-            throw new InvalidArgumentException('Ingresa el costo en bolivianos con un máximo de dos decimales.');
+            throw new \App\Core\ValidationException(['monto_bs' => 'Ingresa el costo en bolivianos con un máximo de dos decimales.']);
         }
         [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
         $normalized = (string) (int) $whole . '.' . str_pad($fraction, 2, '0');
         if ($normalized === '0.00') {
-            throw new InvalidArgumentException('El costo en bolivianos debe ser mayor que cero.');
+            throw new \App\Core\ValidationException(['monto_bs' => 'El costo en bolivianos debe ser mayor que cero.']);
         }
         return $normalized;
     }
@@ -660,13 +770,13 @@ abstract class CuentaCompartida extends BaseModel
         $label = trim((string) ($data['etiqueta'] ?? '')) ?: $email;
         $notes = trim((string) ($data['notas'] ?? ''));
         if ($label === '' || static::length($label) > 100) {
-            throw new InvalidArgumentException('La etiqueta debe tener entre 1 y 100 caracteres.');
+            throw new \App\Core\ValidationException(['etiqueta' => 'El nombre interno debe tener entre 1 y 100 caracteres.']);
         }
         if ($email === '' || static::length($email) > 150 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new InvalidArgumentException('Ingresa un correo válido para la cuenta.');
+            throw new \App\Core\ValidationException(['correo' => 'Ingresa un correo válido para la cuenta.']);
         }
         if (strlen($notes) > 65535) {
-            throw new InvalidArgumentException('Las notas son demasiado largas.');
+            throw new \App\Core\ValidationException(['notas' => 'Las notas son demasiado largas.']);
         }
         return ['etiqueta' => $label, 'correo' => $email, 'notas' => $notes !== '' ? $notes : null];
     }
@@ -685,7 +795,7 @@ abstract class CuentaCompartida extends BaseModel
             throw new RuntimeException('No se pudo cifrar la contraseña de forma segura.');
         }
         if (strlen($encrypted) > 255) {
-            throw new InvalidArgumentException('La contraseña es demasiado larga.');
+            throw new \App\Core\ValidationException(['password_cuenta' => 'La contraseña es demasiado larga.']);
         }
         return $encrypted;
     }

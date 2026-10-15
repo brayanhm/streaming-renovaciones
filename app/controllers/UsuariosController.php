@@ -43,30 +43,37 @@ class UsuariosController extends Controller
         $password = (string) ($_POST['password'] ?? '');
         $confirm  = (string) ($_POST['password_confirm'] ?? '');
         $rol      = strtolower(trim((string) ($_POST['rol'] ?? 'operador')));
+        set_old(['username' => $username, 'rol' => $rol]);
 
         if (strlen($username) < 3) {
+            set_field_errors(['username' => 'El usuario debe tener al menos 3 caracteres.']);
             flash('danger', 'El usuario debe tener al menos 3 caracteres.');
             $this->redirect('/usuarios');
         }
         if (!in_array($rol, User::ROLES, true)) {
+            set_field_errors(['rol' => 'Selecciona un rol válido.']);
             flash('danger', 'El rol seleccionado no es válido.');
             $this->redirect('/usuarios');
         }
         if ($this->users->usernameExists($username, 0)) {
+            set_field_errors(['username' => 'Ese nombre de usuario ya está en uso.']);
             flash('danger', 'Ese nombre de usuario ya está en uso.');
             $this->redirect('/usuarios');
         }
         if (strlen($password) < 6) {
+            set_field_errors(['password' => 'La contraseña debe tener al menos 6 caracteres.']);
             flash('danger', 'La contraseña debe tener al menos 6 caracteres.');
             $this->redirect('/usuarios');
         }
         if ($password !== $confirm) {
+            set_field_errors(['password_confirm' => 'Las contraseñas no coinciden.']);
             flash('danger', 'Las contraseñas no coinciden.');
             $this->redirect('/usuarios');
         }
 
         try {
             $this->users->create($username, $password, $rol);
+            clear_old();
             audit('usuario.crear', $username . ' (' . $rol . ')');
             flash('success', 'Usuario "' . $username . '" creado correctamente.');
         } catch (\Throwable $exception) {
@@ -86,7 +93,7 @@ class UsuariosController extends Controller
 
         $this->render('usuarios/edit', [
             'pageTitle' => 'Editar usuario',
-            'user' => $user,
+            'user' => restore_form_values($user, '/usuarios/actualizar/' . $id),
             'roles' => User::ROLES,
             'currentUserId' => $this->currentUserId(),
             'isLastActiveAdmin' => $this->isLastActiveAdmin($user),
@@ -103,27 +110,33 @@ class UsuariosController extends Controller
 
         $username = trim((string) ($_POST['username'] ?? ''));
         $rol      = strtolower(trim((string) ($_POST['rol'] ?? '')));
+        set_old(['username' => $username, 'rol' => $rol]);
 
         if (strlen($username) < 3) {
+            set_field_errors(['username' => 'El usuario debe tener al menos 3 caracteres.']);
             flash('danger', 'El usuario debe tener al menos 3 caracteres.');
             $this->redirect('/usuarios/editar/' . $id);
         }
         if (!in_array($rol, User::ROLES, true)) {
+            set_field_errors(['rol' => 'Selecciona un rol válido.']);
             flash('danger', 'El rol seleccionado no es válido.');
             $this->redirect('/usuarios/editar/' . $id);
         }
         if ($this->users->usernameExists($username, $id)) {
+            set_field_errors(['username' => 'Ese nombre de usuario ya está en uso.']);
             flash('danger', 'Ese nombre de usuario ya está en uso.');
             $this->redirect('/usuarios/editar/' . $id);
         }
 
         // No permitir quitar el rol admin al ultimo administrador activo.
         if ($rol !== 'admin' && $this->isLastActiveAdmin($user)) {
+            set_field_errors(['rol' => 'Este usuario debe conservar el rol de administrador.']);
             flash('danger', 'No puedes quitar el rol de administrador al último admin activo.');
             $this->redirect('/usuarios/editar/' . $id);
         }
 
         $this->users->updateProfileData($id, $username, $rol);
+        clear_old();
         audit('usuario.editar', 'ID ' . $id . ' -> ' . $username . ' / ' . $rol);
 
         // Si el admin se edita a si mismo, refrescar los datos de la sesion.
@@ -146,17 +159,21 @@ class UsuariosController extends Controller
 
         $password = (string) ($_POST['new_password'] ?? '');
         $confirm  = (string) ($_POST['confirm_password'] ?? '');
+        set_old([]);
 
         if (strlen($password) < 6) {
+            set_field_errors(['new_password' => 'La nueva contraseña debe tener al menos 6 caracteres.']);
             flash('danger', 'La nueva contraseña debe tener al menos 6 caracteres.');
             $this->redirect('/usuarios/editar/' . $id);
         }
         if ($password !== $confirm) {
+            set_field_errors(['confirm_password' => 'Las contraseñas no coinciden.']);
             flash('danger', 'Las contraseñas no coinciden.');
             $this->redirect('/usuarios/editar/' . $id);
         }
 
         $this->users->updatePassword($id, $password);
+        clear_old();
         audit('usuario.password', 'Reset contrasena ID ' . $id . ' (' . (string) $user['username'] . ')');
         flash('success', 'Contraseña de "' . (string) $user['username'] . '" restablecida.');
         $this->redirect('/usuarios/editar/' . $id);

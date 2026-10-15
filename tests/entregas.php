@@ -31,6 +31,10 @@ function runDeliveryTests(PDO $pdo, callable $test): void
         $test("entrega {$service}: copia registra la cantidad correcta y repetir token o recargar no duplica cupos", static function () use ($pdo, $service, $modelClass, $controllerClass, $create, $login, $deliver, $page, $operator): void {
             $model = new $modelClass($pdo);
             if ($service === 'CLAUDE') $model->saveTemplates(['entrega_1' => '']);
+            if ($service === 'CHATGPT') {
+                $defaults = require APP_PATH . '/config/chatgpt_templates.php';
+                $model->saveTemplates(array_map(static fn(string $text): string => str_replace('*', '', $text), $defaults));
+            }
             $id = $create($model, 5);
             $model->selectDistribution($id);
             $controller = $login($controllerClass, $operator);
@@ -40,6 +44,9 @@ function runDeliveryTests(PDO $pdo, callable $test): void
             clEq($first->data['occupied'], 1, 'Una entrega consume un cupo.');
             clCheck(str_contains($first->data['text'], $model->find($id)['correo']), 'El texto debe incluir el correo actual.');
             clCheck(str_contains($first->data['text'], 'entrega-password-fixture'), 'El texto debe incluir la contraseña actual.');
+            clCheck(str_contains($first->data['text'], '📧 Correo: ' . $model->find($id)['correo'])
+                && str_contains($first->data['text'], '🔑 Contraseña: entrega-password-fixture'), 'Las credenciales deben copiarse sin asteriscos de formato.');
+            if ($service === 'CHATGPT') clCheck(str_contains($first->data['text'], '*LEER OBLIGATORIO*'), 'La plantilla estándar instalada sin formato debe actualizar sus negritas.');
             if ($service === 'CLAUDE') {
                 clCheck(str_contains($first->data['text'], 'Claude compartido'), 'Una plantilla vacía debe usar la entrega predeterminada.');
                 clCheck(!str_contains($first->data['text'], 'Bs Bs'), 'El precio debe llevar una sola etiqueta de moneda.');
@@ -49,6 +56,7 @@ function runDeliveryTests(PDO $pdo, callable $test): void
             clEq($model->find($id)['ocupados'], 1, 'El reintento conserva la ocupación.');
             $data = $page($controller);
             clEq($data['lastDelivery']['saleId'], $first->data['saleId'], 'La recarga recupera el texto de la última entrega.');
+            clEq($data['lastDelivery']['text'], $first->data['text'], 'Volver a copiar debe conservar el formato de WhatsApp.');
             clEq($model->find($id)['ocupados'], 1, 'Mostrar la última entrega no consume cupos.');
             $nextDevices = $service === 'CHATGPT' ? '2' : '1';
             $next = $deliver($controller, $id, $nextDevices, $again->data['nextToken']);
@@ -57,7 +65,7 @@ function runDeliveryTests(PDO $pdo, callable $test): void
             clEq(count($model->sales($id)), 2, 'Debe conservar dos ventas en el historial.');
             $lastSale = $model->sale($id, $next->data['saleId']);
             clEq((int) $lastSale['dispositivos'], (int) $nextDevices, 'La cantidad se registra en la venta.');
-            $model->startCycle($id, true, 'fixture', bin2hex(random_bytes(32)));
+            $model->startCycle($id, true, 'fixture', bin2hex(random_bytes(32)), $model->currentCycleId($id));
             clEq($page($controller)['lastDelivery'], null, 'El texto del ciclo anterior ya no debe aparecer como última entrega.');
             clEq($model->find($id)['ocupados'], 0, 'La pantalla no recupera los cupos reiniciados.');
         });
@@ -70,6 +78,7 @@ function runDeliveryTests(PDO $pdo, callable $test): void
             $controller = $login($controllerClass, $operator);
             $first = $deliver($controller, $id, '1', $controller->formToken('entregar', $id));
             clEq($first->status, 200, 'El último cupo debe venderse.');
+            clEq($first->data['state'], 'Vendida', 'La última entrega debe informar Vendida para actualizar la pantalla inmediatamente.');
             clEq($deliver($controller, $id, '1', $first->data['nextToken'])->status, 422, 'Un operador no supera la capacidad, aunque el POST lo pida.');
             clEq($model->find($id)['ocupados'], 1, 'La entrega rechazada no consume cupos.');
             clEq($deliver($controller, $id, '1', $controller->formToken('vender', $id))->status, 422, 'Un token de otra acción no permite entregar.');

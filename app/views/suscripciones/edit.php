@@ -31,11 +31,11 @@ use App\Models\Plataforma;
                         <?php foreach ($plataformas as $plataforma): ?>
                             <option
                                 value="<?= e((string) $plataforma['id']) ?>"
-                                data-tipo="<?= e((string) $plataforma['tipo_servicio']) ?>"
+                                data-tipo="<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>"
                                 data-dato-renovacion="<?= e((string) Plataforma::normalizeDatoRenovacion((string) ($plataforma['dato_renovacion'] ?? ''), (string) ($plataforma['tipo_servicio'] ?? ''))) ?>"
                                 <?= (int) $item['plataforma_id'] === (int) $plataforma['id'] ? 'selected' : '' ?>
                             >
-                                <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
+                                <?= e((string) $plataforma['nombre']) ?> (<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -56,7 +56,7 @@ use App\Models\Plataforma;
                                 -
                                 <?= e((string) $modalidad['nombre_modalidad']) ?>
                                 (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
-                                <?= e((string) max(1, (int) ($modalidad['duracion_meses'] ?? 1))) ?> mes(es),
+                                <?= e(duration_label(max(1, (int) ($modalidad['duracion_meses'] ?? 1)))) ?>,
                                 Costo: <?= e(money((float) ($modalidad['costo'] ?? 0))) ?>,
                                 Venta: <?= e(money((float) $modalidad['precio'])) ?>)
                             </option>
@@ -103,11 +103,11 @@ use App\Models\Plataforma;
 
                 <div class="col-md-3">
                     <label class="form-label" for="fecha_inicio">Fecha inicio</label>
-                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= e((string) $item['fecha_inicio']) ?>" required>
+                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="<?= e(old('fecha_inicio', (string) $item['fecha_inicio'])) ?>" required>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="fecha_vencimiento">Fecha vencimiento</label>
-                    <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" value="<?= e((string) $item['fecha_vencimiento']) ?>" required>
+                    <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" value="<?= e(old('fecha_vencimiento', (string) $item['fecha_vencimiento'])) ?>" required>
                 </div>
 
                 <div class="col-md-6 js-usuario-wrap">

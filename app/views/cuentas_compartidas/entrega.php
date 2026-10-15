@@ -12,7 +12,7 @@ $blockedMessage = $cuenta === null ? 'El administrador debe seleccionar una cuen
     : (!$credentialsReady ? 'Completa el correo y la contraseña de la cuenta antes de entregar accesos.'
     : (!in_array($period, ['PAGADO', 'GRACIA'], true) ? 'La cuenta está Gratis o sin vigencia confirmada. Las entregas están bloqueadas.'
     : (empty($cuenta['distribucion_actual']) ? 'La cuenta de distribución cambió. Recarga esta pantalla.'
-    : ($canAdmin ? 'La cuenta está llena. Puedes registrar entregas adicionales como administrador.' : 'La cuenta está llena. El administrador debe seleccionar otra cuenta.')))));
+    : ($canAdmin ? 'Cuenta vendida: todos sus cupos están ocupados. Puedes registrar entregas adicionales como administrador.' : 'Cuenta vendida: todos sus cupos están ocupados. El administrador debe seleccionar otra cuenta.')))));
 $lastDelivery = $lastDelivery ?? null;
 $scriptVersion = (string) filemtime(PUBLIC_PATH . '/js/distribucion.js');
 ?>
@@ -35,7 +35,7 @@ $scriptVersion = (string) filemtime(PUBLIC_PATH . '/js/distribucion.js');
         <div>
             <h2 class="h4 mb-1" id="delivery-account-title"><?= e((string) $cuenta['etiqueta']) ?></h2>
             <p class="text-secondary text-break mb-2"><?= e((string) $cuenta['correo']) ?></p>
-            <span class="badge text-bg-<?= $occupied >= $capacity ? 'warning' : 'primary' ?>" data-distribution-state><?= e((string) $cuenta['estado_distribucion']) ?></span>
+            <span class="badge text-bg-<?= $occupied >= $capacity ? 'success' : 'primary' ?>" data-distribution-state><?= e((string) $cuenta['estado_distribucion']) ?></span>
             <span class="badge text-bg-<?= $period === 'PAGADO' ? 'success' : ($period === 'GRACIA' ? 'warning' : 'secondary') ?>"><?= e($periodLabels[$period] ?? $period) ?></span>
         </div>
         <?php if ($canAdmin): ?><a href="<?= e(url('/' . $service . '/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-primary btn-sm"><?= icon('square-pen') ?><span class="button-label">Administrar cuenta</span></a><?php endif; ?>
@@ -45,8 +45,10 @@ $scriptVersion = (string) filemtime(PUBLIC_PATH . '/js/distribucion.js');
         <div class="col-4"><div class="small text-secondary">Ocupados</div><strong class="h3" data-distribution-occupied><?= $occupied ?></strong></div>
         <div class="col-4"><div class="small text-secondary">Libres</div><strong class="h3 text-primary" data-distribution-remaining><?= max(0, $capacity - $occupied) ?></strong></div>
     </div>
-    <p class="small text-secondary mb-3">Cada entrega nueva registra una venta y ocupa los <?= e($unit) ?> indicados.</p>
     <div class="alert alert-warning small" data-distribution-notice <?= $ready && $occupied < $capacity ? 'hidden' : '' ?>><?= e($blockedMessage) ?></div>
+    <details class="gs-new-delivery" data-new-delivery <?= $lastDelivery === null ? 'open' : '' ?>>
+    <summary class="fw-semibold mb-3">Nueva entrega</summary>
+    <p class="small text-secondary mb-3">Registra una venta, ocupa los <?= e($unit) ?> indicados y copia el mensaje. Para recuperar una entrega ya registrada, usa «Volver a copiar».</p>
     <form method="post" action="<?= e(url('/' . $service . '/' . (int) $cuenta['id'] . '/entregar')) ?>" data-distribution-delivery
         data-unit="<?= e($unit) ?>" data-occupied="<?= $occupied ?>" data-capacity="<?= $capacity ?>"
         data-can-exceed="<?= $canAdmin ? '1' : '0' ?>" data-eligible="<?= $ready ? '1' : '0' ?>">
@@ -56,20 +58,21 @@ $scriptVersion = (string) filemtime(PUBLIC_PATH . '/js/distribucion.js');
             <div class="<?= count($prices) > 1 ? 'col-sm-6' : 'col-sm-8 col-lg-6' ?>">
                 <button type="submit" name="dispositivos" value="<?= (int) $devices ?>" class="btn <?= $devices === 1 ? 'btn-primary' : 'btn-outline-primary' ?> w-100"
                     <?= !$ready || (!$canAdmin && $occupied + (int) $devices > $capacity) ? 'disabled' : '' ?>>
-                    <?= icon('copy') ?><span class="button-label">Copiar entrega · <?= (int) $devices ?> <?= $devices === 1 ? 'dispositivo' : 'dispositivos' ?></span>
+                    <?= icon('copy') ?><span class="button-label">Registrar y copiar · <?= (int) $devices ?> <?= $devices === 1 ? 'dispositivo' : 'dispositivos' ?></span>
                 </button>
                 <small class="d-block text-secondary mt-2"><?= (int) $devices ?> <?= $devices === 1 ? 'cupo ocupado' : 'cupos ocupados' ?> · <?= e(money($price)) ?></small>
             </div>
         <?php endforeach; ?>
         </div>
     </form>
+    </details>
     <noscript><p class="text-danger mt-3 mb-0">Activa JavaScript para registrar y copiar las entregas desde esta pantalla.</p></noscript>
     <p class="small mt-3 mb-0" role="status" aria-live="polite" data-distribution-status></p>
 </div></section>
-<section class="card" data-distribution-output <?= $lastDelivery === null ? 'hidden' : '' ?> aria-labelledby="delivery-text-title"><div class="card-body">
+<section class="card gs-delivery-result" data-distribution-output <?= $lastDelivery === null ? 'hidden' : '' ?> aria-labelledby="delivery-text-title"><div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h2 class="h5 mb-0" id="delivery-text-title">Última entrega registrada</h2>
-        <button type="button" class="btn btn-outline-primary btn-sm" data-distribution-copy-again><?= icon('copy') ?><span class="button-label">Volver a copiar</span></button>
+        <button type="button" class="btn btn-primary" data-distribution-copy-again><?= icon('copy') ?><span class="button-label">Volver a copiar esta entrega</span></button>
     </div>
     <label for="distribution-client-text" class="form-label small text-secondary">Texto para enviar al cliente</label>
     <textarea id="distribution-client-text" class="form-control" rows="8" readonly><?= e((string) ($lastDelivery['text'] ?? '')) ?></textarea>

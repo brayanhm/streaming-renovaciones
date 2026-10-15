@@ -52,18 +52,19 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
     <div class="alert alert-info">Esta cuenta conserva <?= (int) $cuenta['ocupados_anteriores'] ?> cupos de asignaciones anteriores, incluidos en el contador. Se conservarán hasta confirmar un nuevo ciclo.</div>
 <?php endif; ?>
 <?php if ($occupied >= $recommended): ?>
-    <div class="alert alert-warning">La cuenta está llena. Solo el administrador puede registrar ventas adicionales en la cuenta seleccionada.
+    <div class="alert alert-warning">Cuenta vendida: todos sus cupos están ocupados. <?= $ready && $selected ? 'Solo el administrador puede registrar ventas adicionales en la cuenta seleccionada.' : 'El administrador debe seleccionar una cuenta habilitada para continuar.' ?>
         <?php if ($exceeded > 0): ?><span class="badge text-bg-warning ms-1">+<?= $exceeded ?> adicionales</span><?php endif; ?>
     </div>
 <?php endif; ?>
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Cupos</h2>
-        <div class="h3 mb-1 text-<?= $occupancyColor ?>"><?= $occupied ?> <span class="h5 text-secondary">ocupados</span></div>
+        <div class="h3 mb-1 text-<?= $occupancyColor ?>"><?= $occupied ?> <span class="h5 text-secondary"><?= $occupied === 1 ? 'ocupado' : 'ocupados' ?></span></div>
         <div class="small text-secondary">Capacidad: <?= $recommended ?></div>
         <div class="mb-2">Libres: <?= $remaining ?></div>
         <div class="progress mb-2" role="progressbar" aria-label="Cupos ocupados respecto a su capacidad" aria-valuenow="<?= min($recommended, max(0, $occupied)) ?>" aria-valuemin="0" aria-valuemax="<?= $recommended ?>"><div class="progress-bar bg-<?= $occupancyColor ?>" style="width: <?= min(100, max(0, $occupied * 100 / max(1, $recommended))) ?>%"></div></div>
         <small class="text-secondary">Los cupos se reinician al confirmar un nuevo ciclo.</small>
+        <?php if ($canAdmin): ?><a class="btn btn-sm btn-outline-primary mt-3" href="<?= e(url('/claude/' . $accountId . '/editar') . '#ocupacion') ?>"><?= icon('square-pen') ?><span class="button-label">Editar cupos ocupados</span></a><?php endif; ?>
     </div></div></div>
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Pago y vigencia</h2>
@@ -79,8 +80,10 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
         <div class="mb-2">Pagos: <strong>Bs <?= e($claudeMoney($cuenta['pagos_bs'] ?? 0)) ?></strong></div>
         <span class="badge text-bg-<?= $isActive ? 'success' : 'secondary' ?>"><?= $isActive ? 'Cuenta activa' : 'Cuenta inactiva' ?></span>
         <?php if ($canAdmin): ?>
-            <form method="post" action="<?= e(url('/claude/' . $accountId . '/estado')) ?>" class="mt-2" data-chatgpt-submit>
+            <form method="post" action="<?= e(url('/claude/' . $accountId . '/estado')) ?>" class="mt-2" data-chatgpt-submit
+                <?php if ($isActive): ?>data-confirm="Se bloquearán las nuevas ventas de esta cuenta. Podrás activarla de nuevo cuando esté preparada." data-confirm-title="¿Desactivar esta cuenta?" data-confirm-button="Desactivar cuenta" data-confirm-danger="1"<?php endif; ?>>
                 <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e((string) ($stateToken ?? '')) ?>">
+                <input type="hidden" name="activo" value="<?= $isActive ? '0' : '1' ?>">
                 <button type="submit" class="btn btn-sm btn-outline-secondary"><?= icon($isActive ? 'circle-x' : 'circle-check') ?><span class="button-label"><?= $isActive ? 'Desactivar cuenta' : 'Activar cuenta' ?></span></button>
             </form>
         <?php endif; ?>
@@ -164,7 +167,7 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
     </ul></div>
     <div class="card-body p-0 tab-content">
         <div class="tab-pane fade show active" id="sales-history" role="tabpanel" aria-labelledby="sales-tab" tabindex="0"><div class="table-responsive">
-            <table class="table table-striped align-middle mb-0"><thead><tr><th>Venta</th><th>Cantidad</th><th>Monto</th><th>Vigencia del acceso</th><th>Cupos</th><th>Entrega</th></tr></thead><tbody>
+            <table data-responsive-cards data-mobile-primary="" class="table table-striped align-middle mb-0"><thead><tr><th>Venta</th><th>Cantidad</th><th>Monto</th><th>Vigencia del acceso</th><th>Cupos</th><th>Entrega</th></tr></thead><tbody>
                 <?php if (empty($ventas)): ?><tr><td colspan="6" class="text-center text-secondary py-4">Sin ventas registradas.</td></tr><?php endif; ?>
                 <?php foreach (($ventas ?? []) as $sale): ?>
                     <?php $saleId = (int) $sale['id']; $saleText = (string) ($saleTexts[$saleId] ?? ''); ?>
@@ -176,14 +179,14 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
                         <td>
                             <textarea id="sale-text-<?= $saleId ?>" hidden <?= $saleId === $lastSaleId && $saleText !== '' ? 'data-copy-on-load' : '' ?>><?= e($saleText) ?></textarea>
                             <button type="button" class="btn btn-outline-primary btn-sm" data-copy-source="sale-text-<?= $saleId ?>" <?= $saleText === '' ? 'disabled' : '' ?>><?= icon('copy') ?><span class="button-label">Copiar entrega</span></button>
-                            <?php if ($saleText === ''): ?><small class="d-block text-secondary"><?= !$credentialsReady ? 'Credenciales pendientes de completar' : 'Mensaje pendiente de configurar' ?></small><?php endif; ?>
+                            <?php if ($saleText === ''): ?><small class="d-block text-secondary"><?= e((string) ($saleCopyReasons[$saleId] ?? 'Entrega no disponible.')) ?></small><?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody></table>
         </div></div>
         <div class="tab-pane fade" id="payments-history" role="tabpanel" aria-labelledby="payments-tab" tabindex="0"><div class="table-responsive">
-            <table class="table table-striped align-middle mb-0"><thead><tr><th>Fecha de pago</th><th>Fin de vigencia</th><th>Costo real</th></tr></thead><tbody>
+            <table data-responsive-cards data-mobile-primary="" class="table table-striped align-middle mb-0"><thead><tr><th>Fecha de pago</th><th>Fin de vigencia</th><th>Costo real</th></tr></thead><tbody>
                 <?php if (empty($pagos)): ?><tr><td colspan="3" class="text-center text-secondary py-4">Sin pagos registrados.</td></tr><?php endif; ?>
                 <?php foreach (($pagos ?? []) as $payment): ?><tr>
                     <td><?= e($claudeDate($payment['fecha_pago'] ?? null)) ?></td><td><?= e($claudeDate($payment['fin_pagado'] ?? null)) ?></td>

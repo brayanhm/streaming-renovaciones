@@ -300,7 +300,7 @@ try {
         $id = cgePaid($model, $recent, 'Preserved-fixture@example.invalid');
         $model->sell($id, 2, $recent, cgeToken());
         cgeLegacy($pdo, $id);
-        $model->toggleActive($id);
+        $model->setActive($id, false);
         $snapshot = cgeSnapshot($pdo);
         cgeEq($model->importPendingEmails([' preserved-FIXTURE@example.invalid ', 'PRESERVED-fixture@example.invalid']),
             ['creadas' => 0, 'existentes' => 1, 'ids' => [$id]], 'Debe identificar la cuenta existente sin crear otra.');
@@ -407,15 +407,17 @@ try {
         }
     });
 
-    cgeTest('configurar ambas fechas conserva credenciales, actividad, cupos y todos los historiales', static function () use ($model, $pdo, $recent, $todayString): void {
+    cgeTest('revisión de fechas con pagos existentes se rechaza y conserva credenciales, actividad, cupos e historiales', static function () use ($model, $pdo, $recent, $todayString): void {
         $id = cgePaid($model, $recent);
         $model->sell($id, 2, $recent, cgeToken());
         cgeLegacy($pdo, $id);
-        $model->toggleActive($id);
+        $model->setActive($id, false);
         $before = cgeWithoutDates(cgeRaw($pdo, $id));
         $ledgers = cgeLedgers($pdo);
         foreach (['GRACIA', 'PAGO'] as $origin) {
-            $model->configureExistingPeriod($id, $origin, $todayString);
+            $snapshot = cgeSnapshot($pdo);
+            cgeReject(static fn() => $model->configureExistingPeriod($id, $origin, $todayString), 'No debe revisar fechas que ya tienen un pago registrado.');
+            cgeEq(cgeSnapshot($pdo), $snapshot, 'La revisión rechazada no debe cambiar fechas ni datos.');
             cgeEq((int) cgeRaw($pdo, $id)['revision_vigencia_pendiente'], 0, 'Confirmar las fechas debe quitar la revisión pendiente.');
             cgeEq(cgeWithoutDates(cgeRaw($pdo, $id)), $before, 'Las fechas no deben cambiar campos de la cuenta.');
             cgeEq(cgeLedgers($pdo), $ledgers, 'Las fechas no deben alterar pagos, ventas, clientes o suscripciones.');
@@ -432,7 +434,7 @@ try {
         cgeEq(cgeSnapshot($pdo), $snapshot, 'La venta rechazada dejó movimientos.');
     });
 
-    cgeTest('revisión pendiente preserva datos e historial hasta confirmar fechas o registrar un pago real', static function () use ($model, $pdo, $recent, $todayString): void {
+    cgeTest('revisión pendiente con pagos conserva datos y exige un pago real para recuperar vigencia', static function () use ($model, $pdo, $recent, $todayString): void {
         foreach (['PAGO', 'GRACIA', 'PAGO_REAL'] as $confirmation) {
             $id = cgePaid($model, $recent);
             cgeEq((int) cgeRaw($pdo, $id)['revision_vigencia_pendiente'], 0, 'Crear una cuenta con pago conocido debe confirmar la vigencia.');
@@ -463,8 +465,10 @@ try {
                 cgeEq($afterPayments[0]['monto_bs'], '211.35', 'El nuevo pago debe guardar su monto real.');
                 cgeEq(array_slice($afterPayments, 1), $payments, 'Confirmar con un pago real debe conservar el historial previo.');
             } else {
-                $model->configureExistingPeriod($id, $confirmation, $recent);
-                cgeEq(cgeLedgers($pdo), $ledgers, 'Confirmar fechas debe preservar todos los movimientos y clientes.');
+                cgeReject(static fn() => $model->configureExistingPeriod($id, $confirmation, $recent), 'Una revisión pendiente no permite alterar fechas de pagos existentes.');
+                cgeEq(cgeSnapshot($pdo), $snapshot, 'La revisión rechazada debe conservar todos los datos.');
+                cgeEq(cgeLedgers($pdo), $ledgers, 'La revisión rechazada debe preservar todos los movimientos y clientes.');
+                continue;
             }
             $confirmed = cgeRaw($pdo, $id);
             cgeEq((int) $confirmed['revision_vigencia_pendiente'], 0, 'La confirmación debe quitar la revisión pendiente.');
@@ -570,7 +574,7 @@ try {
         $id = cgePaid($model, $todayString);
         $token = cgeToken();
         $saleId = $model->sell($id, 2, $todayString, $token);
-        cgeEq($model->startCycle($id, true, 'fixture-runner', cgeToken()), 2, 'Debe liberar los dispositivos fixture.');
+        cgeEq($model->startCycle($id, true, 'fixture-runner', cgeToken(), $model->currentCycleId($id)), 2, 'Debe liberar los dispositivos fixture.');
         $pdo->prepare('UPDATE cuentas_principales SET password_cuenta = NULL, correo = :email, activo = 0, fecha_inicio = NULL, fecha_vencimiento = NULL, fin_gracia = NULL, revision_vigencia_pendiente = 1 WHERE id = :id')
             ->execute(['email' => 'invalid-fixture-email', 'id' => $id]);
         $snapshot = cgeSnapshot($pdo);

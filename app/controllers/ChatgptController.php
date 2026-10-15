@@ -12,6 +12,34 @@ class ChatgptController extends CuentasCompartidasController
     protected const LABEL = 'ChatGPT';
     protected const UNIT = 'dispositivos';
 
+    public function vencimientos(): void
+    {
+        $this->render('chatgpt/vencimientos', [
+            'pageTitle' => 'Vencimientos de ChatGPT',
+            'avisosChatgpt' => (new \App\Models\ChatgptAvisos())->resumen(),
+            'canAdmin' => $this->canAdmin(),
+            'alertsToken' => $this->issueToken('avisos', 0),
+        ]);
+    }
+
+    public function saveAlerts(): void
+    {
+        $this->requireAdmin();
+        $token = $this->validateToken('avisos', 0);
+        $input = ['aviso_fin_pagado' => $_POST['aviso_fin_pagado'] ?? '', 'aviso_fin_gracia' => $_POST['aviso_fin_gracia'] ?? ''];
+        try {
+            (new \App\Models\ChatgptAvisos())->saveConfig($input);
+            unset($_SESSION['chatgpt_operaciones'][$token]);
+            clear_old();
+            audit('chatgpt.configurar_avisos', 'Fin pagado: ' . $input['aviso_fin_pagado'] . ' días / fin gracia: ' . $input['aviso_fin_gracia'] . ' días');
+            flash('success', 'Anticipación de los avisos actualizada.');
+        } catch (\Throwable $error) {
+            set_old($input);
+            $this->operationError($error);
+        }
+        $this->redirect('/chatgpt/vencimientos#configurar-avisos');
+    }
+
     public function importPending(): void
     {
         $this->requireAdmin();

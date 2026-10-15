@@ -15,7 +15,7 @@ if (!function_exists('plan_label_contactar')) {
         $tipoCuenta = (string) ($row['tipo_cuenta'] ?? 'CUENTA_COMPLETA');
         $dispositivos = isset($row['dispositivos']) ? (int) $row['dispositivos'] : null;
         $duracion = max(1, (int) ($row['duracion_meses'] ?? 1));
-        return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' · ' . $duracion . ' mes(es)';
+        return Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos) . ' · ' . duration_label($duracion);
     }
 }
 
@@ -42,7 +42,7 @@ foreach (($rows ?? []) as $r) {
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle mb-0">
+            <table data-responsive-cards data-mobile-primary="0,2,4,5,6,7" class="table table-striped table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>Cliente</th>
@@ -87,7 +87,7 @@ foreach (($rows ?? []) as $r) {
                             </td>
                             <td><small><?= e(plan_label_contactar($row)) ?></small></td>
                             <td>
-                                <div><?= e((string) ($row['fecha_vencimiento'] ?? '')) ?></div>
+                                <div><?= e(display_date($row['fecha_vencimiento'] ?? null)) ?></div>
                                 <small class="text-secondary"><?= e($diasLabel) ?></small>
                             </td>
                             <td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>

@@ -13,16 +13,16 @@ declare(strict_types=1);
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="contacto" class="form-label">Contacto <span class="text-secondary fw-normal">(opcional)</span></label>
-                    <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e((string) $item['nombre']) ?>">
+                    <input type="text" class="form-control" id="contacto" name="contacto" value="<?= e(old('contacto', old('nombre', (string) $item['nombre']))) ?>">
                 </div>
                 <div class="col-md-6">
                     <label for="numero" class="form-label">Número (celular)</label>
-                    <input type="text" class="form-control" id="numero" name="numero" value="<?= e((string) $item['telefono']) ?>" placeholder="Ej: 71234567" inputmode="numeric" maxlength="8" required>
+                    <input type="text" class="form-control" id="numero" name="numero" value="<?= e(old('numero', old('telefono', local_whatsapp_phone_bolivia((string) $item['telefono'])))) ?>" placeholder="Ej: 71234567" inputmode="numeric" maxlength="8" required>
                     <small class="text-secondary">Solo los 8 dígitos, sin +591.</small>
                 </div>
                 <div class="col-12">
                     <label for="notas" class="form-label">Notas</label>
-                    <textarea class="form-control" id="notas" name="notas" rows="4"><?= e((string) ($item['notas'] ?? '')) ?></textarea>
+                    <textarea class="form-control" id="notas" name="notas" rows="4"><?= e(old('notas', (string) ($item['notas'] ?? ''))) ?></textarea>
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <button class="btn btn-primary btn-lg w-100 w-sm-auto" type="submit"><?= icon('save') ?><span class="button-label">Guardar cambios</span></button>

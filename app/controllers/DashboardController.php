@@ -120,6 +120,7 @@ class DashboardController extends Controller
             'panelTitulo' => 'Panel operativo Ghost Store',
             'panelSubtitulo' => 'Control diario de clientes, vencimientos y renovaciones de la tienda virtual.',
             'panelTipo' => 'streaming',
+            'avisosChatgpt' => (new \App\Models\ChatgptAvisos())->resumen(),
         ];
 
         $this->render('dashboard/index', $renderData);
@@ -172,6 +173,7 @@ class DashboardController extends Controller
 
     public function whatsapp(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         $subscription = $this->suscripciones->findWithRelations($id);
         if ($subscription === null) {
             flash('danger', 'Suscripción no encontrada.');
@@ -196,6 +198,7 @@ class DashboardController extends Controller
 
     public function renovar(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         $months = (int) ($_POST['meses'] ?? 0);
         if ($months <= 0) {
             flash('danger', 'El período de renovación no es válido.');
@@ -219,6 +222,7 @@ class DashboardController extends Controller
 
     public function noRenovo(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         if ($this->suscripciones->find($id) === null) {
             flash('danger', 'Suscripcion no encontrada.');
             $this->redirect('/dashboard');
@@ -232,6 +236,15 @@ class DashboardController extends Controller
         }
 
         $this->redirect('/dashboard');
+    }
+
+    private function redirectSharedSubscription(int $id): void
+    {
+        $account = $this->suscripciones->sharedAccount($id);
+        if ($account !== null) {
+            flash('info', 'Esta asignación se administra desde su cuenta de ChatGPT o Claude.');
+            $this->redirect('/' . strtolower($account['servicio']) . '/' . (int) $account['id']);
+        }
     }
 
     private function inferContactTypeFromDueDate(string $dueDate): string

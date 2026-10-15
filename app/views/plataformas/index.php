@@ -5,16 +5,18 @@ use App\Models\Plataforma;
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Plataformas</h1>
+    <a href="<?= e(url('/plataformas?nuevo=1')) ?>#nueva-plataforma" class="btn btn-primary" data-open-panel="nueva-plataforma"><?= icon('plus') ?><span class="button-label">Nueva plataforma</span></a>
     <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
-<div class="row g-3">
+<div class="row g-3 gs-page-layout">
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body">
-                <form method="get" action="<?= e(url('/plataformas')) ?>" class="row g-2 mb-3">
+                <form method="get" action="<?= e(url('/plataformas')) ?>" class="row g-2 align-items-end mb-3">
                     <div class="col-12 col-md-9">
-                        <input
+                        <label class="form-label" for="buscar-plataformas">Buscar plataformas</label>
+                        <input id="buscar-plataformas"
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
@@ -26,9 +28,10 @@ use App\Models\Plataforma;
                         <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
+                <?php if (($search ?? '') !== ''): ?><p class="small text-secondary">Filtros activos. <a href="<?= e(url('/plataformas')) ?>">Limpiar filtros</a></p><?php endif; ?>
 
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table data-responsive-cards data-mobile-primary="0,1,5" class="table table-striped align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Nombre</th>
@@ -41,7 +44,7 @@ use App\Models\Plataforma;
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="6" class="text-center text-secondary py-4">No hay plataformas registradas.</td></tr>
+                                <tr><td colspan="6" class="text-center text-secondary py-4"><?= ($search ?? '') !== '' ? 'No encontramos plataformas para esta búsqueda.' : 'Todavía no hay plataformas. Usa «Nueva plataforma» para comenzar.' ?></td></tr>
                             <?php endif; ?>
                             <?php
                             $truncatePreview = static function (string $value, int $limit = 40): string {
@@ -117,7 +120,7 @@ use App\Models\Plataforma;
                                                     <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/tipos-suscripcion?plataforma_id=' . (int) $item['id'])) ?>"><?= icon('arrow-right') ?><span class="button-label">Ver tipos</span></a>
                                                 <?php endif; ?>
                                                 <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/plataformas/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
-                                                <form method="post" action="<?= e(url('/plataformas/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar esta plataforma?')">
+                                                <form method="post" action="<?= e(url('/plataformas/eliminar/' . (int) $item['id'])) ?>" class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar la plataforma «' . $item['nombre'] . '». Solo se permitirá si no tiene planes ni suscripciones asociados.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar plataforma" data-confirm-danger="1">
                                                     <?= csrf_field() ?>
                                                     <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                                 </form>
@@ -133,10 +136,10 @@ use App\Models\Plataforma;
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm">
+    <div class="col-lg-4 gs-create-column">
+        <details class="card gs-form-panel shadow-sm" id="nueva-plataforma" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/plataformas' ? 'open' : '' ?>>
+            <summary>Nueva plataforma</summary>
             <div class="card-body">
-                <h2 class="h5 mb-3">Nueva plataforma</h2>
                 <form method="post" action="<?= e(url('/plataformas')) ?>" id="create-platform-form" accept-charset="UTF-8">
                     <?= csrf_field() ?>
                     <div class="mb-3">
@@ -147,17 +150,17 @@ use App\Models\Plataforma;
                         <label class="form-label" for="tipo_servicio">Tipo de servicio</label>
                         <select class="form-select" id="tipo_servicio" name="tipo_servicio" required>
                             <?php $oldType = old('tipo_servicio', 'RENOVABLE'); ?>
-                            <option value="RENOVABLE" <?= $oldType === 'RENOVABLE' ? 'selected' : '' ?>>RENOVABLE</option>
-                            <option value="DESECHABLE" <?= $oldType === 'DESECHABLE' ? 'selected' : '' ?>>DESECHABLE</option>
+                            <option value="RENOVABLE" <?= $oldType === 'RENOVABLE' ? 'selected' : '' ?>>Renovable</option>
+                            <option value="DESECHABLE" <?= $oldType === 'DESECHABLE' ? 'selected' : '' ?>>No renovable</option>
                         </select>
                     </div>
                     <div class="mb-3 js-dato-renovacion-wrap">
                         <label class="form-label" for="dato_renovacion">Dato requerido para renovar</label>
                         <?php $oldDato = old('dato_renovacion', 'USUARIO'); ?>
                         <select class="form-select js-dato-renovacion" id="dato_renovacion" name="dato_renovacion">
-                            <option value="USUARIO" <?= $oldDato === 'USUARIO' ? 'selected' : '' ?>>USUARIO</option>
-                            <option value="CORREO" <?= $oldDato === 'CORREO' ? 'selected' : '' ?>>CORREO</option>
-                            <option value="NO_APLICA" <?= $oldDato === 'NO_APLICA' ? 'selected' : '' ?>>NO_APLICA</option>
+                            <option value="USUARIO" <?= $oldDato === 'USUARIO' ? 'selected' : '' ?>>Usuario</option>
+                            <option value="CORREO" <?= $oldDato === 'CORREO' ? 'selected' : '' ?>>Correo</option>
+                            <option value="NO_APLICA" <?= $oldDato === 'NO_APLICA' ? 'selected' : '' ?>>No aplica</option>
                         </select>
                         <small class="text-secondary js-dato-renovacion-help">Define el dato que se pedirá para renovar esta plataforma.</small>
                     </div>
@@ -201,7 +204,7 @@ use App\Models\Plataforma;
                     <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar plataforma</span></button>
                 </form>
             </div>
-        </div>
+        </details>
     </div>
 </div>
 

@@ -8,6 +8,7 @@ $rolBadge = static function (string $rol): string {
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="h3 mb-0">Usuarios del sistema</h1>
+    <a href="<?= e(url('/usuarios?nuevo=1')) ?>#nuevo-usuario" class="btn btn-primary" data-open-panel="nuevo-usuario"><?= icon('plus') ?><span class="button-label">Nuevo usuario</span></a>
         <small class="text-secondary">Gestiona quién puede acceder al panel y sus contraseñas.</small>
     </div>
     <div class="d-flex gap-2">
@@ -16,12 +17,12 @@ $rolBadge = static function (string $rol): string {
     </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-3 gs-page-layout">
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table data-responsive-cards data-mobile-primary="0,1,2,4" class="table table-striped align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Usuario</th>
@@ -56,14 +57,14 @@ $rolBadge = static function (string $rol): string {
                                             <span class="badge text-bg-danger">Inactivo</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><small class="text-secondary"><?= e((string) ($item['created_at'] ?? '')) ?></small></td>
+                                    <td><small class="text-secondary"><?= e(display_date($item['created_at'] ?? null)) ?></small></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/usuarios/editar/' . $uid)) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
 
                                             <?php if ($isActive): ?>
                                                 <form method="post" action="<?= e(url('/usuarios/estado/' . $uid)) ?>"
-                                                      onsubmit="return confirm('¿Desactivar el acceso de este usuario?')">
+                                                      data-confirm="<?= e('Desactivar el acceso del usuario «' . $item['username'] . '». Sus registros se conservan y podrás volver a activarlo.') ?>" data-confirm-title="Confirmar desactivación" data-confirm-button="Desactivar" data-confirm-danger="1">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="activo" value="0">
                                                     <button class="btn btn-outline-warning btn-sm" type="submit"
@@ -78,7 +79,7 @@ $rolBadge = static function (string $rol): string {
                                             <?php endif; ?>
 
                                             <form method="post" action="<?= e(url('/usuarios/eliminar/' . $uid)) ?>"
-                                                  onsubmit="return confirm('¿Eliminar definitivamente a este usuario?')">
+                                                  class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar definitivamente al usuario «' . $item['username'] . '». Perderá el acceso al sistema.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar usuario" data-confirm-danger="1">
                                                 <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit"
                                                     <?= $isSelf || $isLastAdmin ? 'disabled title="No disponible para tu cuenta o el último admin"' : '' ?>><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
@@ -94,10 +95,10 @@ $rolBadge = static function (string $rol): string {
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm">
+    <div class="col-lg-4 gs-create-column">
+        <details class="card gs-form-panel shadow-sm" id="nuevo-usuario" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/usuarios' ? 'open' : '' ?>>
+            <summary>Nuevo usuario</summary>
             <div class="card-body">
-                <h2 class="h5 mb-3">Nuevo usuario</h2>
                 <form method="post" action="<?= e(url('/usuarios')) ?>" autocomplete="off">
                     <?= csrf_field() ?>
                     <div class="mb-3">
@@ -127,6 +128,6 @@ $rolBadge = static function (string $rol): string {
                     <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('plus') ?><span class="button-label">Crear usuario</span></button>
                 </form>
             </div>
-        </div>
+        </details>
     </div>
 </div>

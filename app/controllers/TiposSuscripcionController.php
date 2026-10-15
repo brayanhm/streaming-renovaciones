@@ -35,7 +35,7 @@ class TiposSuscripcionController extends Controller
         }
 
         $this->render('modalidades/index', [
-            'pageTitle' => 'Tipos de suscripcion',
+            'pageTitle' => 'Planes de suscripción',
             'rows' => $rows,
             'platforms' => $platforms,
             'search' => $search,
@@ -62,13 +62,13 @@ class TiposSuscripcionController extends Controller
             $created = $this->tiposSuscripcion->ensureTemplateDurations($payload, $duraciones);
             clear_old();
             if ($created > 1) {
-                flash('success', 'Tipo de suscripcion creado con ' . $created . ' duraciones automaticamente.');
+                flash('success', 'Plan de suscripción creado con ' . $created . ' duraciones automaticamente.');
             } else {
-                flash('success', 'Tipo de suscripcion creado.');
+                flash('success', 'Plan de suscripción creado.');
             }
         } catch (\Throwable $exception) {
             set_old($payload);
-            flash('danger', 'No se pudo crear el tipo de suscripcion: ' . $exception->getMessage());
+            flash('danger', 'No se pudo crear el plan de suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));
@@ -78,15 +78,17 @@ class TiposSuscripcionController extends Controller
     {
         $item = $this->tiposSuscripcion->find($id);
         if ($item === null) {
-            flash('danger', 'Tipo de suscripcion no encontrado.');
+            flash('danger', 'Plan de suscripción no encontrado.');
             $this->redirect('/tipos-suscripcion');
         }
 
         $platforms = $this->plataformas->all();
         $returnPlatformId = $this->resolvePlatformFilterId();
 
+        $item = restore_form_values($item, '/tipos-suscripcion/actualizar/' . $id);
+
         $this->render('modalidades/edit', [
-            'pageTitle' => 'Editar tipo de suscripcion',
+            'pageTitle' => 'Editar plan de suscripción',
             'item' => $item,
             'platforms' => $platforms,
             'returnPlatformId' => $returnPlatformId,
@@ -130,6 +132,7 @@ class TiposSuscripcionController extends Controller
     {
         $platformId = (int) ($_POST['plataforma_id'] ?? 0);
         if ($platformId <= 0 || $this->plataformas->find($platformId) === null) {
+            set_field_errors(['plataforma_id' => 'Selecciona una plataforma existente.']);
             flash('danger', 'Selecciona una plataforma valida.');
             $this->redirect('/tipos-suscripcion/precios');
         }
@@ -195,7 +198,7 @@ class TiposSuscripcionController extends Controller
     {
         $returnPlatformId = $this->resolveReturnPlatformId();
         if ($this->tiposSuscripcion->find($id) === null) {
-            flash('danger', 'Tipo de suscripcion no encontrado.');
+            flash('danger', 'Plan de suscripción no encontrado.');
             $this->redirect($this->buildIndexPath($returnPlatformId));
         }
 
@@ -207,9 +210,11 @@ class TiposSuscripcionController extends Controller
         try {
             $this->tiposSuscripcion->update($id, $payload);
             clear_old();
-            flash('success', 'Tipo de suscripcion actualizado.');
+            flash('success', 'Plan de suscripción actualizado.');
         } catch (\Throwable $exception) {
-            flash('danger', 'No se pudo actualizar el tipo de suscripcion: ' . $exception->getMessage());
+            set_old($payload);
+            flash('danger', 'No se pudo actualizar el plan de suscripción: ' . $exception->getMessage());
+            $this->redirect($this->buildEditPath($id, $returnPlatformId));
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));
@@ -219,19 +224,19 @@ class TiposSuscripcionController extends Controller
     {
         $returnPlatformId = $this->resolveReturnPlatformId();
         if ($this->tiposSuscripcion->find($id) === null) {
-            flash('danger', 'Tipo de suscripcion no encontrado.');
+            flash('danger', 'Plan de suscripción no encontrado.');
             $this->redirect($this->buildIndexPath($returnPlatformId));
         }
 
         try {
             $this->tiposSuscripcion->delete($id);
             audit('plan.eliminar', 'ID ' . $id);
-            flash('success', 'Tipo de suscripcion eliminado.');
+            flash('success', 'Plan de suscripción eliminado.');
         } catch (\Throwable $exception) {
             $isFk = str_contains($exception->getMessage(), '1451') || stripos($exception->getMessage(), 'foreign key') !== false;
             flash('danger', $isFk
                 ? 'No se puede eliminar este plan porque tiene suscripciones asociadas. Reasígnalas o elimínalas primero.'
-                : 'No se pudo eliminar el tipo de suscripcion: ' . $exception->getMessage());
+                : 'No se pudo eliminar el plan de suscripción: ' . $exception->getMessage());
         }
 
         $this->redirect($this->buildIndexPath($returnPlatformId));
@@ -252,6 +257,7 @@ class TiposSuscripcionController extends Controller
         $normalizedCosto = normalize_decimal_amount($payload['costo']);
         if ($normalizedCosto === null) {
             set_old($payload);
+            set_field_errors(['costo' => 'Introduce un costo válido mayor que cero.']);
             flash('danger', 'El costo debe ser un numero valido mayor a 0.');
 
             return null;
@@ -260,6 +266,7 @@ class TiposSuscripcionController extends Controller
         $normalizedPrecio = normalize_decimal_amount($payload['precio']);
         if ($normalizedPrecio === null) {
             set_old($payload);
+            set_field_errors(['precio' => 'Introduce un precio válido mayor que cero.']);
             flash('danger', 'El precio de venta debe ser un numero valido mayor a 0.');
 
             return null;
@@ -276,6 +283,14 @@ class TiposSuscripcionController extends Controller
             $precio <= 0
         ) {
             set_old($payload);
+            set_field_errors(array_filter([
+                'plataforma_id' => $payload['plataforma_id'] <= 0 ? 'Selecciona una plataforma.' : '',
+                'nombre_modalidad' => $payload['nombre_modalidad'] === '' ? 'Completa el nombre del plan.' : '',
+                'tipo_cuenta' => !in_array($payload['tipo_cuenta'], Modalidad::TIPOS_CUENTA, true) ? 'Selecciona un tipo de cuenta válido.' : '',
+                'duracion_meses' => $payload['duracion_meses'] <= 0 ? 'La duración debe ser mayor que cero.' : '',
+                'costo' => $costo <= 0 ? 'El costo debe ser mayor que cero.' : '',
+                'precio' => $precio <= 0 ? 'El precio debe ser mayor que cero.' : '',
+            ]));
             flash(
                 'danger',
                 'Completa todos los campos obligatorios. Costo, precio de venta y duracion deben ser mayores a 0.'
@@ -287,6 +302,7 @@ class TiposSuscripcionController extends Controller
         $plataforma = $this->plataformas->find($payload['plataforma_id']);
         if ($plataforma === null) {
             set_old($payload);
+            set_field_errors(['plataforma_id' => 'Selecciona una plataforma existente.']);
             flash('danger', 'La plataforma seleccionada no existe.');
 
             return null;
@@ -295,13 +311,15 @@ class TiposSuscripcionController extends Controller
         $dispositivos = $payload['dispositivos'] === '' ? null : (int) $payload['dispositivos'];
         if ($payload['tipo_cuenta'] === 'POR_DISPOSITIVOS' && ($dispositivos === null || $dispositivos <= 0)) {
             set_old($payload);
-            flash('danger', 'Si eliges "POR_DISPOSITIVOS", debes indicar la cantidad de dispositivos.');
+            set_field_errors(['dispositivos' => 'Indica la cantidad de dispositivos.']);
+            flash('danger', 'Para una cuenta por dispositivos debes indicar la cantidad de dispositivos.');
 
             return null;
         }
 
         if ($dispositivos !== null && $dispositivos <= 0) {
             set_old($payload);
+            set_field_errors(['dispositivos' => 'La cantidad de dispositivos debe ser mayor que cero.']);
             flash('danger', 'La cantidad de dispositivos debe ser mayor a 0.');
 
             return null;
@@ -310,6 +328,7 @@ class TiposSuscripcionController extends Controller
         $allowedDurations = Plataforma::parseDuracionesDisponibles((string) ($plataforma['duraciones_disponibles'] ?? ''));
         if ($allowedDurations !== [] && !in_array($payload['duracion_meses'], $allowedDurations, true)) {
             set_old($payload);
+            set_field_errors(['duracion_meses' => 'Duraciones permitidas: ' . implode(', ', $allowedDurations) . ' meses.']);
             flash(
                 'danger',
                 'La duracion no esta permitida para esta plataforma. Valores permitidos: ' . implode(', ', $allowedDurations) . '.'

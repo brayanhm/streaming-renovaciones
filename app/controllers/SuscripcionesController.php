@@ -105,6 +105,7 @@ class SuscripcionesController extends Controller
 
     public function edit(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         $item = $this->suscripciones->find($id);
         if ($item === null) {
             flash('danger', 'Suscripcion no encontrada.');
@@ -114,6 +115,8 @@ class SuscripcionesController extends Controller
         $clientes = $this->clientes->all();
         $plataformas = $this->plataformas->all();
         $tiposSuscripcion = $this->modalidades->all();
+
+        $item = restore_form_values($item, '/suscripciones/actualizar/' . $id);
 
         $this->render('suscripciones/edit', [
             'pageTitle' => 'Editar suscripcion',
@@ -127,6 +130,7 @@ class SuscripcionesController extends Controller
 
     public function update(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         if ($this->suscripciones->find($id) === null) {
             flash('danger', 'Suscripcion no encontrada.');
             $this->redirect('/suscripciones');
@@ -142,7 +146,9 @@ class SuscripcionesController extends Controller
             clear_old();
             flash('success', 'Suscripcion actualizada.');
         } catch (\Throwable $exception) {
+            set_old($payload);
             flash('danger', 'No se pudo actualizar la suscripcion: ' . $exception->getMessage());
+            $this->redirect('/suscripciones/editar/' . $id);
         }
 
         $this->redirect('/suscripciones');
@@ -150,6 +156,7 @@ class SuscripcionesController extends Controller
 
     public function updateDueDate(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         $subscription = $this->suscripciones->find($id);
         if ($subscription === null) {
             flash('danger', 'Suscripcion no encontrada.');
@@ -192,6 +199,7 @@ class SuscripcionesController extends Controller
 
     public function destroy(int $id): void
     {
+        $this->redirectSharedSubscription($id);
         if ($this->suscripciones->find($id) === null) {
             flash('danger', 'Suscripcion no encontrada.');
             $this->redirect('/suscripciones');
@@ -206,6 +214,15 @@ class SuscripcionesController extends Controller
         }
 
         $this->redirect('/suscripciones');
+    }
+
+    private function redirectSharedSubscription(int $id): void
+    {
+        $account = $this->suscripciones->sharedAccount($id);
+        if ($account !== null) {
+            flash('info', 'Esta asignación se administra desde su cuenta de ChatGPT o Claude.');
+            $this->redirect('/' . strtolower($account['servicio']) . '/' . (int) $account['id']);
+        }
     }
 
     private function collectPayload(): ?array
@@ -243,6 +260,7 @@ class SuscripcionesController extends Controller
         $dueDate = parse_ymd_date($payload['fecha_vencimiento']);
         if ($startDate === null || $dueDate === null) {
             set_old($payload);
+            set_field_errors(['fecha_vencimiento' => 'Revisa ambas fechas y usa el formato indicado.']);
             flash('danger', 'Las fechas deben ser validas y usar el formato YYYY-MM-DD.');
 
             return null;
@@ -250,6 +268,7 @@ class SuscripcionesController extends Controller
 
         if ($startDate > $dueDate) {
             set_old($payload);
+            set_field_errors(['fecha_vencimiento' => 'El vencimiento debe ser igual o posterior al inicio.']);
             flash('danger', 'La fecha de inicio no puede ser posterior a la fecha de vencimiento.');
 
             return null;
@@ -260,6 +279,7 @@ class SuscripcionesController extends Controller
 
         if ($this->clientes->find($payload['cliente_id']) === null) {
             set_old($payload);
+            set_field_errors(['cliente_id' => 'Selecciona un cliente existente.']);
             flash('danger', 'El cliente seleccionado no existe.');
 
             return null;
@@ -268,6 +288,7 @@ class SuscripcionesController extends Controller
         $modalidad = $this->modalidades->find($payload['modalidad_id']);
         if ($modalidad === null || (int) $modalidad['plataforma_id'] !== $payload['plataforma_id']) {
             set_old($payload);
+            set_field_errors(['modalidad_id' => 'Selecciona un plan de esta plataforma.']);
             flash('danger', 'El plan seleccionado no corresponde a la plataforma elegida.');
 
             return null;
@@ -276,6 +297,7 @@ class SuscripcionesController extends Controller
         $plataforma = $this->plataformas->find($payload['plataforma_id']);
         if ($plataforma === null) {
             set_old($payload);
+            set_field_errors(['plataforma_id' => 'Selecciona una plataforma existente.']);
             flash('danger', 'La plataforma seleccionada no existe.');
 
             return null;
@@ -291,6 +313,7 @@ class SuscripcionesController extends Controller
             if ($payload['usuario_proveedor'] === '') {
                 set_old($payload);
                 $fieldLabel = $datoRenovacion === 'CORREO' ? 'correo' : 'usuario';
+                set_field_errors(['usuario_proveedor' => 'Completa el dato necesario para renovar.']);
                 flash('danger', 'Debes indicar el ' . $fieldLabel . ' de la cuenta para renovar esta plataforma.');
 
                 return null;
@@ -298,6 +321,7 @@ class SuscripcionesController extends Controller
 
             if ($datoRenovacion === 'CORREO' && filter_var($payload['usuario_proveedor'], FILTER_VALIDATE_EMAIL) === false) {
                 set_old($payload);
+                set_field_errors(['usuario_proveedor' => 'Introduce un correo válido.']);
                 flash('danger', 'Debes ingresar un correo valido para la cuenta de renovacion.');
 
                 return null;
@@ -311,6 +335,7 @@ class SuscripcionesController extends Controller
             : normalize_decimal_amount($payload['precio_venta']);
         if ($payload['precio_venta'] !== '' && $normalizedPrice === null) {
             set_old($payload);
+            set_field_errors(['precio_venta' => 'Introduce un precio válido mayor que cero.']);
             flash('danger', 'El precio de venta debe ser un numero valido mayor a 0.');
 
             return null;
@@ -321,6 +346,7 @@ class SuscripcionesController extends Controller
             : normalize_decimal_amount($payload['costo_base']);
         if ($payload['costo_base'] !== '' && $normalizedCost === null) {
             set_old($payload);
+            set_field_errors(['costo_base' => 'Introduce un costo válido mayor que cero.']);
             flash('danger', 'El costo debe ser un numero valido mayor a 0.');
 
             return null;
@@ -334,12 +360,14 @@ class SuscripcionesController extends Controller
             : (float) $normalizedPrice;
         if ($costValue <= 0) {
             set_old($payload);
+            set_field_errors(['costo_base' => 'Introduce un costo válido mayor que cero.']);
             flash('danger', 'El costo debe ser mayor a 0.');
 
             return null;
         }
         if ($priceValue <= 0) {
             set_old($payload);
+            set_field_errors(['precio_venta' => 'Introduce un precio válido mayor que cero.']);
             flash('danger', 'El precio de venta debe ser mayor a 0.');
 
             return null;

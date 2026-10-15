@@ -13,13 +13,19 @@
         });
     });
 
+    document.querySelectorAll('[data-occupancy-adjust]').forEach(form => {
+        const updateConfirmation = () => {
+            const value = form.elements.ocupados.value;
+            const unit = value === '1' ? form.dataset.occupationUnit.slice(0, -1) : form.dataset.occupationUnit;
+            form.dataset.confirm = `La ocupación de ${form.dataset.accountLabel} cambiará de ${form.elements.ocupados_antes.value} a ${value} ${unit}. Las ventas y los pagos se conservan.`;
+        };
+        form.elements.ocupados.addEventListener('input', updateConfirmation);
+        updateConfirmation();
+    });
+
     document.querySelectorAll('[data-chatgpt-submit]').forEach(form => {
         form.addEventListener('submit', event => {
             if (form.dataset.submitting === '1') {
-                event.preventDefault();
-                return;
-            }
-            if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
                 event.preventDefault();
                 return;
             }
@@ -59,6 +65,10 @@
         }
         copyStatus.textContent = copied ? 'Texto copiado. Ya puedes pegarlo en WhatsApp.' : 'Selecciona el texto y usa Ctrl+C para copiarlo. En celular, mantén presionado y elige Copiar.';
         copyStatus.className = copied ? 'small text-success mb-2' : 'small text-warning mb-2';
+        if (window.GhostAlerts) {
+            if (copied) GhostAlerts.success('Texto copiado al portapapeles.');
+            else GhostAlerts.warning('El texto está disponible para copiar manualmente. La ocupación se conserva.', 'Copia manual');
+        }
         if (!copied) {
             copyBox.scrollIntoView({behavior: 'smooth', block: 'center'});
             copyOutput.focus({preventScroll: true});

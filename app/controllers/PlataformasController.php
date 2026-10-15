@@ -62,6 +62,8 @@ class PlataformasController extends Controller
             $this->redirect('/plataformas');
         }
 
+        $item = restore_form_values($item, '/plataformas/actualizar/' . $id);
+
         $this->render('plataformas/edit', [
             'pageTitle' => 'Editar plataforma',
             'item' => $item,
@@ -90,7 +92,9 @@ class PlataformasController extends Controller
             }
             clear_old();
         } catch (\Throwable $exception) {
+            set_old($payload);
             flash('danger', 'No se pudo actualizar la plataforma: ' . $exception->getMessage());
+            $this->redirect('/plataformas/editar/' . $id);
         }
 
         $this->redirect('/plataformas');
@@ -133,6 +137,7 @@ class PlataformasController extends Controller
 
         if ($payload['nombre'] === '' || !in_array($payload['tipo_servicio'], ['RENOVABLE', 'DESECHABLE'], true)) {
             set_old($payload);
+            set_field_errors(['nombre' => 'Completa el nombre y selecciona un tipo de servicio.']);
             flash('danger', 'Completa el nombre y el tipo de servicio de la plataforma.');
 
             return null;
@@ -141,6 +146,7 @@ class PlataformasController extends Controller
         $normalizedDurations = Plataforma::normalizeDuracionesDisponibles($payload['duraciones_disponibles']);
         if ($payload['duraciones_disponibles'] !== '' && $normalizedDurations === null) {
             set_old($payload);
+            set_field_errors(['duraciones_disponibles' => 'Usa meses positivos separados por comas: 1,3,7.']);
             flash('danger', 'Duraciones no válidas. Usa meses positivos separados por comas, por ejemplo: 1,3,7.');
 
             return null;
@@ -152,6 +158,7 @@ class PlataformasController extends Controller
             !in_array($payload['dato_renovacion'], ['USUARIO', 'CORREO'], true)
         ) {
             set_old($payload);
+            set_field_errors(['dato_renovacion' => 'Selecciona usuario o correo.']);
             flash('danger', 'Para plataformas renovables debes definir si la renovación se realiza por usuario o por correo.');
 
             return null;

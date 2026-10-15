@@ -8,7 +8,8 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Clientes</h1>
-    <div class="d-flex gap-2">
+    <div class="gs-page-actions"><a href="<?= e(url('/clientes?nuevo=1')) ?>#nuevo-cliente" class="btn btn-primary" data-open-panel="nuevo-cliente"><?= icon('plus') ?><span class="button-label">Nuevo cliente</span></a>
+        <a href="<?= e(url('/clientes?nuevo=antiguo')) ?>#cliente-antiguo" class="btn btn-outline-primary" data-open-panel="cliente-antiguo">Cliente existente</a>
         <?php if ((int) ($missingContactCount ?? 0) > 0): ?>
             <a href="<?= e(url('/clientes/completar')) ?>" class="btn btn-warning"><?= icon('users') ?><span class="button-label">Completar faltantes (<?= (int) $missingContactCount ?>)</span></a>
         <?php endif; ?>
@@ -16,13 +17,14 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
     </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-3 gs-page-layout">
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body">
-                <form method="get" action="<?= e(url('/clientes')) ?>" class="row g-2 mb-3">
+                <form method="get" action="<?= e(url('/clientes')) ?>" class="row g-2 align-items-end mb-3">
                     <div class="col-12 col-md-9">
-                        <input
+                        <label class="form-label" for="buscar-clientes">Buscar clientes</label>
+                        <input id="buscar-clientes"
                             type="text"
                             class="form-control form-control-lg"
                             name="q"
@@ -34,9 +36,10 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         <button class="btn btn-primary btn-lg" type="submit"><?= icon('search') ?><span class="button-label">Buscar</span></button>
                     </div>
                 </form>
+                <?php if (($search ?? '') !== ''): ?><p class="small text-secondary">Filtros activos. <a href="<?= e(url('/clientes')) ?>">Limpiar filtros</a></p><?php endif; ?>
 
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
+                    <table data-responsive-cards data-mobile-primary="0,1,2,3,5" class="table table-striped align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Contacto</th>
@@ -49,7 +52,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                         </thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="6" class="text-center text-secondary py-4">No hay clientes registrados.</td></tr>
+                                <tr><td colspan="6" class="text-center text-secondary py-4"><?= ($search ?? '') !== '' ? 'No encontramos clientes para esta búsqueda.' : 'Todavía no hay clientes. Usa «Nuevo cliente» para comenzar.' ?></td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
                                 <tr>
@@ -64,7 +67,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>"><?= icon('plus') ?><span class="button-label">Asignar vigencia</span></a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
-                                            <form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" onsubmit="return confirm('Eliminar este cliente?')">
+                                            <form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar a «' . $item['nombre'] . '» (' . $item['telefono'] . '). También se eliminarán sus suscripciones asociadas. Esta acción no se puede deshacer desde el sistema.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar cliente" data-confirm-danger="1">
                                                 <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
                                             </form>
@@ -81,11 +84,11 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                     <small class="text-secondary"><?= e((string) ($totalRows ?? 0)) ?> clientes en total</small>
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item <?= ($page ?? 1) <= 1 ? 'disabled' : '' ?>">
-                            <a class="page-link" href="<?= e(url('/clientes?' . $pq . '&page=' . (($page ?? 1) - 1))) ?>">‹</a>
+                            <a class="page-link" href="<?= e(url('/clientes?' . $pq . '&page=' . (($page ?? 1) - 1))) ?>" aria-label="Página anterior">‹</a>
                         </li>
                         <li class="page-item disabled"><span class="page-link"><?= e((string) ($page ?? 1)) ?> / <?= e((string) ($totalPages ?? 1)) ?></span></li>
                         <li class="page-item <?= ($page ?? 1) >= ($totalPages ?? 1) ? 'disabled' : '' ?>">
-                            <a class="page-link" href="<?= e(url('/clientes?' . $pq . '&page=' . (($page ?? 1) + 1))) ?>">›</a>
+                            <a class="page-link" href="<?= e(url('/clientes?' . $pq . '&page=' . (($page ?? 1) + 1))) ?>" aria-label="Página siguiente">›</a>
                         </li>
                     </ul>
                 </div>
@@ -94,15 +97,15 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm">
+    <div class="col-lg-4 gs-create-column">
+        <details class="card gs-form-panel shadow-sm" id="nuevo-cliente" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/clientes' ? 'open' : '' ?>>
+            <summary>Nuevo cliente</summary>
             <div class="card-body">
-                <h2 class="h5 mb-3">Nuevo cliente</h2>
                 <form method="post" action="<?= e(url('/clientes')) ?>" id="create-client-form">
                     <?= csrf_field() ?>
                     <?php if (!$hasSubscriptionCatalog): ?>
                         <div class="alert alert-warning">
-                            Antes de crear clientes, registra al menos una plataforma y un tipo de suscripción.
+                            Antes de crear clientes, registra al menos una plataforma y un plan de suscripción.
                         </div>
                     <?php endif; ?>
                     <div class="mb-3">
@@ -144,11 +147,11 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                             <?php foreach (($plataformas ?? []) as $plataforma): ?>
                                 <option
                                     value="<?= e((string) $plataforma['id']) ?>"
-                                    data-tipo="<?= e((string) $plataforma['tipo_servicio']) ?>"
+                                    data-tipo="<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>"
                                     data-dato-renovacion="<?= e((string) Plataforma::normalizeDatoRenovacion((string) ($plataforma['dato_renovacion'] ?? ''), (string) ($plataforma['tipo_servicio'] ?? ''))) ?>"
                                     <?= $oldPlat === (string) $plataforma['id'] ? 'selected' : '' ?>
                                 >
-                                    <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
+                                    <?= e((string) $plataforma['nombre']) ?> (<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -166,7 +169,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                 >
                                     <?= e((string) $modalidad['nombre_modalidad']) ?> -
                                     <?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?> -
-                                    <?= e((string) max(1, (int) ($modalidad['duracion_meses'] ?? 1))) ?> mes(es)
+                                    <?= e(duration_label(max(1, (int) ($modalidad['duracion_meses'] ?? 1)))) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -187,11 +190,11 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                     <button type="submit" class="btn btn-success w-100 btn-lg" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>><?= icon('save') ?><span class="button-label">Guardar cliente</span></button>
                 </form>
             </div>
-        </div>
+        </details>
 
-        <div class="card shadow-sm mt-3">
+        <details class="card gs-form-panel shadow-sm mt-3" id="cliente-antiguo" data-form-panel <?= ($_GET['nuevo'] ?? '') === 'antiguo' || ($_SESSION['_old_action'] ?? '') === '/clientes/antiguo' ? 'open' : '' ?>>
+            <summary>Agregar cliente antiguo</summary>
             <div class="card-body">
-                <h2 class="h5 mb-3">Agregar cliente antiguo</h2>
                 <form method="post" action="<?= e(url('/clientes/antiguo')) ?>">
                     <?= csrf_field() ?>
                     <?php if (!$hasSubscriptionCatalog): ?>
@@ -230,7 +233,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                     value="<?= e((string) $plataforma['id']) ?>"
                                     <?= $oldPlatAntiguo === (string) $plataforma['id'] ? 'selected' : '' ?>
                                 >
-                                    <?= e((string) $plataforma['nombre']) ?> (<?= e((string) $plataforma['tipo_servicio']) ?>)
+                                    <?= e((string) $plataforma['nombre']) ?> (<?= e(service_type_label((string) $plataforma['tipo_servicio'])) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -265,7 +268,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                     <button type="submit" class="btn btn-outline-primary w-100" <?= !$hasSubscriptionCatalog ? 'disabled' : '' ?>><?= icon('save') ?><span class="button-label">Guardar cliente antiguo</span></button>
                 </form>
             </div>
-        </div>
+        </details>
     </div>
 </div>
 

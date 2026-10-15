@@ -1,0 +1,39 @@
+.swal2-container.gs-dialog-container,
+.swal2-container.gs-toast-container { z-index: 2100; font-family: var(--gs-font); }
+.swal2-popup.gs-dialog {
+    max-width: calc(100vw - 2rem);
+    border: 1px solid var(--gs-border);
+    border-top: 4px solid var(--gs-primary);
+    border-radius: 12px;
+    padding-bottom: 1.5rem;
+    box-shadow: 0 16px 48px rgba(16, 40, 63, .16);
+}
+.gs-dialog .gs-dialog-title { color: var(--gs-text); font-size: 1.35rem; font-weight: 650; padding-top: 1rem; }
+.gs-dialog .gs-dialog-text { color: var(--gs-dim); font-size: .95rem; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+.gs-dialog .swal2-actions { gap: .65rem; margin-top: 1.5rem; }
+.gs-dialog .swal2-actions .btn { margin: 0; min-height: 42px; padding: .55rem 1rem; }
+.gs-dialog .swal2-actions .btn:focus-visible { outline: 3px solid var(--gs-cyan); outline-offset: 3px; box-shadow: none; }
+.swal2-container.gs-toast-container { padding: 4rem .9rem .9rem; }
+.swal2-popup.gs-toast {
+    border: 1px solid var(--gs-border);
+    border-left: 4px solid var(--gs-primary);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(16, 40, 63, .12);
+    max-width: calc(100vw - 1.8rem);
+}
+.gs-toast.gs-toast-success { border-left-color: var(--gs-success); }
+.gs-toast.gs-toast-error { border-left-color: var(--gs-danger); }
+.gs-toast.gs-toast-warning { border-left-color: var(--gs-warning); }
+.gs-toast.swal2-toast .swal2-title { color: var(--gs-text); font-size: .9rem; font-weight: 550; line-height: 1.5; overflow-wrap: anywhere; }
+.gs-toast .swal2-timer-progress-bar { background: var(--gs-primary); opacity: .35; }
+.gs-toast .swal2-close { color: var(--gs-dim); border-radius: 4px; }
+.gs-toast .swal2-close:focus-visible { outline: 2px solid var(--gs-primary); outline-offset: 1px; box-shadow: none; }
+@media (max-width: 575.98px) {
+    .gs-dialog .gs-dialog-title { font-size: 1.2rem; }
+    .gs-dialog .gs-dialog-text { margin-left: 1rem; margin-right: 1rem; }
+    .gs-dialog .swal2-actions { flex-wrap: wrap; padding: 0 .8rem; }
+    .swal2-popup.gs-toast { width: calc(100vw - 1.8rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .swal2-container *, .swal2-container *::before, .swal2-container *::after { animation: none !important; transition: none !important; }
+}

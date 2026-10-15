@@ -76,12 +76,12 @@ function runDistributionTests(PDO $pdo, string $date, callable $test): void
             clEq($model->find($a)['ocupados'], 1, 'Volver a seleccionarla no reinicia cupos.');
         });
 
-        $test("distribución {$label}: capacidad configurable, cuenta llena y excepción administrativa", static function () use ($pdo, $class, $create, $token, $date): void {
+        $test("distribución {$label}: capacidad configurable, cuenta vendida y excepción administrativa", static function () use ($pdo, $class, $create, $token, $date): void {
             $model = new $class($pdo);
             $id = $create($model, 1);
             $model->selectDistribution($id);
             $model->sell($id, 1, $date, $token());
-            clEq($model->find($id)['estado_distribucion'], 'Llena', 'Llegar a la capacidad cambia el estado.');
+            clEq($model->find($id)['estado_distribucion'], 'Vendida', 'Llegar a la capacidad cambia el estado.');
             clReject(static fn() => $model->sell($id, 1, $date, $token()), 'Los vendedores no pueden superar el límite.');
             $model->sell($id, 1, $date, $token(), true);
             clEq($model->find($id)['ocupados'], 2, 'El administrador puede superar el límite.');
@@ -95,6 +95,33 @@ function runDistributionTests(PDO $pdo, string $date, callable $test): void
             clEq($model->find($id)['capacidad'], 4, 'Una capacidad inválida no modifica la cuenta.');
         });
 
+        $test("distribución {$label}: Vendida se conserva al cambiar selección o bloquear el plan y termina al reiniciar cupos", static function () use ($pdo, $class, $create, $token, $date): void {
+            $model = new $class($pdo);
+            $id = $create($model, 1);
+            $other = $create($model);
+            $model->selectDistribution($id);
+            $model->sell($id, 1, $date, $token());
+            $model->selectDistribution($other);
+            clEq($model->find($id)['estado_distribucion'], 'Vendida', 'Una cuenta vendida no debe volver a reserva al elegir otra.');
+            clEq($model->find($id)['distribucion_actual'], false, 'El estado Vendida no la mantiene seleccionada.');
+            clReject(static fn() => $model->sell($id, 1, $date, $token(), true), 'Vendida no permite vender fuera de la selección.');
+            $model->setFreePlan($id, true);
+            clEq($model->find($id)['estado_distribucion'], 'Vendida', 'El plan y la ocupación son estados separados.');
+            clEq($model->find($id)['estado_periodo'], 'GRATIS', 'La marca Gratis sigue vigente.');
+            clReject(static fn() => $model->sell($id, 1, $date, $token(), true), 'Una cuenta vendida y Gratis sigue bloqueada para el administrador.');
+            $model->setFreePlan($id, false);
+            $model->selectDistribution($id);
+            $model->setActive($id, false);
+            clEq($model->find($id)['estado_distribucion'], 'Vendida', 'Desactivar no borra que todos los cupos están ocupados.');
+            clReject(static fn() => $model->sell($id, 1, $date, $token(), true), 'Vendida no evita el bloqueo de una cuenta inactiva.');
+            $model->setActive($id, true);
+            $model->startCycle($id, true, 'fixture', $token(), $model->currentCycleId($id));
+            clEq($model->find($id)['ocupados'], 0, 'Un nuevo ciclo reinicia la ocupación.');
+            clEq($model->find($id)['estado_distribucion'], 'En distribución', 'Una cuenta reutilizada deja de estar Vendida.');
+            clEq(count($model->sales($id)), 1, 'Se conserva la venta del ciclo anterior.');
+            clEq(count($model->payments($id)), 1, 'Los cambios de estado no crean ni borran pagos.');
+        });
+
         $test("distribución {$label}: Gratis manual bloquea ventas y restaurar conserva cupos", static function () use ($pdo, $class, $create, $token, $date): void {
             $model = new $class($pdo);
             $id = $create($model);
@@ -104,7 +131,7 @@ function runDistributionTests(PDO $pdo, string $date, callable $test): void
             clEq($model->find($id)['estado_periodo'], 'GRATIS', 'Debe mostrar Gratis inmediatamente.');
             clReject(static fn() => $model->sell($id, 1, $date, $token(), true), 'Gratis bloquea incluso al administrador.');
             clReject(static fn() => $model->selectDistribution($id), 'No puede seleccionar Gratis.');
-            clReject(static fn() => $model->startCycle($id, true, 'fixture', $token()), 'No puede reiniciar Gratis.');
+            clReject(static fn() => $model->startCycle($id, true, 'fixture', $token(), $model->currentCycleId($id)), 'No puede reiniciar Gratis.');
             $model->setFreePlan($id, false);
             clEq($model->find($id)['ocupados'], 1, 'Restaurar no reinicia cupos.');
             clEq(count($model->payments($id)), 1, 'Restaurar un plan vigente no inventa pagos.');
@@ -122,19 +149,19 @@ function runDistributionTests(PDO $pdo, string $date, callable $test): void
             $model->sell($id, 1, $date, $token());
             $history = $model->sales($id);
             $cycleToken = $token();
-            clReject(static fn() => $model->startCycle($id, false, 'fixture', $cycleToken), 'El cierre de sesiones es obligatorio.');
+            clReject(static fn() => $model->startCycle($id, false, 'fixture', $cycleToken, $model->currentCycleId($id)), 'El cierre de sesiones es obligatorio.');
             clEq($model->sales($id), $history, 'La falta de confirmación no altera ventas.');
-            clEq($model->startCycle($id, true, 'fixture', $cycleToken), 1, 'Debe liberar la ocupación actual.');
+            clEq($model->startCycle($id, true, 'fixture', $cycleToken, $model->currentCycleId($id)), 1, 'Debe liberar la ocupación actual.');
             clEq($model->find($id)['ocupados'], 0, 'El ciclo comienza vacío.');
             $model->sell($id, 1, $date, $token());
             $model->selectDistribution($other);
-            clEq($model->startCycle($id, true, 'fixture', $cycleToken), 1, 'Repetir devuelve el resultado original.');
+            clEq($model->startCycle($id, true, 'fixture', $cycleToken, $model->currentCycleId($id)), 1, 'Repetir devuelve el resultado original.');
             clEq($model->find($id)['ocupados'], 1, 'Repetir el ciclo no libera una venta nueva.');
             clEq((int) $model->currentDistribution()['id'], $other, 'Repetir un ciclo viejo no cambia la selección.');
             clEq(count($model->cycles($id)), 1, 'El ciclo no debe duplicarse.');
             clEq(count($model->sales($id)), 2, 'Se conserva todo el historial.');
             clEq(count($model->payments($id)), 1, 'El ciclo no registra un pago ficticio.');
-            clReject(static fn() => $model->startCycle($other, true, 'fixture', $cycleToken), 'El token no puede usarse en otra cuenta.');
+            clReject(static fn() => $model->startCycle($other, true, 'fixture', $cycleToken, $model->currentCycleId($other)), 'El token no puede usarse en otra cuenta.');
         });
 
         $test("distribución {$label}: vigencia terminada exige pago y no permite restaurar ni editar fechas para vender", static function () use ($pdo, $class, $create, $token, $date): void {
@@ -159,12 +186,13 @@ function runDistributionTests(PDO $pdo, string $date, callable $test): void
 
     $test('distribución ChatGPT: vender dos dispositivos exige dos cupos y la gracia permite ventas', static function () use ($pdo, $create, $token, $date): void {
         $model = new \App\Models\ChatgptCuenta($pdo);
-        $id = $create($model, 2);
+        $id = $model->create(['etiqueta' => 'Gracia fixture', 'correo' => bin2hex(random_bytes(8)) . '@example.invalid',
+            'password_cuenta' => 'fixture-only', 'capacidad' => 2,
+            'fecha_pago' => shift_months_clamped(new DateTimeImmutable('today'), -1)->format('Y-m-d'), 'monto_bs' => '200.00']);
         $model->selectDistribution($id);
         $model->sell($id, 1, $date, $token());
         clReject(static fn() => $model->sell($id, 2, $date, $token()), 'Una venta de dos no puede usar un único cupo libre.');
         clEq($model->find($id)['ocupados'], 1, 'El rechazo debe ser atómico.');
-        $model->configureExistingPeriod($id, 'GRACIA', date('Y-m-d'));
         $model->sell($id, 1, date('Y-m-d'), $token());
         clEq($model->find($id)['estado_periodo'], 'GRACIA', 'Debe permitir ventas durante la gracia.');
     });
@@ -190,7 +218,7 @@ function runDistributionTests(PDO $pdo, string $date, callable $test): void
             $controller = new $controllerClass();
             clEq($_SESSION['auth']['rol'], 'operador', 'La sesión debe reflejar el rol real.');
             $before = $model->find($id);
-            foreach (['selectDistribution', 'startCycle', 'setPlan', 'pagar', 'update'] as $method) {
+            foreach (['selectDistribution', 'startCycle', 'setPlan', 'pagar', 'update', 'adjustOccupation', 'toggleActive'] as $method) {
                 $redirect(static fn() => $controller->$method($id));
                 clEq($model->find($id), $before, 'Un operador no puede modificar distribución, ciclo, plan, pago o capacidad.');
             }

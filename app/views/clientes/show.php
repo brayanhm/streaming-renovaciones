@@ -43,7 +43,7 @@ if (!function_exists('status_badge_show')) {
             <a href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>" class="btn btn-sm btn-outline-primary"><?= icon('plus') ?><span class="button-label">Nueva vigencia</span></a>
         </div>
         <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
+            <table data-responsive-cards data-mobile-primary="0,1,3,4,5" class="table table-striped align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>Plataforma</th>
@@ -87,7 +87,7 @@ if (!function_exists('status_badge_show')) {
                             </td>
                             <td>
                                 <div><?= e((string) ($sus['nombre_modalidad'] ?? '')) ?></div>
-                                <small class="text-secondary"><?= e(Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos)) ?> · <?= e((string) $duracion) ?> mes(es)</small>
+                                <small class="text-secondary"><?= e(Modalidad::tipoCuentaLabel($tipoCuenta, $dispositivos)) ?> · <?= e(duration_label($duracion)) ?></small>
                             </td>
                             <td>
                                 <?php if (!empty($sus['usuario_proveedor'])): ?>
@@ -115,7 +115,7 @@ if (!function_exists('status_badge_show')) {
                             </td>
                             <td><?= e(money((float) ($sus['precio_final'] ?? $sus['modalidad_precio'] ?? 0))) ?></td>
                             <td>
-                                <span class="badge <?= e(status_badge_show($statusLabel)) ?>"><?= e($statusLabel) ?></span>
+                                <span class="badge <?= e(status_badge_show($statusLabel)) ?>"><?= e(status_label((string) $statusLabel)) ?></span>
                                 <?php if ($isNoRenew): ?>
                                     <div><small class="text-danger">No renovado</small></div>
                                 <?php endif; ?>

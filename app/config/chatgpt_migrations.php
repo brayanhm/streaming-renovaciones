@@ -7,6 +7,8 @@ declare(strict_types=1);
  */
 function run_chatgpt_schema_migrations(\PDO $pdo): void
 {
+    require_once __DIR__ . '/chatgpt_avisos_migrations.php';
+    run_chatgpt_avisos_schema_migrations($pdo);
     require_once __DIR__ . '/distribucion_migrations.php';
     run_distribucion_schema_migrations($pdo);
     ensure_column(

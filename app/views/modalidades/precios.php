@@ -76,7 +76,7 @@ use App\Models\Modalidad;
                                     <td class="fw-semibold"><?= $id ?></td>
                                     <td><?= e((string) ($item['nombre_modalidad'] ?? '')) ?></td>
                                     <td><?= e(Modalidad::tipoCuentaLabel((string) ($item['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($item['dispositivos']) ? (int) $item['dispositivos'] : null)) ?></td>
-                                    <td><?= e((string) max(1, (int) ($item['duracion_meses'] ?? 1))) ?> mes(es)</td>
+                                    <td><?= e(duration_label(max(1, (int) ($item['duracion_meses'] ?? 1)))) ?></td>
                                     <td>
                                         <input
                                             type="number"

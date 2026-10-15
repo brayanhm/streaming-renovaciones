@@ -4,17 +4,17 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Models\Movimiento;
+use App\Models\ReporteFinanciero;
 use App\Models\Suscripcion;
 
 class ReportesController extends Controller
 {
-    private Movimiento $movimientos;
+    private ReporteFinanciero $reportes;
     private Suscripcion $suscripciones;
 
     public function __construct()
     {
-        $this->movimientos = new Movimiento();
+        $this->reportes = new ReporteFinanciero();
         $this->suscripciones = new Suscripcion();
     }
 
@@ -22,33 +22,33 @@ class ReportesController extends Controller
     {
         $this->suscripciones->recalculateStates(RECUP_DAYS);
 
-        $porMes = $this->movimientos->reportePorMes(12);
-        $porPlataforma = $this->movimientos->reportePorPlataforma();
-        $mesActual = $this->movimientos->resumenMesActual();
+        [$service, $months] = $this->filters();
+        $report = $this->reportes->resumen($service, $months);
         $cartera = $this->suscripciones->estadisticas();
 
         $this->render('reportes/index', [
             'pageTitle' => 'Reportes',
-            'porMes' => $porMes,
-            'porPlataforma' => $porPlataforma,
-            'mesActual' => $mesActual,
             'cartera' => $cartera,
-        ]);
+            'servicios' => ReporteFinanciero::SERVICIOS,
+        ] + $report);
     }
 
     public function exportarMovimientos(): void
     {
-        $rows = $this->movimientos->reportePorMes(120);
-        $filename = 'reporte_por_mes_' . date('Ymd') . '.csv';
+        [$service, $months] = $this->filters();
+        $report = $this->reportes->resumen($service, $months);
+        $rows = $report['porMes'];
+        $filename = 'reporte_' . $service . '_' . $months . '_meses_' . date('Ymd') . '.csv';
 
         header('Content-Type: text/csv; charset=UTF-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
 
         $out = fopen('php://output', 'wb');
         fwrite($out, "\xEF\xBB\xBF"); // BOM para Excel
-        fputcsv($out, ['Anio', 'Mes', 'Renovaciones', 'Ingreso', 'Costo', 'Ganancia'], ';');
+        fputcsv($out, ['Servicio', 'Desde', 'Hasta', 'Anio', 'Mes', 'Ventas o renovaciones', 'Ingresos registrados', 'Costos registrados', 'Saldo registrado'], ';');
         foreach ($rows as $r) {
             fputcsv($out, [
+                ReporteFinanciero::SERVICIOS[$service], $report['desde'], $report['hasta'],
                 (int) ($r['anio'] ?? 0),
                 (int) ($r['mes'] ?? 0),
                 (int) ($r['renovaciones'] ?? 0),
@@ -59,5 +59,12 @@ class ReportesController extends Controller
         }
         fclose($out);
         exit;
+    }
+
+    private function filters(): array
+    {
+        $service = is_string($_GET['servicio'] ?? null) && isset(ReporteFinanciero::SERVICIOS[$_GET['servicio']]) ? $_GET['servicio'] : 'todos';
+        $months = (int) ($_GET['meses'] ?? 12);
+        return [$service, in_array($months, [6, 12, 24], true) ? $months : 12];
     }
 }
