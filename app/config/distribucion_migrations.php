@@ -36,8 +36,21 @@ function run_distribucion_schema_migrations(\PDO $pdo): void
         UNIQUE KEY uq_ajuste_ocupacion_token (token_operacion),
         INDEX idx_ajuste_ocupacion_cuenta (cuenta_principal_id, id)
     )' . $options);
+    // El ciclo 0 corresponde a la distribución anterior al primer reinicio.
+    // No se rellenan fechas anteriores: solo se guardan eventos nuevos.
+    ensure_table($pdo, 'cuentas_distribucion_historial', 'CREATE TABLE cuentas_distribucion_historial (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        cuenta_principal_id INT NOT NULL,
+        ciclo_id INT NOT NULL DEFAULT 0,
+        inicio_distribucion DATETIME NULL,
+        cupos_completados_at DATETIME NULL,
+        capacidad_al_completar INT NULL,
+        ocupados_al_completar INT NULL,
+        UNIQUE KEY uq_distribucion_historial_ciclo (cuenta_principal_id, ciclo_id)
+    )' . $options);
     ensure_foreign_key($pdo, 'cuentas_distribucion', 'cuenta_principal_id', 'cuentas_principales', 'id', 'RESTRICT');
     ensure_foreign_key($pdo, 'cuentas_ciclos', 'cuenta_principal_id', 'cuentas_principales', 'id', 'RESTRICT');
     ensure_foreign_key($pdo, 'cuentas_ajustes_ocupacion', 'cuenta_principal_id', 'cuentas_principales', 'id', 'RESTRICT');
+    ensure_foreign_key($pdo, 'cuentas_distribucion_historial', 'cuenta_principal_id', 'cuentas_principales', 'id', 'RESTRICT');
     $pdo->exec("INSERT IGNORE INTO cuentas_distribucion (servicio) VALUES ('CHATGPT'), ('CLAUDE')");
 }

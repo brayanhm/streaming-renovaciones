@@ -86,7 +86,7 @@ use App\Models\Plataforma;
                                     $r3 = $truncatePreview((string) ($item['mensaje_rec_7'] ?? ''));
                                     $r15 = $truncatePreview((string) ($item['mensaje_rec_15'] ?? ''));
                                     ?>
-                                    <tr>
+                                    <tr data-record-key="plataforma-<?= (int) $item['id'] ?>">
                                         <td class="fw-semibold">
                                             <?= e((string) $item['nombre']) ?>
                                             <?php if ($esIa): ?><span class="badge text-bg-success ms-1">IA</span><?php endif; ?>
@@ -140,7 +140,7 @@ use App\Models\Plataforma;
         <details class="card gs-form-panel shadow-sm" id="nueva-plataforma" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/plataformas' ? 'open' : '' ?>>
             <summary>Nueva plataforma</summary>
             <div class="card-body">
-                <form method="post" action="<?= e(url('/plataformas')) ?>" id="create-platform-form" accept-charset="UTF-8">
+                <form method="post" action="<?= e(url('/plataformas')) ?>" id="create-platform-form" data-form-behavior="create-platform" accept-charset="UTF-8">
                     <?= csrf_field() ?>
                     <div class="mb-3">
                         <label class="form-label" for="nombre">Nombre</label>
@@ -207,35 +207,3 @@ use App\Models\Plataforma;
         </details>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('create-platform-form');
-    if (!form) return;
-
-    const tipoServicio = form.querySelector('#tipo_servicio');
-    const datoWrap = form.querySelector('.js-dato-renovacion-wrap');
-    const datoSelect = form.querySelector('.js-dato-renovacion');
-    const datoHelp = form.querySelector('.js-dato-renovacion-help');
-
-    const apply = () => {
-        const tipo = tipoServicio.value;
-        if (tipo === 'RENOVABLE') {
-            datoWrap.classList.remove('d-none');
-            if (datoSelect.value === 'NO_APLICA') {
-                datoSelect.value = 'USUARIO';
-            }
-            datoHelp.textContent = 'Define si la renovación se realiza usando usuario o correo.';
-            return;
-        }
-
-        datoSelect.value = 'NO_APLICA';
-        datoWrap.classList.add('d-none');
-        datoHelp.textContent = 'No aplica para servicios desechables.';
-    };
-
-    tipoServicio.addEventListener('change', apply);
-    apply();
-})();
-</script>
-

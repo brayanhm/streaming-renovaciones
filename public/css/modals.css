@@ -1,0 +1,42 @@
+.gs-form-modal .modal-content { border: 1px solid var(--gs-border); border-top: 4px solid var(--gs-primary); border-radius: 12px; box-shadow: 0 20px 64px rgba(16,40,63,.2); }
+.gs-form-modal .modal-header { gap: 1rem; padding: 1rem 1.25rem; }
+.gs-form-modal .modal-title { color: var(--gs-text); font-weight: 650; }
+.gs-form-modal .modal-body { padding: 1.25rem; overscroll-behavior: contain; }
+.gs-form-modal .modal-footer { background: var(--gs-bg, #F8FAFC); padding: .75rem 1.25rem; }
+.gs-form-modal .modal-body > details { border: 0; margin: 0 !important; box-shadow: none !important; }
+.gs-form-modal .modal-body > details > summary { display: none; }
+.gs-form-modal .modal-body > details > .card-body { padding: 0; }
+.gs-form-modal [data-modal-page] > .card { border: 0; box-shadow: none !important; }
+.gs-form-modal [data-modal-page] > .card > .card-body { padding: 0; }
+.gs-form-modal [data-modal-panel] > h2 { display: none; }
+.gs-form-modal [data-modal-panel] { margin: 0 !important; padding: 0; }
+.gs-modal-trigger { white-space: normal; }
+.card > .gs-modal-trigger { align-self: flex-start; margin: 1rem; }
+.gs-form-modal .modal-body .row { --bs-gutter-y: 1rem; }
+.gs-form-modal .modal-body .btn { min-height: 40px; }
+.gs-form-modal .modal-body .form-control, .gs-form-modal .modal-body .form-select { min-height: 42px; }
+.gs-operation-context { display: flex; flex-direction: column; gap: .35rem; border-left: 3px solid var(--gs-primary); padding: .75rem 1rem; background: var(--gs-bg, #F8FAFC); }
+.gs-operation-context > span { color: var(--gs-dim); overflow-wrap: anywhere; }
+.gs-operation-preview { padding: 1rem .25rem .25rem; border-top: 1px solid var(--gs-border); border-bottom: 1px solid var(--gs-border); }
+.gs-operation-preview dd { font-size: 1.15rem; font-weight: 650; color: var(--gs-primary); }
+.gs-form-modal [data-standalone-occupation] > summary { display: none; }
+.gs-form-modal .modal-footer [data-modal-actions] { margin-left: auto; }
+@media (max-width: 991.98px) {
+    .gs-form-modal .btn, .gs-form-modal summary { min-width: 44px; min-height: 44px; }
+    .gs-form-modal .modal-body .btn { min-height: 44px; }
+    .gs-form-modal .btn-close { box-sizing: border-box; flex: 0 0 44px; width: 44px; height: 44px; }
+    .gs-form-modal .modal-body .form-control, .gs-form-modal .modal-body .form-select { min-height: 44px; font-size: 1rem; }
+    .gs-form-modal .modal-header { padding: .5rem 1rem; }
+    .gs-form-modal .modal-footer { padding: .5rem 1rem; padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 575.98px) {
+    .gs-form-modal .modal-body { padding: 1rem; }
+    .gs-form-modal [data-modal-actions] { width: 100%; }
+    .gs-form-modal [data-modal-actions] > .btn { flex: 1 1 auto; }
+}
+@media (max-width: 575.98px), (max-width: 991.98px) and (max-height: 500px) {
+    .gs-form-modal .modal-dialog { width: 100%; max-width: none; height: 100%; height: 100dvh; min-height: 0; margin: 0; }
+    .gs-form-modal .modal-content { height: 100%; max-height: 100%; border-radius: 0; }
+    .gs-form-modal .modal-header, .gs-form-modal .modal-body, .gs-form-modal .modal-footer { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+    .gs-form-modal .modal-body { overflow-y: auto; }
+}

@@ -83,7 +83,7 @@ $churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6 text-secondary mb-1">Ingresos registrados del período</h2>
-                <div class="h4 mb-0"><?= e(money((float) ($totalPeriodo['total_monto'] ?? 0))) ?></div>
+                <div class="h4 mb-0"><?= e(display_money((float) ($totalPeriodo['total_monto'] ?? 0))) ?></div>
             </div>
         </div>
     </div>
@@ -91,17 +91,17 @@ $churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h6 text-secondary mb-1">Saldo registrado del período</h2>
-                <p class="small text-secondary mb-1">Costos: <?= e(money((float) $totalPeriodo['total_costo'])) ?></p>
+                <p class="small text-secondary mb-1">Costos: <?= e(display_money((float) $totalPeriodo['total_costo'])) ?></p>
                 <?php $ganMes = (float) ($totalPeriodo['total_utilidad'] ?? 0); ?>
                 <div class="h4 mb-0 <?= $ganMes < 0 ? 'text-danger' : 'text-success' ?>">
-                    <?= e(money($ganMes)) ?>
+                    <?= e(display_money($ganMes)) ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<p class="small text-secondary mb-3">Este mes: <?= (int) $mesActual['renovaciones'] ?> ventas o renovaciones · Ingresos <?= e(money((float) $mesActual['total_monto'])) ?> · Costos <?= e(money((float) $mesActual['total_costo'])) ?> · Saldo <?= e(money((float) $mesActual['total_utilidad'])) ?>.</p>
+<p class="small text-secondary mb-3">Este mes: <?= (int) $mesActual['renovaciones'] ?> ventas o renovaciones · Ingresos <?= e(display_money((float) $mesActual['total_monto'])) ?> · Costos <?= e(display_money((float) $mesActual['total_costo'])) ?> · Saldo <?= e(display_money((float) $mesActual['total_utilidad'])) ?>.</p>
 <?php if (!empty($porMes)): ?>
 <div class="card shadow-sm mb-4">
     <div class="card-body">
@@ -139,10 +139,10 @@ $churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
                                 <tr>
                                     <td><?= e($mesesNombres[(int) $fila['mes']] . ' ' . $fila['anio']) ?></td>
                                     <td class="text-end"><?= e((string) (int) $fila['renovaciones']) ?></td>
-                                    <td class="text-end"><?= e(money((float) ($fila['total_monto'] ?? 0))) ?></td>
-                                    <td class="text-end"><?= e(money((float) ($fila['total_costo'] ?? 0))) ?></td>
+                                    <td class="text-end"><?= e(display_money((float) ($fila['total_monto'] ?? 0))) ?></td>
+                                    <td class="text-end"><?= e(display_money((float) ($fila['total_costo'] ?? 0))) ?></td>
                                     <td class="text-end fw-semibold <?= $gan < 0 ? 'text-danger' : 'text-success' ?>">
-                                        <?= e(money($gan)) ?>
+                                        <?= e(display_money($gan)) ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -178,9 +178,9 @@ $churn = $totalCartera > 0 ? round($noRenov / $totalCartera * 100, 1) : 0.0;
                                 <tr>
                                     <td class="fw-semibold"><?= e((string) $fila['plataforma']) ?><small class="d-block text-secondary"><?= e($servicios[$fila['servicio']] ?? '') ?></small></td>
                                     <td class="text-end"><?= e((string) (int) $fila['renovaciones']) ?></td>
-                                    <td class="text-end"><?= e(money((float) $fila['total_monto'])) ?></td><td class="text-end"><?= e(money((float) $fila['total_costo'])) ?></td>
+                                    <td class="text-end"><?= e(display_money((float) $fila['total_monto'])) ?></td><td class="text-end"><?= e(display_money((float) $fila['total_costo'])) ?></td>
                                     <td class="text-end fw-semibold <?= $gan < 0 ? 'text-danger' : 'text-success' ?>">
-                                        <?= e(money($gan)) ?>
+                                        <?= e(display_money($gan)) ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

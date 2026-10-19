@@ -69,7 +69,7 @@ if (!function_exists('modalidad_label_disp')) {
                             <td><?= e((string) $c['inicio']) ?></td>
                             <td><?= e((string) $c['fin']) ?></td>
                             <td><?= e((string) $c['credito']) ?></td>
-                            <td class="text-end"><?= e(money((float) ($c['mod']['precio'] ?? 0))) ?></td>
+                            <td class="text-end"><?= e(display_money((float) ($c['mod']['precio'] ?? 0))) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

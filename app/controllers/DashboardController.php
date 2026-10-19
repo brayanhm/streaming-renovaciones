@@ -24,14 +24,14 @@ class DashboardController extends Controller
     private function renderPanel(): void
     {
         $this->suscripciones->recalculateStates(RECUP_DAYS);
-        $dashboardStates = ['TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
+        $dashboardStates = ['PENDIENTES', 'TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
 
         $contacto = trim((string) ($_GET['contacto'] ?? ''));
         $usuario = trim((string) ($_GET['usuario'] ?? ''));
         $telefono = trim((string) ($_GET['telefono'] ?? ''));
-        $selectedStatus = strtoupper(trim((string) ($_GET['estado'] ?? 'TODOS')));
+        $selectedStatus = strtoupper(trim((string) ($_GET['estado'] ?? 'PENDIENTES')));
         if (!in_array($selectedStatus, $dashboardStates, true)) {
-            $selectedStatus = 'TODOS';
+            $selectedStatus = 'PENDIENTES';
         }
 
         $allRows = $this->suscripciones->all('', '', 'TODOS', $contacto, $usuario, $telefono);
@@ -59,7 +59,9 @@ class DashboardController extends Controller
             $activeRows,
             static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), $nonExpiredStates, true)
         ));
-        if ($selectedStatus === 'VENCIDO') {
+        if ($selectedStatus === 'PENDIENTES') {
+            $filteredRows = array_values(array_filter($activeRows, static fn (array $row): bool => in_array((string) $row['estado'], ['REENVIAR_1D', 'CONTACTAR_2D', 'RECUP'], true)));
+        } elseif ($selectedStatus === 'VENCIDO') {
             $filteredRows = array_values(array_filter(
                 $activeRows,
                 static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
@@ -95,6 +97,7 @@ class DashboardController extends Controller
         }
 
         $counts = $this->buildDashboardCounts($allRows);
+        $counts['PENDIENTES'] = count(array_filter($activeRows, static fn (array $row): bool => in_array((string) $row['estado'], ['REENVIAR_1D', 'CONTACTAR_2D', 'RECUP'], true)));
 
         $perPage = PER_PAGE;
         $totalRows = count($filteredRows);
@@ -206,13 +209,23 @@ class DashboardController extends Controller
         }
 
         try {
-            $newDue = $this->suscripciones->renovar($id, $months);
+            $token = is_string($_POST['token_renovacion'] ?? null) ? $_POST['token_renovacion'] : '';
+            $expected = null;
+            if (is_modal_form_request() || $token !== '') {
+                $operation = $_SESSION['renovaciones_operaciones'][$token] ?? null;
+                if (!is_array($operation) || ($operation['id'] ?? 0) !== $id || !isset($operation['opciones'][$months])) {
+                    throw new \RuntimeException('La renovación expiró o ya fue registrada. Cierra y vuelve a abrir el formulario.');
+                }
+                $expected = $operation['opciones'][$months];
+            }
+            $newDue = $this->suscripciones->renovar($id, $months, $expected);
             if ($newDue === null) {
                 flash('danger', 'No se pudo renovar la suscripción. Verifica los meses permitidos para esa plataforma.');
                 $this->redirect('/dashboard');
             }
 
-            flash('success', 'Renovación aplicada. Nueva fecha de vencimiento: ' . $newDue);
+            if ($token !== '') unset($_SESSION['renovaciones_operaciones'][$token]);
+            flash('success', 'Renovación aplicada. Nueva fecha de vencimiento: ' . display_date($newDue));
         } catch (\Throwable $exception) {
             flash('danger', 'Error al renovar: ' . $exception->getMessage());
         }

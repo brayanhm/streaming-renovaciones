@@ -74,7 +74,7 @@ $tiposCuentaOpciones = [
                         <th>Vence</th>
                         <th>Contacto</th>
                         <th>Número</th>
-                        <th class="text-end">Guardar</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -103,37 +103,10 @@ $tiposCuentaOpciones = [
                                     <span class="text-secondary">—</span>
                                 <?php endif; ?>
                             </td>
-                            <td><?= e((string) ($item['fecha_vencimiento'] ?? '')) ?></td>
-                            <td colspan="3">
-                                <form method="post" action="<?= e(url('/clientes/completar/actualizar/' . (int) $item['id'])) ?>" class="row g-2">
-                                    <?= csrf_field() ?>
-                                    <div class="col-12 col-md-4">
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            name="contacto"
-                                            placeholder="Contacto"
-                                            value="<?= e((string) ($item['nombre'] ?? '')) ?>"
-                                            required
-                                        >
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            name="numero"
-                                            placeholder="Número (8 dígitos)"
-                                            value="<?= e((string) ($item['telefono'] ?? '')) ?>"
-                                            inputmode="numeric"
-                                            maxlength="8"
-                                            required
-                                        >
-                                    </div>
-                                    <div class="col-12 col-md-4 d-grid d-md-flex justify-content-md-end">
-                                        <button type="submit" class="btn btn-success"><?= icon('save') ?><span class="button-label">Guardar</span></button>
-                                    </div>
-                                </form>
-                            </td>
+                            <td><?= e(display_date($item['fecha_vencimiento'] ?? null)) ?></td>
+                            <td><?= e((string) $item['nombre']) ?></td>
+                            <td><span class="text-secondary">Pendiente</span></td>
+                            <td class="text-end"><a class="btn btn-primary btn-sm" data-modal-link data-contact-complete href="<?= e(url('/clientes/completar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Completar contacto</span></a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

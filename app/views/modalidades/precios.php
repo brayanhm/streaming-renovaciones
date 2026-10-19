@@ -45,7 +45,7 @@ use App\Models\Modalidad;
                 <span class="badge text-bg-secondary">Planes: <?= e((string) count($rows ?? [])) ?></span>
             </div>
 
-            <form method="post" action="<?= e(url('/tipos-suscripcion/precios')) ?>" id="bulk-pricing-form">
+            <form method="post" action="<?= e(url('/tipos-suscripcion/precios')) ?>" id="bulk-pricing-form" data-form-behavior="bulk-pricing">
                 <?= csrf_field() ?>
                 <input type="hidden" name="plataforma_id" value="<?= e((string) (int) ($selectedPlatformId ?? 0)) ?>">
                 <div class="table-responsive">
@@ -101,7 +101,7 @@ use App\Models\Modalidad;
                                     </td>
                                     <td>
                                         <strong class="js-ganancia <?= $ganancia < 0 ? 'text-danger' : 'text-success' ?>">
-                                            <?= e(money($ganancia)) ?>
+                                            <?= e(display_money($ganancia)) ?>
                                         </strong>
                                     </td>
                                 </tr>
@@ -118,44 +118,3 @@ use App\Models\Modalidad;
         </div>
     </div>
 <?php endif; ?>
-
-<script>
-(() => {
-    const form = document.getElementById('bulk-pricing-form');
-    if (!form) return;
-
-    const money = (value) => {
-        const sign = value < 0 ? '-' : '';
-        const abs = Math.abs(value).toLocaleString('es-BO', {
-            minimumFractionDigits: Number.isInteger(Math.abs(value)) ? 0 : 2,
-            maximumFractionDigits: 2,
-        });
-        return 'Bs ' + sign + abs;
-    };
-
-    const recalc = () => {
-        const rows = form.querySelectorAll('tbody tr');
-        rows.forEach((row) => {
-            const costInput = row.querySelector('.js-costo');
-            const priceInput = row.querySelector('.js-precio');
-            const gainEl = row.querySelector('.js-ganancia');
-            if (!costInput || !priceInput || !gainEl) return;
-
-            const cost = Number.parseFloat(costInput.value || '0');
-            const price = Number.parseFloat(priceInput.value || '0');
-            const gain = (Number.isNaN(price) ? 0 : price) - (Number.isNaN(cost) ? 0 : cost);
-            gainEl.textContent = money(gain);
-            gainEl.classList.toggle('text-danger', gain < 0);
-            gainEl.classList.toggle('text-success', gain >= 0);
-        });
-    };
-
-    form.addEventListener('input', (event) => {
-        if (event.target instanceof HTMLInputElement) {
-            if (event.target.classList.contains('js-costo') || event.target.classList.contains('js-precio')) {
-                recalc();
-            }
-        }
-    });
-})();
-</script>

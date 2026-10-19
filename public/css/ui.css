@@ -7,6 +7,8 @@
 a:focus-visible,button:focus-visible,summary:focus-visible { outline:2px solid var(--gs-primary); outline-offset:3px; }
 .gs-nav-pin { width:100%; color:var(--gs-nav-text); justify-content:flex-start; margin-bottom:.5rem; border:1px solid #536f87; }
 .gs-nav-pin:hover,.gs-nav-pin:focus-visible { color:#fff; background:var(--gs-nav-active); }
+.gs-nav-pin[aria-pressed=true] { color:var(--gs-cyan); border-color:var(--gs-cyan); background:var(--gs-nav-active); }
+html:not([data-js=true]) .gs-nav-pin { display:none !important; }
 .gs-nav-heading { display:none; padding:.5rem .6rem; color:var(--gs-nav-text); font-size:.75rem; font-weight:650; }
 .gs-form-panel { scroll-margin-top:5rem; }
 .gs-form-panel > summary { padding:1rem; font-size:1.05rem; font-weight:650; color:var(--gs-primary); cursor:pointer; }
@@ -33,17 +35,28 @@ html[data-js=true] .gs-create-column:not(:has(.gs-form-panel[open])) { display:n
 .gs-other-actions > summary { font-size:.85rem; color:var(--gs-dim); cursor:pointer; }
 .gs-dashboard-filters > summary { padding:1rem; font-weight:600; color:var(--gs-primary); cursor:pointer; }
 .gs-dashboard-filters > .card-body { padding-top:0; }
+.gs-notice-summary > summary { padding:.75rem 1rem; color:var(--gs-primary); }
+.gs-notice-summary > summary .badge { margin:.25rem 0 0 .35rem; vertical-align:middle; }
+.gs-selected-dates { flex:0 0 100%; }
 
 @media (min-width:992px) {
-    html[data-nav-mode=expanded] .app-sidebar { flex-basis:244px; width:244px; }
-    html[data-nav-mode=expanded] .app-sidebar > .offcanvas-body { width:244px; overflow-y:auto; box-shadow:none; }
-    html[data-nav-mode=expanded] .app-sidebar .app-nav-toggle { display:flex; }
+    html[data-nav-mode=expanded] .app-sidebar { flex-basis:64px; width:64px; }
+    html[data-nav-mode=expanded] .app-sidebar > .offcanvas-body { width:244px; overflow-y:auto; overflow-x:hidden; box-shadow:8px 0 22px rgba(16,40,63,.18); }
+    html[data-nav-pinned=true] .app-sidebar { flex-basis:244px; width:244px; }
+    html[data-nav-pinned=true] .app-sidebar > .offcanvas-body { box-shadow:none; }
     html[data-nav-mode=expanded] .app-nav-link { justify-content:flex-start; }
     html[data-nav-mode=expanded] .app-nav-link .ico { margin-right:.55rem; }
     html[data-nav-mode=expanded] .app-sidebar .lbl { display:inline; }
-    html[data-nav-mode=expanded] .gs-nav-heading { display:block; }
+    .app-sidebar > .offcanvas-body { padding:.5rem; }
+    .app-sidebar .app-nav-group { margin-bottom:2px; }
+    .app-sidebar .app-nav-link { min-height:36px; padding:.4rem .65rem; margin:0; line-height:1.25; }
+    .app-sidebar .app-nav-link .lbl { white-space:nowrap; }
+    .app-sidebar .gs-nav-pin { min-height:38px; margin-bottom:.375rem; white-space:nowrap; }
+    .app-sidebar .gs-nav-heading { display:block; visibility:hidden; height:20px; padding:3px .65rem; line-height:14px; white-space:nowrap; overflow:hidden; }
+    html[data-nav-mode=expanded] .gs-nav-heading { visibility:visible; }
     html[data-nav-mode=compact] .app-sidebar { flex-basis:64px; width:64px; }
-    html[data-nav-mode=compact] .app-sidebar > .offcanvas-body { width:64px; overflow-y:auto; overflow-x:hidden; box-shadow:none; }
+    html[data-nav-mode=compact] .app-sidebar > .offcanvas-body { width:64px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none; box-shadow:none; }
+    html[data-nav-mode=compact] .app-sidebar > .offcanvas-body::-webkit-scrollbar { display:none; }
     html[data-nav-mode=compact] .app-sidebar .lbl { display:none; }
     html[data-nav-mode=compact] .gs-nav-pin { justify-content:center; }
     html[data-nav-mode=compact] .gs-nav-pin .lbl { display:none; }
@@ -63,7 +76,7 @@ html[data-js=true] .gs-create-column:not(:has(.gs-form-panel[open])) { display:n
     .gs-card-table tbody tr { display:block; padding:1rem; border-bottom:1px solid var(--gs-border); background:var(--gs-surface); }
     .gs-card-table tbody tr:nth-child(even) { background:var(--gs-bg); }
     .gs-card-table tbody td { display:grid; grid-template-columns:minmax(5rem,32%) minmax(0,1fr); gap:.7rem; padding:.45rem 0; border:0; background:transparent !important; box-shadow:none !important; text-align:left !important; }
-    .gs-card-table td::before { content:attr(data-label); color:var(--gs-dim); font-size:.85rem; font-weight:550; }
+    .gs-card-table td::before { content:attr(data-label); color:var(--gs-text); font-size:.85rem; font-weight:600; }
     .gs-card-table td:first-child { display:block; padding-top:0; font-size:1.05rem; font-weight:600; }
     .gs-card-table td:first-child::before { display:none; }
     .gs-card-table td[colspan] { display:block; }
@@ -81,6 +94,9 @@ html[data-js=true] .gs-create-column:not(:has(.gs-form-panel[open])) { display:n
     .gs-card-table .gs-row-expanded .gs-mobile-detail-action { display:block; }
     .gs-card-table .gs-mobile-detail-action ~ * { margin-top:.35rem; }
     .app-main .btn,.app-main summary,.app-topbar .btn,.app-burger,.app-sidebar button,.app-nav-link { min-height:44px; }
+    .app-burger,.app-topbar .btn,.app-sidebar .btn-close,.app-main .btn-close { min-width:44px; }
+    .app-sidebar .btn-close,.app-main .btn-close { box-sizing:border-box; width:44px; height:44px; }
+    .app-brand { min-width:0; white-space:nowrap; }
     .gs-form-panel > summary { min-height:56px; }
     .app-content { padding-top:1rem !important; }
     .gs-dashboard-stats .card-body { padding:.7rem; }
@@ -91,12 +107,100 @@ html[data-js=true] .gs-create-column:not(:has(.gs-form-panel[open])) { display:n
     .gs-status-filters .nav-item { flex:1 1 30%; margin-right:0 !important; }
     .gs-status-filters .nav-link { padding:.5rem .35rem; font-size:.8rem; text-align:center; }
     .gs-account-summary { margin-bottom:1rem !important; }
+    .gs-account-summary .card-body { gap:.5rem !important; padding:.75rem; }
+    .gs-selected-account { flex:1 1 160px; min-width:0; overflow-wrap:anywhere; }
+    .gs-selected-account h2 { margin-bottom:.25rem !important; font-size:.8rem; }
+    .gs-selected-availability { margin-top:.35rem !important; font-size:.875rem; }
+    .gs-selected-dates { border-top:1px solid var(--gs-border); }
+    .gs-selected-dates > summary,.gs-delivery-details > summary { display:flex; align-items:center; cursor:pointer; }
+    .gs-selected-dates > summary::before,.gs-delivery-details > summary::before { content:''; width:0; height:0; border-left:5px solid currentColor; border-top:4px solid transparent; border-bottom:4px solid transparent; margin-right:.5rem; }
+    .gs-selected-dates[open] > summary::before,.gs-delivery-details[open] > summary::before { transform:rotate(90deg); }
+    .gs-delivery-heading { display:grid !important; grid-template-columns:minmax(0,1fr) auto; gap:.75rem !important; margin-bottom:1rem !important; }
+    .gs-delivery-heading h1 { font-size:1.25rem; margin:0 !important; }
+    .gs-delivery-account { margin-bottom:.75rem !important; gap:.5rem !important; }
+    .gs-delivery-account h2 { font-size:1.2rem; }
+    .gs-delivery-stats { margin-bottom:.75rem !important; --bs-gutter-x:.5rem; --bs-gutter-y:.5rem; }
+    .gs-delivery-stats .small { font-size:.75rem; }
+    .gs-delivery-stats .h3 { font-size:1.35rem; }
+    .gs-delivery-card .gs-new-delivery > summary { margin-bottom:.5rem !important; }
+    .gs-delivery-card .gs-new-delivery > form > .row { --bs-gutter-y:.75rem; }
+    .gs-history-summary { --bs-gutter-x:.5rem; --bs-gutter-y:.5rem; }
+    .gs-history-summary .card-body { padding:.75rem; }
+    .gs-history-summary h2 { font-size:.8rem; }
+    .gs-history-summary .h5 { font-size:1rem; overflow-wrap:anywhere; }
 }
 @media (max-width:575.98px) {
     .app-brand { gap:.35rem; font-size:.9rem; }
+    .app-brand img { width:24px; height:24px; }
     .app-topbar { gap:.4rem; padding-inline:.6rem; }
     .app-topbar .btn { padding-inline:.45rem; }
-    .app-topbar .gs-icon { width:16px; height:16px; }
+    .app-topbar .gs-icon { width:20px; height:20px; }
     .gs-card-table tbody td { grid-template-columns:minmax(4.5rem,30%) minmax(0,1fr); }
     .gs-page-actions > .btn { flex:1 1 auto; }
+}
+/* Listados operativos: la estructura, el estado y las acciones comparten una jerarquía. */
+.gs-search-form{display:flex;flex-wrap:wrap;gap:.65rem;align-items:flex-end}
+.gs-search-field{flex:1 1 240px}
+.gs-search-form .form-label{display:block;font-size:.875rem;margin-bottom:.35rem;font-weight:600}
+.gs-search-form .form-control,.gs-search-form .form-select,.gs-search-form .btn,
+main form[method="get"] .form-control,main form[method="get"] .form-select,main form[method="get"] .btn{min-height:44px}
+main form[method="get"] input.form-control,main form[method="get"] .form-select,main form[method="get"] .btn{height:44px;font-size:1rem;padding-top:.5rem;padding-bottom:.5rem}
+.gs-quick-filters{display:flex;flex-wrap:wrap;gap:.4rem}
+.gs-filter{display:inline-flex;align-items:center;gap:.5rem;min-height:38px;padding:.35rem .7rem;border:1px solid #8493a5;border-radius:.5rem;color:#314b62;background:#fff;text-decoration:none;font-size:.875rem}
+.gs-filter span{font-variant-numeric:tabular-nums;font-weight:700}
+.gs-filter.active{background:#10283f;color:#fff;border-color:#10283f}
+.gs-filter:hover{border-color:#075e78;box-shadow:inset 0 0 0 1px #075e78}
+.gs-filter-clear{color:#075e78;text-underline-offset:3px}
+.gs-row-actions{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:flex-end;align-items:center}
+.gs-row-actions>form{margin:0}
+.gs-action-menu{display:inline-block;position:relative;text-align:left}
+.gs-action-menu>summary{list-style:none;white-space:nowrap}
+.gs-action-menu>summary::-webkit-details-marker{display:none}
+.gs-action-menu>summary::after{content:'⌄';margin-left:.4rem}
+.gs-action-menu[open]>summary{background:#e6f2f6;border-color:#075e78;color:#075e78}
+.gs-action-popover{position:fixed;z-index:1060;display:flex;flex-direction:column;gap:.4rem;padding:.6rem;background:#fff;border:1px solid #8493a5;border-radius:.6rem;box-shadow:0 8px 24px #10283f29;max-height:calc(100dvh - 24px);overflow:auto}
+.gs-action-popover .btn{width:100%;justify-content:flex-start;min-height:40px;text-align:left}
+.gs-action-popover form{margin:0}
+.gs-action-popover .gs-mobile-detail-action{display:block!important}
+.gs-occupancy-bar{height:5px;max-width:150px;margin:.3rem 0;background:#d6e2e9}
+.gs-occupancy{font-variant-numeric:tabular-nums}
+.table{font-variant-numeric:tabular-nums}
+.gs-account-table td:first-child a{overflow-wrap:anywhere}
+.gs-account-table .small,.gs-account-table small{line-height:1.45}
+.gs-delivery-shortcuts{display:flex;flex-wrap:wrap;gap:.5rem}
+.gs-financial-summary>summary{color:#075e78;margin-bottom:.75rem}
+.gs-row-saved>td{box-shadow:inset 0 0 0 9999px #d9f5ec!important}
+.gs-row-saved>td:first-child{border-left:4px solid #08775b}
+.gs-card-table tbody tr.gs-row-saved{outline:2px solid #08775b;outline-offset:-2px;background:#d9f5ec}
+@media(min-width:992px){
+    main .gs-table-scroll{max-height: min(65vh,42rem);overflow:auto;scrollbar-gutter:stable}
+    main .gs-table-scroll .table{border-collapse:separate;border-spacing:0}
+    main .gs-table-scroll thead th{position:sticky;top:0;z-index:2}
+    .gs-account-table{table-layout:fixed;min-width:940px}
+    .gs-account-table th:nth-child(1){width:23%}
+    .gs-account-table th:nth-child(2){width:22%}
+    .gs-account-table th:nth-child(3){width:23%}
+    .gs-account-table th:nth-child(4){width:12%}
+    .gs-account-table th:nth-child(5){width:20%}
+    .gs-account-summary .card-body{padding:.8rem 1rem}
+    .gs-account-summary .gs-selected-dates{flex-basis:auto;width:auto;margin:0}
+    .gs-account-summary .gs-selected-account{flex:1}
+    .gs-account-summary h2{margin-bottom:.25rem!important}
+    .gs-selected-account .gs-selected-availability{display:inline;margin-left:.65rem}
+    .gs-dashboard-table{min-width:1040px}
+    .gs-dashboard-table th:nth-child(3){width:18%}
+    .gs-dashboard-table th:nth-child(4){width:10%}
+    .gs-dashboard-table th:nth-child(5){width:10%}
+    .gs-dashboard-table th:last-child{width:21%}
+}
+@media(max-width:991.98px){
+    .gs-card-scroll{max-height:none;overflow:visible}
+    .gs-quick-filters .gs-filter{min-height:44px}
+    .gs-row-actions{justify-content:flex-start}
+    .gs-action-popover .btn{min-height:44px}
+    .gs-pagination .btn{min-height:44px}
+}
+@media(max-width:575.98px){
+    .gs-search-form .gs-search-field{flex-basis:100%}
+    .gs-search-form>button{flex:1}
 }

@@ -90,7 +90,7 @@ foreach (($rows ?? []) as $r) {
                                 <div><?= e(display_date($row['fecha_vencimiento'] ?? null)) ?></div>
                                 <small class="text-secondary"><?= e($diasLabel) ?></small>
                             </td>
-                            <td><?= e(money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
+                            <td><?= e(display_money((float) ($row['precio_final'] ?? $row['modalidad_precio'] ?? 0))) ?></td>
                             <td><span class="badge <?= e($m['badge']) ?>"><?= e($m['label']) ?></span></td>
                             <td>
                                 <form method="post" action="<?= e(url('/suscripciones/whatsapp/' . (int) $row['id'])) ?>" target="_blank" rel="noopener">

@@ -6,8 +6,13 @@ declare(strict_types=1);
     <a href="<?= e(url('/dashboard')) ?>" class="btn btn-outline-secondary"><?= icon('arrow-left') ?><span class="button-label">Volver al panel</span></a>
 </div>
 
+<nav class="nav nav-pills gap-2 mb-3" aria-label="Opciones de perfil">
+    <a class="nav-link <?= $profileSection === 'usuario' ? 'active' : '' ?>" data-modal-link href="<?= e(url('/perfil?seccion=usuario')) ?>" <?= $profileSection === 'usuario' ? 'aria-current="page"' : '' ?>>Cambiar usuario</a>
+    <a class="nav-link <?= $profileSection === 'password' ? 'active' : '' ?>" data-modal-link href="<?= e(url('/perfil?seccion=password')) ?>" <?= $profileSection === 'password' ? 'aria-current="page"' : '' ?>>Cambiar contraseña</a>
+</nav>
 <div class="row g-4">
-    <div class="col-lg-6">
+    <?php if ($profileSection === 'usuario'): ?>
+    <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h2 class="h5 mb-4">Cambiar nombre de usuario</h2>
@@ -33,7 +38,8 @@ declare(strict_types=1);
         </div>
     </div>
 
-    <div class="col-lg-6">
+    <?php else: ?>
+    <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h2 class="h5 mb-4">Cambiar contraseña</h2>
@@ -81,4 +87,5 @@ declare(strict_types=1);
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>

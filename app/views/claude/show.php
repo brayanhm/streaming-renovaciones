@@ -17,7 +17,7 @@ $periodColors = ['PAGADO' => 'success', 'GRATIS' => 'secondary', 'SIN_PAGO' => '
 $isActive = (int) ($cuenta['activo'] ?? 1) === 1;
 $credentialsReady = $credentialsReady ?? true;
 $canSell = $isActive && $credentialsReady && in_array($period, ['PAGADO', 'GRACIA'], true)
-    && !empty($cuenta['distribucion_actual']) && ($canAdmin || $occupied < $recommended);
+    && !empty($cuenta['distribucion_actual']);
 $paidUntil = (string) ($cuenta['fecha_vencimiento'] ?? '');
 $saleEnd = $paidUntil;
 $claudeDate = static fn (?string $value): string => $value ? (new DateTimeImmutable($value))->format('d/m/Y') : '—';
@@ -52,7 +52,7 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
     <div class="alert alert-info">Esta cuenta conserva <?= (int) $cuenta['ocupados_anteriores'] ?> cupos de asignaciones anteriores, incluidos en el contador. Se conservarán hasta confirmar un nuevo ciclo.</div>
 <?php endif; ?>
 <?php if ($occupied >= $recommended): ?>
-    <div class="alert alert-warning">Cuenta vendida: todos sus cupos están ocupados. <?= $ready && $selected ? 'Solo el administrador puede registrar ventas adicionales en la cuenta seleccionada.' : 'El administrador debe seleccionar una cuenta habilitada para continuar.' ?>
+    <div class="alert alert-warning">Capacidad de referencia alcanzada. <?= $ready && $selected ? 'Puedes seguir entregando en esta cuenta hasta que el administrador seleccione otra.' : 'Para registrar nuevas entregas, selecciona una cuenta habilitada.' ?>
         <?php if ($exceeded > 0): ?><span class="badge text-bg-warning ms-1">+<?= $exceeded ?> adicionales</span><?php endif; ?>
     </div>
 <?php endif; ?>
@@ -60,11 +60,11 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Cupos</h2>
         <div class="h3 mb-1 text-<?= $occupancyColor ?>"><?= $occupied ?> <span class="h5 text-secondary"><?= $occupied === 1 ? 'ocupado' : 'ocupados' ?></span></div>
-        <div class="small text-secondary">Capacidad: <?= $recommended ?></div>
-        <div class="mb-2">Libres: <?= $remaining ?></div>
+        <div class="small text-secondary">Capacidad de referencia: <?= $recommended ?></div>
+        <div class="mb-2">Hasta la referencia: <?= $remaining ?></div>
         <div class="progress mb-2" role="progressbar" aria-label="Cupos ocupados respecto a su capacidad" aria-valuenow="<?= min($recommended, max(0, $occupied)) ?>" aria-valuemin="0" aria-valuemax="<?= $recommended ?>"><div class="progress-bar bg-<?= $occupancyColor ?>" style="width: <?= min(100, max(0, $occupied * 100 / max(1, $recommended))) ?>%"></div></div>
         <small class="text-secondary">Los cupos se reinician al confirmar un nuevo ciclo.</small>
-        <?php if ($canAdmin): ?><a class="btn btn-sm btn-outline-primary mt-3" href="<?= e(url('/claude/' . $accountId . '/editar') . '#ocupacion') ?>"><?= icon('square-pen') ?><span class="button-label">Editar cupos ocupados</span></a><?php endif; ?>
+        <?php if ($canAdmin): ?><a class="btn btn-sm btn-outline-primary mt-3" data-modal-link href="<?= e(url('/claude/' . $accountId . '/ocupacion')) ?>"><?= icon('square-pen') ?><span class="button-label">Editar cupos ocupados</span></a><?php endif; ?>
     </div></div></div>
     <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
         <h2 class="h6 text-secondary">Pago y vigencia</h2>
@@ -133,7 +133,7 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
                     <p class="mb-3">1 cupo · <strong>Bs 85</strong></p>
                     <div class="mb-3"><label class="form-label" for="fecha_venta">Fecha de venta</label><input type="date" class="form-control" id="fecha_venta" name="fecha_venta" value="<?= e($today) ?>" max="<?= e($today) ?>" required></div>
                     <p class="small text-secondary">El acceso vence el <strong data-sale-expiry><?= e($claudeDate($saleEnd)) ?></strong>. Esta venta suma <strong data-sale-devices>1</strong> cupo al contador. Capacidad: <?= $recommended ?> cupos por cuenta.</p>
-                    <?php if ($occupied + 1 > $recommended): ?><div class="alert alert-warning small">Con esta venta habrá <?= $occupied + 1 ?> cupos ocupados: <?= $occupied + 1 - $recommended ?> por encima de la capacidad de <?= $recommended ?>. Venta adicional autorizada para el administrador.</div><?php endif; ?>
+                    <?php if ($occupied + 1 > $recommended): ?><div class="alert alert-warning small">Con esta venta habrá <?= $occupied + 1 ?> cupos ocupados. Puedes superar la referencia de <?= $recommended ?> mientras esta cuenta siga seleccionada.</div><?php endif; ?>
                     <p class="small text-secondary mb-2" data-sale-template-status><?= trim((string) ($templates['entrega_1'] ?? '')) === '' ? 'Mensaje pendiente de configurar. La venta se registrará y podrás copiarlo después.' : 'Se preparará el texto de entrega al registrar la venta.' ?></p>
                     <button type="submit" class="btn btn-success w-100"><?= icon('plus') ?><span class="button-label"><?= trim((string) ($templates['entrega_1'] ?? '')) === '' ? 'Vender cupo · Bs 85' : 'Vender y copiar · Bs 85' ?></span></button>
 
@@ -146,7 +146,7 @@ $lastSaleText = (string) ($saleTexts[$lastSaleId] ?? '');
 
 <?php if ($canAdmin): ?>
 <div class="row g-3 mb-3">
-    <div class="col-12"><div class="card shadow-sm"><div class="card-body">
+    <div class="col-12"><div class="card shadow-sm"><div class="card-body" data-modal-panel data-modal-title="Registrar pago Claude">
         <h2 class="h5 mb-2">Registrar pago</h2>
         <p class="small text-secondary">El nuevo período inicia en la fecha que registres y dura un mes calendario. Ingresa el costo real en bolivianos. Los cupos ocupados se conservan.</p>
         <form method="post" action="<?= e(url('/claude/' . $accountId . '/pagar')) ?>" class="row g-2 align-items-end" data-chatgpt-submit>

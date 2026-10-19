@@ -103,6 +103,30 @@ class SuscripcionesController extends Controller
         $this->redirect('/suscripciones');
     }
 
+    public function renewalForm(int $id): void
+    {
+        $this->redirectSharedSubscription($id);
+        $item = $this->suscripciones->findWithRelations($id);
+        if ($item === null) { flash('danger', 'Suscripción no encontrada.'); $this->redirect('/suscripciones'); }
+        $options = $this->suscripciones->renewalOptions($id);
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['renovaciones_operaciones'][$token] = ['id' => $id, 'opciones' => $options];
+        if (count($_SESSION['renovaciones_operaciones']) > 100) array_shift($_SESSION['renovaciones_operaciones']);
+        $this->render('suscripciones/renovar', ['pageTitle' => 'Renovar suscripción', 'modalPage' => true,
+            'item' => $item, 'options' => $options, 'renewalToken' => $token]);
+    }
+
+    public function dueDateForm(int $id): void
+    {
+        $this->redirectSharedSubscription($id);
+        $item = $this->suscripciones->findWithRelations($id);
+        if ($item === null) { flash('danger', 'Suscripción no encontrada.'); $this->redirect('/suscripciones'); }
+        $reactivate = ($_GET['reactivar'] ?? '') === '1';
+        $this->render('suscripciones/finalizacion', ['pageTitle' => $reactivate ? 'Reactivar suscripción' : 'Editar vencimiento',
+            'modalPage' => true, 'item' => $item, 'reactivate' => $reactivate,
+            'suggestedDue' => $reactivate ? shift_months_clamped(new DateTimeImmutable('today'), 1)->format('Y-m-d') : $item['fecha_vencimiento']]);
+    }
+
     public function edit(int $id): void
     {
         $this->redirectSharedSubscription($id);
@@ -167,18 +191,21 @@ class SuscripcionesController extends Controller
         $fallbackPath = $clienteId > 0 ? '/clientes/' . $clienteId : '/clientes';
         $rawDueDate = trim((string) ($_POST['fecha_vencimiento'] ?? ''));
         if ($rawDueDate === '') {
+            set_field_errors(['fecha_vencimiento' => 'Selecciona la nueva fecha.']);
             flash('danger', 'Debes indicar la nueva fecha de finalizacion.');
             $this->goBack($fallbackPath);
         }
 
         $dueDate = parse_ymd_date($rawDueDate);
         if ($dueDate === null) {
+            set_field_errors(['fecha_vencimiento' => 'Introduce una fecha válida.']);
             flash('danger', 'La fecha de finalizacion no es valida.');
             $this->goBack($fallbackPath);
         }
 
         $startDateRaw = (string) ($subscription['fecha_inicio'] ?? '');
         if ($startDateRaw !== '' && $dueDate->format('Y-m-d') < $startDateRaw) {
+            set_field_errors(['fecha_vencimiento' => 'La fecha no puede ser anterior al inicio de la suscripción.']);
             flash('danger', 'La fecha de finalizacion no puede ser anterior a la fecha de inicio.');
             $this->goBack($fallbackPath);
         }

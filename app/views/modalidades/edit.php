@@ -15,7 +15,7 @@ $returnQuery = $returnPlatformId > 0
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="post" action="<?= e(url('/tipos-suscripcion/actualizar/' . (int) $item['id'])) ?>" id="edit-plan-form">
+        <form method="post" action="<?= e(url('/tipos-suscripcion/actualizar/' . (int) $item['id'])) ?>" id="edit-plan-form" data-form-behavior="plan">
             <?= csrf_field() ?>
             <?php if ($returnPlatformId > 0): ?>
                 <input type="hidden" name="return_plataforma_id" value="<?= e((string) $returnPlatformId) ?>">
@@ -112,7 +112,7 @@ $returnQuery = $returnPlatformId > 0
                     <label class="form-label">Ganancia por plan</label>
                     <div class="form-control bg-light">
                         <strong class="js-ganancia">
-                            <?= e(money((float) ((float) ($item['precio'] ?? 0) - (float) ($item['costo'] ?? 0)))) ?>
+                            <?= e(display_money((float) ((float) ($item['precio'] ?? 0) - (float) ($item['costo'] ?? 0)))) ?>
                         </strong>
                     </div>
                 </div>
@@ -124,86 +124,3 @@ $returnQuery = $returnPlatformId > 0
         </form>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('edit-plan-form');
-    if (!form) return;
-
-    const tipoCuenta = form.querySelector('.js-tipo-cuenta');
-    const plataforma = form.querySelector('.js-plataforma');
-    const duracion = form.querySelector('.js-duracion');
-    const duracionesList = form.querySelector('#duraciones-list');
-    const duracionHelp = form.querySelector('.js-duracion-help');
-    const dispositivosWrap = form.querySelector('.js-dispositivos-wrap');
-    const dispositivos = form.querySelector('#dispositivos');
-    const costoInput = form.querySelector('.js-costo');
-    const precioInput = form.querySelector('.js-precio');
-    const gananciaEl = form.querySelector('.js-ganancia');
-
-    const parseDuraciones = (csv) => {
-        if (!csv) return [];
-        const values = [];
-        for (const raw of csv.split(',')) {
-            const parsed = Number.parseInt(raw.trim(), 10);
-            if (Number.isNaN(parsed) || parsed <= 0 || values.includes(parsed)) {
-                continue;
-            }
-            values.push(parsed);
-        }
-        values.sort((a, b) => a - b);
-        return values;
-    };
-
-    const applyDuraciones = () => {
-        const selected = plataforma.options[plataforma.selectedIndex];
-        const values = parseDuraciones(selected ? selected.dataset.duraciones : '');
-
-        duracionesList.innerHTML = '';
-        for (const value of values) {
-            const option = document.createElement('option');
-            option.value = String(value);
-            duracionesList.appendChild(option);
-        }
-
-        if (values.length > 0) {
-            duracionHelp.textContent = 'Duraciones configuradas: ' + values.join(', ') + ' meses.';
-        } else {
-            duracionHelp.textContent = 'Sin duraciones fijas para esta plataforma.';
-        }
-    };
-
-    const apply = () => {
-        const value = tipoCuenta.value;
-        const needs = value === 'POR_DISPOSITIVOS' || value === 'AMBOS';
-        dispositivosWrap.classList.toggle('d-none', !needs);
-        dispositivos.required = value === 'POR_DISPOSITIVOS';
-        if (!needs) {
-            dispositivos.value = '';
-        }
-    };
-
-    const applyGanancia = () => {
-        const costo = Number.parseFloat(costoInput.value || '0');
-        const precio = Number.parseFloat(precioInput.value || '0');
-        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
-        const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
-            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
-            maximumFractionDigits: 2,
-        });
-        gananciaEl.textContent = 'Bs ' + sign + abs;
-        gananciaEl.classList.toggle('text-danger', ganancia < 0);
-        gananciaEl.classList.toggle('text-success', ganancia >= 0);
-    };
-
-    plataforma.addEventListener('change', applyDuraciones);
-    tipoCuenta.addEventListener('change', apply);
-    costoInput.addEventListener('input', applyGanancia);
-    precioInput.addEventListener('input', applyGanancia);
-    applyDuraciones();
-    apply();
-    applyGanancia();
-})();
-</script>
-

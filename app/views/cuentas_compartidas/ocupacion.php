@@ -4,7 +4,7 @@ if (!($canAdmin ?? false)) return;
 $occupationUnit = $service === 'chatgpt' ? 'dispositivos' : 'cupos';
 $occupationCount = (int) ($cuenta['ocupados'] ?? 0);
 ?>
-<details class="mt-3" id="ocupacion" <?= !empty($occupationExpanded) ? 'open' : '' ?>>
+<details class="mt-3" id="ocupacion" <?= !empty($occupationExpanded) ? 'open' : '' ?> <?= !empty($occupationStandalone) ? 'data-standalone-occupation' : '' ?>>
     <summary class="fw-semibold">Editar <?= e($occupationUnit) ?> ocupados</summary>
     <form class="mt-3" method="post" action="<?= e(url('/' . $service . '/' . $accountId . '/ocupacion')) ?>"
         data-chatgpt-submit data-occupancy-adjust data-occupation-unit="<?= e($occupationUnit) ?>" data-account-label="<?= e((string) $cuenta['etiqueta']) ?>"

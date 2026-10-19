@@ -21,9 +21,9 @@ function runOccupationTests(PDO $pdo, callable $test): void
             $payments = $model->payments($id);
             $model->adjustOccupation($id, '4', '1', 'Conteo de dispositivos', 'fixture-admin', $token());
             clEq($model->find($id)['ocupados'], 4, 'Debe permitir una ocupación superior a la capacidad.');
-            clEq($model->find($id)['estado_distribucion'], 'Vendida', 'La cuenta debe estar vendida al ocupar su capacidad.');
+            clEq($model->find($id)['estado_distribucion'], 'En distribución', 'La cuenta debe seguir seleccionada al alcanzar la referencia.');
             clEq($model->currentDistribution()['libres'], 0, 'No debe mostrar cupos negativos.');
-            clReject(static fn() => $model->sell($id, 1, $today, $token()), 'El vendedor debe respetar la ocupación ajustada.');
+            clEq($model->find($id)['ventas_habilitadas'], true, 'La ocupación ajustada no bloquea la cuenta seleccionada.');
             $model->adjustOccupation($id, 0, 4, '', 'fixture-admin', $token());
             clEq($model->find($id)['ocupados'], 0, 'Debe poder reducir a cero.');
             clEq($model->find($id)['estado_distribucion'], 'En distribución', 'Reducir la ocupación vuelve a abrir cupos.');
@@ -73,7 +73,7 @@ function runOccupationTests(PDO $pdo, callable $test): void
             $model->setFreePlan($id, true);
             $model->adjustOccupation($id, 1, 2, '', 'fixture', $token());
             clEq($model->find($id)['estado_periodo'], 'GRATIS', 'Ajustar no debe restaurar un plan Gratis.');
-            clReject(static fn() => $model->sell($id, 1, $today, $token(), true), 'Ajustar no puede habilitar ventas en Gratis.');
+            clReject(static fn() => $model->sell($id, 1, $today, $token()), 'Ajustar no puede habilitar ventas en Gratis.');
         });
         $test("ocupación {$label}: ajustes negativos y retirada de accesos heredados mantienen el contador y la próxima entrega", static function () use ($pdo, $class, $create, $token, $today): void {
             $model = new $class($pdo);
@@ -120,12 +120,12 @@ function runOccupationTests(PDO $pdo, callable $test): void
         $_POST = [];
         unset($_SESSION['auth']);
     });
-    $test('ocupación: dos entregas concurrentes respetan el último cupo de un contador ajustado', static function () use ($pdo, $create, $token, $today): void {
+    $test('ocupación: dos entregas concurrentes se suman al contador ajustado aunque crucen la referencia', static function () use ($pdo, $create, $token, $today): void {
         $model = new \App\Models\ClaudeCuenta($pdo);
         $id = $create($model);
         $model->selectDistribution($id);
         $model->adjustOccupation($id, 2, 0, '', 'fixture', $token());
-        clEq(clConcurrentSales($id, $today, [$token(), $token()]), ['REJECTED', 'SOLD'], 'Solo una entrega puede ocupar el último cupo.');
-        clEq($model->find($id)['ocupados'], 3, 'Debe sumar la entrega al ajuste sin superar la capacidad.');
+        clEq(clConcurrentSales($id, $today, [$token(), $token()]), ['SOLD', 'SOLD'], 'Ambas entregas se permiten en la cuenta seleccionada.');
+        clEq($model->find($id)['ocupados'], 4, 'Debe sumar ambas entregas al ajuste sin perder cupos.');
     });
 }

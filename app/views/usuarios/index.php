@@ -44,7 +44,7 @@ $rolBadge = static function (string $rol): string {
                                 $isAdmin = (string) ($item['rol'] ?? '') === 'admin';
                                 $isLastAdmin = $isAdmin && $isActive && (int) ($activeAdmins ?? 0) <= 1;
                                 ?>
-                                <tr>
+                                <tr data-record-key="usuario-<?= (int) $item['id'] ?>">
                                     <td class="fw-semibold">
                                         <?= e((string) $item['username']) ?>
                                         <?php if ($isSelf): ?><span class="badge text-bg-primary ms-1">Tú</span><?php endif; ?>

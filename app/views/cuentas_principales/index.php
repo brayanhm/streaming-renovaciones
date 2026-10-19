@@ -34,7 +34,7 @@ declare(strict_types=1);
                                 $cap = (int) ($c['capacidad'] ?? 0);
                                 $lleno = $cap > 0 && $ocup >= $cap;
                                 ?>
-                                <tr>
+                                <tr data-record-key="cuenta-<?= (int) $c['id'] ?>">
                                     <td>
                                         <div class="fw-semibold">
                                             <a href="<?= e(url('/cuentas-principales/' . (int) $c['id'])) ?>" class="text-decoration-none"><?= e((string) $c['etiqueta']) ?></a>

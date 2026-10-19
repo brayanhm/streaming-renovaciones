@@ -108,12 +108,12 @@ if (!function_exists('status_badge_show')) {
                                     <small class="text-secondary">—</small>
                                 <?php endif; ?>
                             </td>
-                            <td><small><?= e((string) ($sus['fecha_inicio'] ?? '')) ?></small></td>
+                            <td><small><?= e(display_date($sus['fecha_inicio'] ?? null)) ?></small></td>
                             <td>
-                                <div><?= e((string) ($sus['fecha_vencimiento'] ?? '')) ?></div>
+                                <div><?= e(display_date($sus['fecha_vencimiento'] ?? null)) ?></div>
                                 <small class="<?= e($diasClass) ?>"><?= e($diasLabel) ?></small>
                             </td>
-                            <td><?= e(money((float) ($sus['precio_final'] ?? $sus['modalidad_precio'] ?? 0))) ?></td>
+                            <td><?= e(display_money((float) ($sus['precio_final'] ?? $sus['modalidad_precio'] ?? 0))) ?></td>
                             <td>
                                 <span class="badge <?= e(status_badge_show($statusLabel)) ?>"><?= e(status_label((string) $statusLabel)) ?></span>
                                 <?php if ($isNoRenew): ?>
@@ -125,23 +125,7 @@ if (!function_exists('status_badge_show')) {
                                     <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones/historial/' . (int) $sus['id'])) ?>"><?= icon('scroll-text') ?><span class="button-label">Historial</span></a>
                                     <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/suscripciones/editar/' . (int) $sus['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
                                 </div>
-                                <details class="mt-2">
-                                    <summary class="small text-primary" role="button">Modificar finalizacion</summary>
-                                    <form method="post" action="<?= e(url('/suscripciones/finalizacion/' . (int) $sus['id'])) ?>" class="mt-2">
-                                        <?= csrf_field() ?>
-                                        <label class="form-label form-label-sm mb-1" for="fecha_vencimiento_<?= (int) $sus['id'] ?>">Nueva fecha</label>
-                                        <input
-                                            type="date"
-                                            class="form-control form-control-sm mb-2"
-                                            id="fecha_vencimiento_<?= (int) $sus['id'] ?>"
-                                            name="fecha_vencimiento"
-                                            value="<?= e((string) ($sus['fecha_vencimiento'] ?? '')) ?>"
-                                            min="<?= e((string) ($sus['fecha_inicio'] ?? '')) ?>"
-                                            required
-                                        >
-                                        <button class="btn btn-success btn-sm w-100" type="submit"><?= icon('save') ?><span class="button-label">Guardar finalizacion</span></button>
-                                    </form>
-                                </details>
+                                <a class="btn btn-outline-primary btn-sm mt-2" data-modal-link href="<?= e(url('/suscripciones/finalizacion/' . (int) $sus['id'])) ?>"><?= icon('calendar-clock') ?><span class="button-label">Editar vencimiento</span></a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

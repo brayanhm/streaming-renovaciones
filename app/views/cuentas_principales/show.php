@@ -103,7 +103,7 @@ $lleno = $libres <= 0;
 
     <div class="col-lg-4">
         <div class="card shadow-sm">
-            <div class="card-body">
+            <div class="card-body" <?= !$lleno ? 'data-modal-panel data-modal-title="Asignar usuario"' : '' ?>>
                 <h2 class="h5 mb-3">Asignar usuario</h2>
                 <?php if ($lleno): ?>
                     <div class="alert alert-warning small mb-0">Cupo lleno. Aumenta la capacidad o libera un cupo para asignar más usuarios.</div>

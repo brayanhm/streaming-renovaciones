@@ -50,7 +50,8 @@ independiente.
 ChatGPT se administra por cuenta principal, sin registrar clientes en cada venta:
 
 - Se recomiendan 20 **dispositivos** por cuenta y el administrador configura su capacidad.
-  Al llenarse, solo el administrador puede superar el límite de la cuenta seleccionada.
+  Al llenarse, la cuenta sigue en distribución y todos los vendedores pueden
+  continuar entregando hasta que el administrador seleccione otra cuenta.
   Una venta de 1 dispositivo
   cuesta Bs 30; una venta de 2 dispositivos cuesta Bs 55 y consume dos cupos.
 - El administrador registra la fecha del pago y el costo real en bolivianos.
@@ -127,8 +128,19 @@ Bs 85**, y cada pago otorga **un mes calendario sin gracia**. El costo real de
 la cuenta se registra manualmente en bolivianos; no se fija un costo en dólares.
 Las ventas vencen con la cuenta y no registran clientes. Los pagos y el vencimiento
 conservan los cupos ocupados hasta que el administrador los libera manualmente.
-La capacidad es configurable; solo el administrador puede superarla y únicamente
-en la cuenta seleccionada para distribución.
+La capacidad es una referencia configurable; administradores y operadores pueden
+superarla únicamente en la cuenta seleccionada para distribución. Solo existe una
+cuenta seleccionada por servicio; elegir otra retira inmediatamente la anterior.
+
+Los listados muestran primero la cuenta actual y después las reservas listas,
+ordenadas por vencimiento final más cercano. Se señalan la siguiente cuenta y
+sus posiciones de cola; las completas, bloqueadas e inactivas quedan después.
+La selección sigue siendo manual y las búsquedas conservan esas prioridades.
+
+El administrador puede usar **Distribuir** desde cada fila del listado. Una cuenta
+Gratis preparada ofrece **Pagar y distribuir**: exige el costo real en Bs y registra
+el pago de hoy junto con la selección, en una sola operación. Conserva los cupos,
+el ciclo y el historial. Las cuentas ya vigentes se seleccionan sin registrar otro pago.
 
 `/claude/distribucion` registra y copia entregas de un dispositivo;
 `/claude/plantillas` redirige a esa pantalla. Se conservan los textos existentes.
@@ -140,12 +152,25 @@ recibir su contenido. Pruebas de Claude: `php tests/claude.php`.
 El comando `php deploy/migrate_chatgpt.php` actualiza el esquema de **ambos**
 apartados, aunque conserva su nombre por compatibilidad.
 
+Ambos servicios registran la fecha y hora del inicio de distribución al seleccionar
+una cuenta y del primer llenado de cupos de cada ciclo. Las fechas se muestran en
+el listado, el detalle y la distribución; el detalle conserva el historial por ciclo.
+Volver a seleccionar, pagar o reabrir cupos conserva las fechas. **Iniciar nuevo ciclo**
+abre un registro nuevo y conserva el anterior. Las fechas anteriores a esta función
+quedan **Sin registrar**, sin estimaciones ni carga manual. La misma migración
+incremental añade `cuentas_distribucion_historial`.
+
 Pruebas adicionales: `php tests/chatgpt_textos.php` (sin acceso a DB) y
 `php tests/chatgpt_existentes.php` (base temporal aislada).
 
 Las mejoras de interfaz, navegación móvil y alcance de los reportes se describen en
 `docs/mejoras-ui-ux.md`. `php tests/ui_ux.php` verifica los filtros y totales financieros,
 la conservación del historial y la recuperación segura de formularios en una base temporal.
+
+En escritorio, el menú lateral comienza compacto y se expande al pasar el cursor o
+navegar con Tab. Se contrae al salir y admite Escape. **Fijar menú** lo mantiene
+abierto y conserva la preferencia al recargar. En móvil se abre desde su botón.
+
 ChatGPT incluye **Ver próximas fechas** para ordenar los cierres del mes pagado y los pagos
 y cierres del fin de gracia. Cada aviso admite una anticipación configurable por el administrador
 (3 días inicialmente). `php tests/chatgpt_avisos.php` verifica sus límites, permisos, configuración
@@ -209,6 +234,12 @@ Nota: si tu plan te permite definir document root del dominio en `public/`, tamb
 Si la tabla `usuarios` esta vacia, la pantalla de login habilita creacion de admin inicial.
 
 ## Rutas principales
+
+Los formularios de creación y edición se abren en modales desde los listados. Al guardar se actualiza la pantalla de origen conservando los filtros y la posición. Desde clientes también se puede asignar una vigencia sin cambiar de pantalla. Los pagos y nuevos ciclos de cuentas usan el mismo modal. Los errores de validación conservan los datos introducidos.
+
+También se renueva con vista previa de importe y nuevo vencimiento, se corrigen fechas, se consultan historiales de renovación y distribución y se ajustan cupos desde el índice. Completar contactos incorpora **Guardar y siguiente** para avanzar entre pendientes filtrados. **Mi perfil** se abre desde el encabezado con operaciones separadas de usuario y contraseña. Las renovaciones rechazan reenvíos y cambios de fecha o precio posteriores a abrir el formulario.
+
+Ver [navegación y funcionamiento de los modales](docs/mejoras-ui-ux.md#formularios-en-modales). Pruebas HTTP aisladas: `php tests/modals.php`; con `--preview` se abre un servidor local con datos ficticios hasta presionar Enter en la terminal.
 
 - `GET /login`
 - `POST /login`

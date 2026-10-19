@@ -388,7 +388,14 @@ class ClientesController extends Controller
         $contacto = trim((string) ($_POST['contacto'] ?? ''));
         $numero = local_whatsapp_phone_bolivia(trim((string) ($_POST['numero'] ?? '')));
 
+        if ($contacto === '') {
+            set_field_errors(['contacto' => 'Indica el nombre de contacto.']);
+            flash('danger', 'Completa el nombre de contacto.');
+            $this->goBack('/clientes/completar');
+        }
+
         if ($numero === '' || !is_valid_local_whatsapp_phone_bolivia($numero)) {
+            set_field_errors(['numero' => 'Usa 8 dígitos que comiencen con 6 o 7.']);
             flash('danger', 'Ingresa un número celular válido (8 dígitos, inicia con 6 o 7); el +591 se agrega automáticamente.');
             $this->goBack('/clientes/completar');
         }
@@ -406,6 +413,14 @@ class ClientesController extends Controller
 
         flash('success', 'Contacto y número actualizados.');
         $this->goBack('/clientes/completar');
+    }
+
+    public function completeContactForm(int $id): void
+    {
+        $item = $this->clientes->find($id);
+        if ($item === null) { flash('danger', 'Cliente no encontrado.'); $this->redirect('/clientes/completar'); }
+        $this->render('clientes/completar_formulario', ['pageTitle' => 'Completar contacto', 'modalPage' => true,
+            'item' => $item, 'subscriptions' => $this->suscripciones->allByCliente($id)]);
     }
 
     public function destroy(int $id): void

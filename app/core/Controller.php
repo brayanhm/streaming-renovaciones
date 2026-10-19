@@ -15,7 +15,12 @@ class Controller
         extract($data, EXTR_SKIP);
 
         require APP_PATH . '/views/layouts/header.php';
+        $modalPage = ($data['modalPage'] ?? false) || str_ends_with($view, '/edit')
+            || in_array($view, ['modalidades/precios', 'suscripciones/historial', 'auth/profile'], true);
+        if ($modalPage) echo '<div data-modal-page data-modal-title="' . e($pageTitle) . '" data-modal-size="'
+            . e($data['modalSize'] ?? ($view === 'suscripciones/historial' ? 'wide' : 'normal')) . '">';
         require APP_PATH . '/views/' . $view . '.php';
+        if ($modalPage) echo '</div>';
         require APP_PATH . '/views/layouts/footer.php';
         \clear_old();
     }
@@ -27,6 +32,7 @@ class Controller
 
     protected function goBack(string $fallback = '/dashboard'): void
     {
+        if (\is_modal_form_request()) $this->redirect($fallback);
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
 
         if (is_string($referer) && $referer !== '') {

@@ -2,6 +2,62 @@
 
 Fecha de registro: **14 de octubre de 2026**. Zona horaria del sistema: `America/La_Paz`.
 
+## Actualización del 19 de octubre de 2026: menú automático
+
+### Ajustes de navegación móvil
+
+Se implementaron los cinco hallazgos de `docs/revision-movil.md`: zonas táctiles de 44 × 44 px, encabezado compacto con accesos identificados para lectores de pantalla, tarjetas para historiales y Auditoría, modales completos con poca altura y distribución con las dos opciones de entrega visibles en la primera pantalla a 360 × 740. Las tablas cargadas en modales se inicializan de forma reutilizable e idempotente. En escritorio conservan todas sus columnas.
+
+El índice de ChatGPT muestra su primera cuenta alrededor de 684 px desde el inicio, frente a 1115 px antes del ajuste, con los mismos datos ficticios. Se verificaron nueve secciones en teléfono y tableta, detalles, menú, guardado con filtros y entrega/copia. Las 21 pruebas HTTP de modales pasaron y se verificó sintaxis PHP/JavaScript. Esta ampliación no requiere migraciones.
+
+El menú de escritorio comienza compacto y se expande al entrar con el cursor o navegar con Tab. Se contrae al salir tras una demora de 240 ms; Escape devuelve el foco al contenido. La apertura automática se superpone al contenido para conservar la posición de tablas y filtros. **Fijar menú** reserva el ancho completo y conserva la preferencia al recargar; **Desfijar menú** vuelve al modo automático. En móvil se conserva el panel con botón de apertura y cierre.
+
+Se verificaron cursor, teclado, cierre, fijación y recarga en el navegador con datos ficticios. Las 21 pruebas HTTP de modales volvieron a pasar. El cambio no requiere migraciones.
+
+## Actualización del 19 de octubre de 2026: formularios en modales
+
+### Ampliación de los siete flujos propuestos
+
+Se incorporaron renovación desde el panel con importe y vencimiento calculados, edición de fecha y reactivación sin ingreso, historial de renovaciones, ajuste independiente de cupos, contactos pendientes con **Guardar y siguiente**, historial de distribución desde ambos índices y perfil desde el encabezado. Los historiales se abren en un modal amplio con **Cerrar**. El perfil separa usuario y contraseña y cambia de operación dentro del mismo modal. El ajuste de cupos conserva el control de administrador y la confirmación.
+
+La renovación comparte sus cálculos de modalidades, importes personalizados y calendario con el modelo. Un token por formulario y la comprobación dentro de la transacción rechazan reenvíos y cambios de vencimiento o precio posteriores a la vista previa. Corregir fechas sigue sin crear movimientos financieros. La cola de contactos recarga el listado filtrado y abre el siguiente pendiente tras guardar; se verificó también el último registro.
+
+Validación de esta ampliación: **145 pruebas aprobadas**, sin fallos (`modals.php`: 21, incluyendo 13 casos adicionales; `claude.php`: 95; `chatgpt.php`: 20; `ui_ux.php`: 9). Se comprobaron en navegador los siete flujos, el importe y fecha al cambiar de período, confirmación de cupos, conservación de filtros, historiales de consulta y avance entre contactos. Todas las escrituras de prueba se hicieron en bases efímeras con datos ficticios; no se requieren cambios de esquema para esta ampliación.
+
+Crear y editar clientes, suscripciones, plataformas, planes, usuarios y cuentas se realiza desde un modal, conservando la búsqueda, los filtros, la página y la posición de origen al guardar. ChatGPT y Claude tienen **Editar** directamente en el índice. Asignar vigencia desde clientes, registrar pagos, pagar y distribuir, revisar vigencias e iniciar nuevos ciclos también usan modales. La edición conjunta de costos y precios permite elegir la plataforma dentro del mismo modal.
+
+Los formularios largos con una sola operación conservan **Guardar** y **Cancelar** visibles en el pie. Los errores del servidor permanecen junto a los campos sin descartar los datos. Las confirmaciones de ajustes funcionan dentro del modal; se bloquean envíos repetidos mientras se guarda. Las páginas directas siguen disponibles y este cambio no requiere migración ni despliegue.
+
+Se probaron creación, edición, validación, cancelación, asignación de vigencias, pagos y confirmación de ocupación en el navegador usando una base efímera con datos ficticios. La suite `tests/modals.php` comprueba ocho flujos HTTP, incluidos validación, persistencia, CSRF, carga de formularios y sesión expirada. También se ejecutaron las suites de Claude (95), ChatGPT (20) y UI (9), sin fallos.
+
+## Actualización del 19 de octubre de 2026: fechas de distribución
+
+### Seleccionar desde el índice y pagar cuentas Gratis
+
+El administrador puede seleccionar una cuenta desde la fila del listado con **Distribuir**, conservando la búsqueda al regresar. Las cuentas Gratis activas y con credenciales ofrecen **Pagar y distribuir**, que solicita el costo real en Bs y registra el pago de hoy en Bolivia junto con la selección. ChatGPT obtiene un mes pagado y un mes de gracia; Claude, un mes pagado. Las cuentas vigentes se seleccionan sin otro gasto. Se conservan la ocupación, el ciclo y su inicio ya conocido; un inicio desconocido se registra al efectuar la nueva selección.
+
+Pago y selección forman una sola transacción: si falla una parte se revierte todo. Los reintentos no duplican gastos ni vuelven a seleccionar una cuenta reemplazada, y dos solicitudes simultáneas solo registran un pago de activación. Los formularios Gratis antiguos se rechazan si la cuenta ya fue pagada. El listado usa un token de selección compartido y mantiene la comprobación del administrador en el servidor.
+
+Validación de este ajuste: **137 pruebas aprobadas**, sin fallos (`claude.php`: 95; `chatgpt.php`: 20; `chatgpt_existentes.php`: 22). Se verificaron costo real, fecha de hoy, conservación de cupos, reversión ante fallos, concurrencia y permisos. En el navegador se revisaron el botón directo para cuentas vigentes y el formulario desplegable para cuentas Gratis con datos ficticios. No se registraron pagos ni selecciones de prueba en cuentas reales; no se requiere una migración adicional para este ajuste.
+
+### Orden predeterminado de próximas cuentas
+
+Los índices de ChatGPT y Claude muestran primero la cuenta actual y luego las reservas activas, vigentes, con credenciales válidas y ocupación inferior a la referencia. Se ordenan por vencimiento final más cercano (incluida la gracia en ChatGPT), nombre e ID, con las indicaciones **Siguiente para distribución** y **En cola**. Las completas, bloqueadas e inactivas aparecen después. Buscar conserva estas prioridades y muestra disponibilidad sin renumerar la cola global. El listado no cambia automáticamente la selección.
+
+Validación de este ajuste: **101 pruebas aprobadas**, sin fallos (`claude.php`: 81; `chatgpt.php`: 20), incluyendo cuatro casos nuevos de orden, disponibilidad, identificación de la siguiente cuenta y búsquedas. Se verificó la presentación en el navegador con cuentas ficticias.
+
+### Distribución continua hasta seleccionar la siguiente cuenta
+
+La capacidad se utiliza como referencia: al llegar a 20 dispositivos ChatGPT o 5 cupos Claude (o al valor configurado), la cuenta seleccionada continúa **En distribución** y todos los vendedores pueden seguir entregando. La primera fecha de llenado se conserva. Solo al seleccionar otra cuenta se retira la anterior de distribución; la anterior mantiene sus ventas e historial y ya no acepta nuevas ventas desde formularios abiertos. Hay una sola selección por servicio y crear, pagar o activar cuentas no la cambia automáticamente.
+
+Validación de este ajuste: **97 pruebas aprobadas**, sin fallos (`claude.php`: 77; `chatgpt.php`: 20), incluyendo vendedores por encima de la referencia, cambio inmediato de cuenta, formularios anteriores, conteos concurrentes y conservación del primer llenado. En el navegador se verificó una cuenta ficticia ChatGPT con **22 / 20** dispositivos y los botones de entrega habilitados para un operador.
+
+ChatGPT y Claude registran el inicio al seleccionar una cuenta y el primer llenado de cada ciclo, incluyendo ventas, ajustes de ocupación y reducciones de capacidad. Volver a seleccionar, pagar o reabrir cupos conserva las fechas; iniciar un nuevo ciclo abre otro registro y conserva el anterior. Se muestran en el listado, el detalle y la distribución, con el historial por ciclo dentro del detalle. Las entregas actualizan la fecha de llenado sin recargar.
+
+La tabla `cuentas_distribucion_historial` se creó en la base local sin reconstruir fechas anteriores ni generar ventas. Las cuentas existentes mantienen **Sin registrar**. Para Hostinger se requiere aplicar la migración incremental habitual; esta actualización se realizó localmente.
+
+Validación: **132 pruebas aprobadas**, sin fallos (`claude.php`: 75; `chatgpt.php`: 20; `chatgpt_existentes.php`: 22; `run.php`: 15). La suite de Claude incluye las nuevas pruebas compartidas de fechas, respuestas de entrega y renderizado. Se revisaron el detalle con dos ciclos, el listado y la distribución en el navegador con datos ficticios de bases temporales, sin ventas de prueba en cuentas reales.
+
 ## Estado de esta etapa
 
 Se implementaron apartados independientes para **ChatGPT** y **Claude**, reemplazando el apartado general de IA. Los cambios están disponibles en el proyecto local y las migraciones se aplicaron a la base local. Esta etapa no incluye un despliegue en Hostinger ni un commit de los cambios.
@@ -129,6 +185,8 @@ php deploy/migrate_chatgpt.php
 El esquema base debe existir previamente. La guía de actualización y publicación está en [DEPLOY_HOSTINGER.md](DEPLOY_HOSTINGER.md#5-verificación-post-deploy).
 
 ## Pendientes para continuar
+
+Actualización UI/UX del 19/10/2026: filtros y paginación de cuentas, acciones compactas, encabezados fijos, resúmenes desplegables, importes/fechas uniformes, panel orientado a pendientes y protección de cambios en modales. La documentación y validación están en [docs/mejoras-ui-ux.md](docs/mejoras-ui-ux.md#listados-y-protección-de-cambios). Estos ajustes no requieren migraciones de base de datos.
 
 - [ ] El administrador confirma la vigencia de las cuentas precargadas y completa las credenciales faltantes.
 - [ ] Recibir y configurar el texto de entrega de Claude.

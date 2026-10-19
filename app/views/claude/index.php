@@ -14,10 +14,10 @@ $periodColors = ['PAGADO' => 'success', 'GRATIS' => 'secondary', 'SIN_PAGO' => '
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h1 class="h3 mb-1">Claude</h1>
-        <p class="text-secondary mb-0">Cuentas principales, pagos y ventas por cupos.</p>
+        <p class="text-secondary mb-0 d-none d-sm-block">Cuentas principales, pagos y ventas por cupos.</p>
     </div>
     <div class="gs-page-actions"><?php if ($canAdmin): ?><a href="<?= e(url('/claude?nuevo=1')) ?>#nueva-cuenta" class="btn btn-primary" data-open-panel="nueva-cuenta"><?= icon('plus') ?><span class="button-label">Nueva cuenta</span></a><?php endif; ?>
-    <a href="<?= e(url('/claude/distribucion')) ?>" class="btn btn-primary"><?= icon('copy') ?><span class="button-label">Cuenta en distribución</span></a></div>
+    <a href="<?= e(url('/claude/distribucion')) ?>" class="btn btn-outline-primary d-none d-lg-inline-flex"><?= icon('copy') ?><span class="button-label">Cuenta en distribución</span></a></div>
 </div>
 
 <?php require __DIR__ . '/../cuentas_compartidas/actual.php'; ?>
@@ -31,35 +31,33 @@ $periodColors = ['PAGADO' => 'success', 'GRATIS' => 'secondary', 'SIN_PAGO' => '
         </div></div></div>
     <?php endforeach; ?>
 </div>
-<p class="small text-secondary">La capacidad sin ocupar incluye cuentas en reserva, Gratis, inactivas o pendientes. Los cupos para vender se muestran en la cuenta seleccionada.</p>
+<p class="small text-secondary">La capacidad sin ocupar incluye cuentas en reserva, Gratis, inactivas o pendientes. Alcanzar la referencia no bloquea las entregas de la cuenta seleccionada.</p>
 </details>
 
 <div class="row g-3 gs-page-layout">
     <div class="<?= $canAdmin ? 'col-xl-8' : 'col-12' ?>">
-        <form method="get" action="<?= e(url('/claude')) ?>" class="d-flex gap-2 mb-3" role="search">
-            <label class="visually-hidden" for="chatgpt-search">Buscar cuenta</label>
-            <input type="search" class="form-control" id="chatgpt-search" name="q" value="<?= e((string) ($q ?? '')) ?>" placeholder="Buscar por correo o nombre de cuenta">
-            <button type="submit" class="btn btn-outline-primary"><?= icon('search') ?><span class="button-label">Buscar</span></button>
-            <?php if (($q ?? '') !== ''): ?><a href="<?= e(url('/claude')) ?>" class="btn btn-outline-secondary"><?= icon('funnel-x') ?><span class="button-label">Limpiar</span></a><?php endif; ?>
-        </form>
+        <?php require __DIR__ . '/../cuentas_compartidas/filtros.php'; ?>
+        <p class="small text-secondary mb-2"><span class="d-none d-lg-inline">Orden: cuenta actual, siguientes listas por vencimiento más cercano y demás cuentas. La selección es manual.</span><span class="d-lg-none">Actual, próximas por vencimiento y demás. Selección manual.</span></p>
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table data-responsive-cards data-mobile-primary="0,1,2,4" class="table table-striped align-middle mb-0">
-                        <thead class="table-dark"><tr><th>Cuenta</th><th>Vigencia</th><th>Cupos</th><th class="text-end">Último pago</th><th></th></tr></thead>
+                    <table data-responsive-cards data-mobile-primary="0,1,2,4" class="table table-striped align-middle mb-0 gs-account-table">
+                        <thead class="table-dark"><tr><th>Cuenta</th><th>Vigencia</th><th>Cupos</th><th class="text-end">Último pago</th><th class="text-end">Acciones</th></tr></thead>
                         <tbody>
                             <?php if (empty($rows)): ?>
-                                <tr><td colspan="5" class="text-center text-secondary py-4"><?= ($q ?? '') !== '' ? 'No hay cuentas que coincidan con la búsqueda.' : 'Todavía no hay cuentas Claude.' ?></td></tr>
+                                <tr><td colspan="5" class="text-center text-secondary py-4">No hay cuentas con estos filtros. <?php if ($q !== '' || ($filter ?? '') !== ''): ?><a href="<?= e(url('/claude')) ?>">Ver todas las cuentas</a><?php else: ?>Registra una cuenta para comenzar.<?php endif; ?></td></tr>
                             <?php endif; ?>
                             <?php foreach (($rows ?? []) as $row): ?>
                                 <?php $period = strtoupper((string) ($row['estado_periodo'] ?? 'SIN_PAGO')); $occupied = (int) ($row['ocupados'] ?? 0); $recommended = (int) ($row['recomendado'] ?? 5); $remaining = max(0, $recommended - $occupied); $exceeded = max(0, $occupied - $recommended); ?>
-                                <tr>
+                                <tr data-record-key="claude-<?= (int) $row['id'] ?>">
                                     <td>
                                         <a class="fw-semibold text-decoration-none" href="<?= e(url('/claude/' . (int) $row['id'])) ?>"><?= e((string) $row['etiqueta']) ?></a>
-                                        <small class="d-block text-secondary text-break"><?= e((string) ($row['correo'] ?? '')) ?></small>
-                                        <span class="badge text-bg-<?= !empty($row['llena']) ? 'success' : (!empty($row['distribucion_actual']) ? 'primary' : 'secondary') ?> mt-1"><?= e((string) $row['estado_distribucion']) ?></span>
+                                        <?php if (strcasecmp(trim((string) $row['etiqueta']), trim((string) ($row['correo'] ?? ''))) !== 0): ?><small class="d-block text-secondary text-break"><?= e((string) ($row['correo'] ?? '')) ?></small><?php endif; ?>
+                                        <span class="badge text-bg-<?= !empty($row['distribucion_actual']) ? 'primary' : (!empty($row['llena']) ? 'success' : 'secondary') ?> mt-1"><?= e((string) $row['estado_distribucion']) ?></span>
+                                        <?php if (!empty($row['lista_para_distribucion'])): ?>
+                                            <small class="d-block text-primary fw-semibold"><?= ($row['turno_distribucion'] ?? 0) === 1 ? 'Siguiente para distribución' : (isset($row['turno_distribucion']) ? 'En cola · ' . (int) $row['turno_distribucion'] : 'Lista para distribuir') ?></small>
+                                        <?php endif; ?>
                                         <?php if (!empty($row['motivo_bloqueo'])): ?><small class="d-block text-danger mt-1"><?= e($row['motivo_bloqueo']) ?></small><?php endif; ?>
-                                        <?php if (!empty($row['distribucion_actual'])): ?><small class="d-block text-primary">Cuenta seleccionada</small><?php endif; ?>
                                         <?php if ((int) ($row['activo'] ?? 1) !== 1): ?><span class="badge text-bg-secondary mt-1">Inactiva</span><?php endif; ?>
                                     </td>
                                     <td>
@@ -69,13 +67,10 @@ $periodColors = ['PAGADO' => 'success', 'GRATIS' => 'secondary', 'SIN_PAGO' => '
                                         <?php if ($period === 'PAGADO'): ?><small class="text-success"><?= (int) ($row['dias_pagado'] ?? 0) ?> días restantes</small><?php endif; ?>
                                     </td>
                                     <td>
-                                        <strong class="<?= $exceeded > 0 ? 'text-danger' : ($remaining === 0 ? 'text-warning' : '') ?>"><?= $occupied ?> ocupados</strong>
-                                        <small class="d-block text-secondary">Capacidad: <?= $recommended ?></small>
-                                        <small class="d-block text-secondary">Libres: <?= $remaining ?></small>
-                                        <?php if ($exceeded > 0): ?><span class="badge text-bg-danger mt-1">+<?= $exceeded ?> adicionales</span><?php elseif ($remaining === 0): ?><span class="badge text-bg-warning mt-1">Capacidad alcanzada</span><?php endif; ?>
+                                        <?php require __DIR__ . '/../cuentas_compartidas/ocupacion_listado.php'; ?>
                                     </td>
-                                    <td class="text-end text-nowrap">Bs <?= e($claudeMoney($row['ultimo_costo_bs'] ?? 0)) ?></td>
-                                    <td class="text-end"><a class="btn btn-outline-primary btn-sm" href="<?= e(url('/claude/' . (int) $row['id'])) ?>"><?= icon('arrow-right') ?><span class="button-label">Abrir</span></a></td>
+                                    <td class="text-end text-nowrap"><?php if (($row['ultimo_costo_bs'] ?? null) !== null): ?>Bs <?= e($claudeMoney($row['ultimo_costo_bs'])) ?><?php else: ?><span class="text-secondary">Sin registrar</span><?php endif; ?></td>
+                                    <td class="text-end"><?php require __DIR__ . '/../cuentas_compartidas/acciones_listado.php'; ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -83,7 +78,8 @@ $periodColors = ['PAGADO' => 'success', 'GRATIS' => 'secondary', 'SIN_PAGO' => '
                 </div>
             </div>
         </div>
-        <p class="small text-secondary mt-2 mb-0">Al ocupar todos sus cupos, la cuenta pasa automáticamente a Vendida. Solo se vende en la cuenta seleccionada; únicamente el administrador puede superar su capacidad.</p>
+        <?php require __DIR__ . '/../cuentas_compartidas/paginacion.php'; ?>
+        <p class="small text-secondary mt-2 mb-0">La cuenta seleccionada sigue en distribución aunque alcance su capacidad de referencia. Todos los vendedores pueden seguir entregando hasta que el administrador seleccione otra cuenta.</p>
     </div>
     <?php if ($canAdmin): ?>
     <div class="col-xl-4 gs-create-column">

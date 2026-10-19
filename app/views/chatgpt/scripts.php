@@ -97,11 +97,7 @@
             const projected = occupied + Number(devices);
             const recommendationWarning = saleForm.querySelector('[data-sale-recommendation-warning]');
             recommendationWarning.hidden = projected <= recommended;
-            const canExceed = saleForm.dataset.canExceed === '1';
-            recommendationWarning.textContent = canExceed
-                ? `Venta adicional del administrador: quedarán ${projected} dispositivos ocupados, ${projected - recommended} por encima de la capacidad de ${recommended}.`
-                : 'No hay suficientes cupos para esta venta. Selecciona menos dispositivos o consulta al administrador.';
-            saleForm.querySelector('[data-sale-button]').disabled = !canExceed && projected > recommended;
+            recommendationWarning.textContent = `Con esta venta habrá ${projected} dispositivos ocupados. Puedes superar la referencia de ${recommended} mientras esta cuenta siga seleccionada.`;
             GhostIcons.setLabel(saleForm.querySelector('[data-sale-button]'), configured ? 'Registrar venta y copiar' : 'Registrar venta');
             saleForm.querySelector('[data-sale-template-status]').textContent = configured ? 'Se preparará el texto de entrega al registrar la venta.' : 'Mensaje pendiente de configurar. La venta se registrará y podrás copiarlo después.';
             const date = saleForm.querySelector('[name="fecha_venta"]').value;

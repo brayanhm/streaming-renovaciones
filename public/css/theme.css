@@ -10,6 +10,11 @@
     --gs-nav: #10283f;
     --gs-nav-text: #c5d5e4;
     --gs-nav-active: #193c53;
+    --gs-table-head-bg: #10283f;
+    --gs-table-head-text: #ffffff;
+    --gs-table-head-border: #45c2d4;
+    --gs-table-column-border: #8493a5;
+    --gs-table-head-divider: #69879f;
     --gs-cyan: #45c2d4;
     --gs-primary: #075e78;
     --gs-primary-hover: #064b60;
@@ -106,12 +111,28 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 
 .table td, .table th { vertical-align: middle; }
-.table thead th {
-    background: var(--gs-surface-muted);
-    color: var(--gs-dim);
-    border-bottom: 1px solid var(--gs-border);
-    font-weight: 600;
-    font-size: .82rem;
+.table thead {
+    --bs-table-bg: var(--gs-table-head-bg);
+    --bs-table-color: var(--gs-table-head-text);
+    --bs-table-border-color: var(--gs-table-head-border);
+    --bs-table-bg-type: transparent;
+    --bs-table-bg-state: transparent;
+}
+.table thead th, .table thead td {
+    background-color: var(--gs-table-head-bg);
+    color: var(--gs-table-head-text);
+    border-bottom: 2px solid var(--gs-table-head-border);
+    font-weight: 650;
+    font-size: .85rem;
+}
+.table > :not(caption) > * > * {
+    border-inline-end: 1px solid var(--gs-table-column-border);
+}
+.table > :not(caption) > * > :last-child {
+    border-inline-end-width: 0;
+}
+.table > thead > tr > * {
+    border-inline-end-color: var(--gs-table-head-divider);
 }
 
 .form-control, .form-select {

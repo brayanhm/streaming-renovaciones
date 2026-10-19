@@ -12,7 +12,7 @@ declare(strict_types=1);
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
+            <table data-responsive-cards data-mobile-primary="0,1,2" class="table table-striped align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>Fecha</th>
@@ -28,7 +28,7 @@ declare(strict_types=1);
                     <?php endif; ?>
                     <?php foreach ($rows as $r): ?>
                         <tr>
-                            <td><small><?= e((string) ($r['created_at'] ?? '')) ?></small></td>
+                            <td><small><?= e(display_datetime($r['created_at'] ?? null)) ?></small></td>
                             <td><?= e((string) ($r['usuario'] ?? '')) ?></td>
                             <td><span class="badge text-bg-secondary"><?= e((string) ($r['accion'] ?? '')) ?></span></td>
                             <td><small><?= e((string) ($r['detalle'] ?? '')) ?></small></td>

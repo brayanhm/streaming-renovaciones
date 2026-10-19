@@ -18,7 +18,7 @@ function runDeliveryTests(PDO $pdo, callable $test): void
         return new $class();
     };
     $deliver = static function ($controller, int $id, string $devices, string $token): DistributionJson {
-        $_POST = ['dispositivos' => $devices, 'token_operacion' => $token, 'canExceed' => '1'];
+        $_POST = ['dispositivos' => $devices, 'token_operacion' => $token];
         try { $controller->deliver($id); } catch (DistributionJson $response) { return $response; }
         throw new RuntimeException('No devolvió una respuesta JSON.');
     };
@@ -70,7 +70,7 @@ function runDeliveryTests(PDO $pdo, callable $test): void
             clEq($model->find($id)['ocupados'], 0, 'La pantalla no recupera los cupos reiniciados.');
         });
 
-        $test("entrega {$service}: límites, plan Gratis, cuenta de reserva y tokens inválidos bloquean el botón en el servidor", static function () use ($pdo, $modelClass, $controllerClass, $create, $login, $deliver, $operator, $admin): void {
+        $test("entrega {$service}: superar la referencia permite entregas, pero Gratis, reservas y tokens inválidos las bloquean", static function () use ($pdo, $modelClass, $controllerClass, $create, $login, $deliver, $operator, $admin): void {
             $model = new $modelClass($pdo);
             $id = $create($model, 1);
             $reserve = $create($model);
@@ -78,17 +78,66 @@ function runDeliveryTests(PDO $pdo, callable $test): void
             $controller = $login($controllerClass, $operator);
             $first = $deliver($controller, $id, '1', $controller->formToken('entregar', $id));
             clEq($first->status, 200, 'El último cupo debe venderse.');
-            clEq($first->data['state'], 'Vendida', 'La última entrega debe informar Vendida para actualizar la pantalla inmediatamente.');
-            clEq($deliver($controller, $id, '1', $first->data['nextToken'])->status, 422, 'Un operador no supera la capacidad, aunque el POST lo pida.');
-            clEq($model->find($id)['ocupados'], 1, 'La entrega rechazada no consume cupos.');
+            clEq($first->data['state'], 'En distribución', 'La última entrega no debe quitar la cuenta de distribución.');
+            clEq($deliver($controller, $id, '1', $first->data['nextToken'])->status, 200, 'El operador puede seguir entregando sobre la referencia.');
+            clEq($model->find($id)['ocupados'], 2, 'La entrega adicional debe contarse.');
             clEq($deliver($controller, $id, '1', $controller->formToken('vender', $id))->status, 422, 'Un token de otra acción no permite entregar.');
             $controller = $login($controllerClass, $admin);
             clEq($deliver($controller, $reserve, '1', $controller->formToken('entregar', $reserve))->status, 422, 'El admin tampoco puede entregar una reserva.');
             $additional = $deliver($controller, $id, '1', $controller->formToken('entregar', $id));
-            clEq($additional->status, 200, 'El administrador mantiene su excepción en la seleccionada.');
+            clEq($additional->status, 200, 'El administrador también puede seguir entregando en la seleccionada.');
             $model->setFreePlan($id, true);
             clEq($deliver($controller, $id, '1', $additional->data['nextToken'])->status, 422, 'Gratis bloquea todas las entregas.');
-            clEq($model->find($id)['ocupados'], 2, 'Gratis no registra una venta nueva.');
+            clEq($model->find($id)['ocupados'], 3, 'Gratis no registra una venta nueva.');
+        });
+
+        $test("entrega {$service}: vendedor continúa tras el llenado y cambiar cuenta retira la anterior inmediatamente", static function () use ($pdo, $service, $modelClass, $controllerClass, $create, $login, $deliver, $page, $operator): void {
+            $model = new $modelClass($pdo);
+            $reference = $modelClass::CAPACIDAD;
+            $id = $create($model, $reference);
+            $model->selectDistribution($id);
+            $model->adjustOccupation($id, $reference - 1, 0, 'Preparar último cupo', 'fixture', clToken());
+            $controller = $login($controllerClass, $operator);
+            $last = $deliver($controller, $id, '1', $controller->formToken('entregar', $id));
+            clEq($last->status, 200, 'El operador debe alcanzar la referencia.');
+            clEq($last->data['state'], 'En distribución', 'La cuenta llena continúa en distribución.');
+            $history = $model->distributionHistory($id);
+            $data = $page($controller);
+            $render = static function (array $data): string {
+                extract($data);
+                ob_start();
+                try {
+                    require APP_PATH . '/views/layouts/header.php';
+                    require APP_PATH . '/views/cuentas_compartidas/entrega.php';
+                    require APP_PATH . '/views/layouts/footer.php';
+                    return (string) ob_get_contents();
+                }
+                finally { ob_end_clean(); }
+            };
+            $html = $render($data);
+            preg_match_all('/<button[^>]*name="dispositivos"[^>]*>/', $html, $buttons);
+            clEq(count($buttons[0]), $service === 'CHATGPT' ? 2 : 1, 'Debe ofrecer las cantidades de este servicio.');
+            foreach ($buttons[0] as $button) clCheck(!str_contains($button, 'disabled'), 'La pantalla del vendedor no debe bloquear entregas al llenarse.');
+            $additional = $deliver($controller, $id, $service === 'CHATGPT' ? '2' : '1', $last->data['nextToken']);
+            clEq($additional->status, 200, 'El operador puede seguir entregando sobre la referencia.');
+            clEq($additional->data['occupied'], $reference + ($service === 'CHATGPT' ? 2 : 1), 'Debe contar todos los dispositivos adicionales.');
+            clEq($model->distributionHistory($id), $history, 'Las entregas adicionales conservan la primera fecha de llenado.');
+            $previewDir = (string) getenv('DISTRIBUTION_PREVIEW_DIR');
+            if ($previewDir !== '' && is_dir($previewDir)) {
+                file_put_contents($previewDir . '/' . strtolower($service) . '-distribucion-continua.html', $render($page($controller)));
+            }
+            $next = $create($model, $reference);
+            $model->setActive($next, true);
+            clEq((int) $model->currentDistribution()['id'], $id, 'Crear o activar una cuenta no cambia la seleccionada.');
+            $model->selectDistribution($next);
+            clEq((int) $page($controller)['cuenta']['id'], $next, 'La pantalla de distribución debe usar inmediatamente la nueva cuenta.');
+            clEq($model->find($id)['distribucion_actual'], false, 'La cuenta anterior debe dejar de estar seleccionada.');
+            clEq($model->find($id)['estado_distribucion'], 'Vendida', 'La anterior llena queda vendida fuera de distribución.');
+            clEq(count(array_filter($model->all(), static fn(array $row): bool => $row['distribucion_actual'])), 1, 'Solo puede existir una cuenta en distribución por servicio.');
+            $before = count($model->sales($id));
+            clEq($deliver($controller, $id, '1', $additional->data['nextToken'])->status, 422, 'Un formulario abierto de la anterior no puede registrar otra venta.');
+            clEq(count($model->sales($id)), $before, 'El intento anterior debe dejar intactas las ventas.');
+            clEq($deliver($controller, $next, '1', $controller->formToken('entregar', $next))->status, 200, 'Las siguientes entregas se registran en la nueva cuenta.');
         });
 
         $test("entrega {$service}: pantalla sin selección es accesible al operador y no crea ventas", static function () use ($pdo, $service, $modelClass, $controllerClass, $login, $page, $operator): void {
@@ -102,14 +151,14 @@ function runDeliveryTests(PDO $pdo, callable $test): void
         });
     }
 
-    $test('entrega: cantidades inválidas y dos dispositivos sin dos cupos no registran ventas; mensajes personalizados se conservan', static function () use ($pdo, $create, $login, $deliver, $operator): void {
+    $test('entrega: cantidades inválidas se rechazan y los mensajes personalizados se conservan', static function () use ($pdo, $create, $login, $deliver, $operator): void {
         $chatgpt = new \App\Models\ChatgptCuenta($pdo);
         $claude = new \App\Models\ClaudeCuenta($pdo);
         $id = $create($chatgpt, 1);
         $chatgpt->selectDistribution($id);
         $controller = $login(DistributionChatgptController::class, $operator);
-        foreach (['0', '3', '2abc', '2'] as $invalid) {
-            clEq($deliver($controller, $id, $invalid, $controller->formToken('entregar', $id))->status, 422, 'No debe registrar una cantidad inválida o sin cupos.');
+        foreach (['0', '3', '2abc'] as $invalid) {
+            clEq($deliver($controller, $id, $invalid, $controller->formToken('entregar', $id))->status, 422, 'No debe registrar una cantidad inválida.');
         }
         clEq($chatgpt->find($id)['ocupados'], 0, 'Las cantidades rechazadas no generan ocupación.');
         $chatgpt->saveTemplates(['entrega_1' => 'Entrega personalizada {CORREO} / {PASSWORD} / {DISPOSITIVOS}']);

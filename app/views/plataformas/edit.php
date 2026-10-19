@@ -13,7 +13,7 @@ use App\Models\Plataforma;
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="post" action="<?= e(url('/plataformas/actualizar/' . (int) $item['id'])) ?>" id="edit-platform-form" accept-charset="UTF-8">
+        <form method="post" action="<?= e(url('/plataformas/actualizar/' . (int) $item['id'])) ?>" id="edit-platform-form" data-form-behavior="platform" accept-charset="UTF-8">
             <?= csrf_field() ?>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -79,35 +79,3 @@ use App\Models\Plataforma;
         </form>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('edit-platform-form');
-    if (!form) return;
-
-    const tipoServicio = form.querySelector('#tipo_servicio');
-    const datoWrap = form.querySelector('.js-dato-renovacion-wrap');
-    const datoSelect = form.querySelector('.js-dato-renovacion');
-    const datoHelp = form.querySelector('.js-dato-renovacion-help');
-
-    const apply = () => {
-        const tipo = tipoServicio.value;
-        if (tipo === 'RENOVABLE') {
-            datoWrap.classList.remove('d-none');
-            if (datoSelect.value === 'NO_APLICA') {
-                datoSelect.value = 'USUARIO';
-            }
-            datoHelp.textContent = 'Define si la renovación se realiza usando usuario o correo.';
-            return;
-        }
-
-        datoSelect.value = 'NO_APLICA';
-        datoWrap.classList.add('d-none');
-        datoHelp.textContent = 'No aplica para servicios desechables.';
-    };
-
-    tipoServicio.addEventListener('change', apply);
-    apply();
-})();
-</script>
-

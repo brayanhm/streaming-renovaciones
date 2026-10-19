@@ -12,16 +12,16 @@ $blockedMessage = $cuenta === null ? 'El administrador debe seleccionar una cuen
     : (!$credentialsReady ? 'Completa el correo y la contraseña de la cuenta antes de entregar accesos.'
     : (!in_array($period, ['PAGADO', 'GRACIA'], true) ? 'La cuenta está Gratis o sin vigencia confirmada. Las entregas están bloqueadas.'
     : (empty($cuenta['distribucion_actual']) ? 'La cuenta de distribución cambió. Recarga esta pantalla.'
-    : ($canAdmin ? 'Cuenta vendida: todos sus cupos están ocupados. Puedes registrar entregas adicionales como administrador.' : 'Cuenta vendida: todos sus cupos están ocupados. El administrador debe seleccionar otra cuenta.')))));
+    : 'Capacidad de referencia alcanzada. Puedes seguir entregando en esta cuenta hasta que el administrador seleccione otra.'))));
 $lastDelivery = $lastDelivery ?? null;
 $scriptVersion = (string) filemtime(PUBLIC_PATH . '/js/distribucion.js');
 ?>
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 gs-delivery-heading">
     <div>
         <h1 class="h3 mb-1">Distribución de <?= e($serviceLabel) ?></h1>
-        <p class="text-secondary mb-0">Entrega accesos desde la cuenta seleccionada.</p>
+        <p class="text-secondary mb-0 d-none d-lg-block">Entrega accesos desde la cuenta seleccionada.</p>
     </div>
-    <a href="<?= e(url('/' . $service)) ?>" class="btn btn-outline-secondary"><?= icon('layers') ?><span class="button-label">Ver cuentas</span></a>
+    <a href="<?= e(url('/' . $service)) ?>" class="btn btn-outline-secondary" aria-label="Ver cuentas" title="Ver cuentas"><?= icon('layers') ?><span class="button-label d-none d-sm-inline">Ver cuentas</span></a>
 </div>
 
 <?php if ($cuenta === null): ?>
@@ -30,41 +30,45 @@ $scriptVersion = (string) filemtime(PUBLIC_PATH . '/js/distribucion.js');
     <p class="text-secondary mb-0"><?= e($blockedMessage) ?></p>
 </div></div>
 <?php else: ?>
-<section class="card mb-3" aria-labelledby="delivery-account-title"><div class="card-body">
-    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+<section class="card mb-3 gs-delivery-card" aria-labelledby="delivery-account-title"><div class="card-body">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4 gs-delivery-account">
         <div>
             <h2 class="h4 mb-1" id="delivery-account-title"><?= e((string) $cuenta['etiqueta']) ?></h2>
             <p class="text-secondary text-break mb-2"><?= e((string) $cuenta['correo']) ?></p>
-            <span class="badge text-bg-<?= $occupied >= $capacity ? 'success' : 'primary' ?>" data-distribution-state><?= e((string) $cuenta['estado_distribucion']) ?></span>
+            <span class="badge text-bg-primary" data-distribution-state><?= e((string) $cuenta['estado_distribucion']) ?></span>
             <span class="badge text-bg-<?= $period === 'PAGADO' ? 'success' : ($period === 'GRACIA' ? 'warning' : 'secondary') ?>"><?= e($periodLabels[$period] ?? $period) ?></span>
         </div>
-        <?php if ($canAdmin): ?><a href="<?= e(url('/' . $service . '/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-primary btn-sm"><?= icon('square-pen') ?><span class="button-label">Administrar cuenta</span></a><?php endif; ?>
     </div>
-    <div class="row g-3 mb-4">
-        <div class="col-4"><div class="small text-secondary">Capacidad</div><strong class="h3" data-distribution-capacity><?= $capacity ?></strong></div>
+    <div class="row g-3 mb-4 gs-delivery-stats">
+        <div class="col-4"><div class="small text-secondary">Referencia</div><strong class="h3" data-distribution-capacity><?= $capacity ?></strong></div>
         <div class="col-4"><div class="small text-secondary">Ocupados</div><strong class="h3" data-distribution-occupied><?= $occupied ?></strong></div>
-        <div class="col-4"><div class="small text-secondary">Libres</div><strong class="h3 text-primary" data-distribution-remaining><?= max(0, $capacity - $occupied) ?></strong></div>
+        <div class="col-4"><div class="small text-secondary">Hasta referencia</div><strong class="h3 text-primary" data-distribution-remaining><?= max(0, $capacity - $occupied) ?></strong></div>
     </div>
     <div class="alert alert-warning small" data-distribution-notice <?= $ready && $occupied < $capacity ? 'hidden' : '' ?>><?= e($blockedMessage) ?></div>
     <details class="gs-new-delivery" data-new-delivery <?= $lastDelivery === null ? 'open' : '' ?>>
     <summary class="fw-semibold mb-3">Nueva entrega</summary>
-    <p class="small text-secondary mb-3">Registra una venta, ocupa los <?= e($unit) ?> indicados y copia el mensaje. Para recuperar una entrega ya registrada, usa «Volver a copiar».</p>
     <form method="post" action="<?= e(url('/' . $service . '/' . (int) $cuenta['id'] . '/entregar')) ?>" data-distribution-delivery
         data-unit="<?= e($unit) ?>" data-occupied="<?= $occupied ?>" data-capacity="<?= $capacity ?>"
-        data-can-exceed="<?= $canAdmin ? '1' : '0' ?>" data-eligible="<?= $ready ? '1' : '0' ?>">
+        data-eligible="<?= $ready ? '1' : '0' ?>">
         <?= csrf_field() ?><input type="hidden" name="token_operacion" value="<?= e($deliveryToken) ?>">
         <div class="row g-3">
         <?php foreach ($prices as $devices => $price): ?>
             <div class="<?= count($prices) > 1 ? 'col-sm-6' : 'col-sm-8 col-lg-6' ?>">
                 <button type="submit" name="dispositivos" value="<?= (int) $devices ?>" class="btn <?= $devices === 1 ? 'btn-primary' : 'btn-outline-primary' ?> w-100"
-                    <?= !$ready || (!$canAdmin && $occupied + (int) $devices > $capacity) ? 'disabled' : '' ?>>
+                    <?= !$ready ? 'disabled' : '' ?>>
                     <?= icon('copy') ?><span class="button-label">Registrar y copiar · <?= (int) $devices ?> <?= $devices === 1 ? 'dispositivo' : 'dispositivos' ?></span>
                 </button>
-                <small class="d-block text-secondary mt-2"><?= (int) $devices ?> <?= $devices === 1 ? 'cupo ocupado' : 'cupos ocupados' ?> · <?= e(money($price)) ?></small>
+                <small class="d-block text-secondary mt-2"><?= (int) $devices ?> <?= $devices === 1 ? 'cupo ocupado' : 'cupos ocupados' ?> · <?= e(display_money($price)) ?></small>
             </div>
         <?php endforeach; ?>
         </div>
     </form>
+    <p class="small text-secondary mt-3 mb-0">Cada entrega registra la venta y ocupa los <?= e($unit) ?> indicados. «Volver a copiar» conserva la ocupación.</p>
+    </details>
+    <details class="gs-delivery-details mt-3" data-desktop-open open>
+        <summary class="small text-secondary">Fechas<?= $canAdmin ? ' y administración' : ' de distribución' ?></summary>
+        <?php $fechasDistribucion = $cuenta; require __DIR__ . '/fechas_distribucion.php'; ?>
+        <?php if ($canAdmin): ?><a href="<?= e(url('/' . $service . '/' . (int) $cuenta['id'])) ?>" class="btn btn-outline-primary btn-sm mt-2"><?= icon('square-pen') ?><span class="button-label">Administrar cuenta</span></a><?php endif; ?>
     </details>
     <noscript><p class="text-danger mt-3 mb-0">Activa JavaScript para registrar y copiar las entregas desde esta pantalla.</p></noscript>
     <p class="small mt-3 mb-0" role="status" aria-live="polite" data-distribution-status></p>

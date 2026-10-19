@@ -47,7 +47,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                         <select class="form-select form-select-lg" id="filtro-estado" name="estado">
                             <option value="">Todos</option>
                             <?php foreach ($estados as $status): ?>
-                                <option value="<?= e(status_label((string) $status)) ?>" <?= ($estado ?? '') === $status ? 'selected' : '' ?>><?= e(status_label((string) $status)) ?></option>
+                                <option value="<?= e((string) $status) ?>" <?= ($estado ?? '') === $status ? 'selected' : '' ?>><?= e(status_label((string) $status)) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -83,7 +83,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                                 $isNoRenew = (int) ($item['flag_no_renovo'] ?? 0) === 1;
                                 $statusLabel = $isNoRenew ? 'VENCIDO' : (string) ($item['estado'] ?? '');
                                 ?>
-                                <tr>
+                                <tr data-record-key="suscripcion-<?= (int) $item['id'] ?>">
                                     <td>
                                         <div class="fw-semibold"><?= e((string) $item['cliente_nombre']) ?></div>
                                         <small class="text-secondary"><?= e((string) $item['cliente_telefono']) ?></small>
@@ -104,10 +104,10 @@ if (!function_exists('tipo_suscripcion_label')) {
                                             <small class="text-secondary">—</small>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= e(money((float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0))) ?></td>
-                                    <td><?= e(money((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0))) ?></td>
+                                    <td><?= e(display_money((float) ($item['costo_final'] ?? $item['modalidad_costo'] ?? 0))) ?></td>
+                                    <td><?= e(display_money((float) ($item['precio_final'] ?? $item['modalidad_precio'] ?? 0))) ?></td>
                                     <td class="<?= (float) ($item['ganancia_final'] ?? 0) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
-                                        <?= e(money((float) ($item['ganancia_final'] ?? 0))) ?>
+                                        <?= e(display_money((float) ($item['ganancia_final'] ?? 0))) ?>
                                     </td>
                                     <td><?= e(display_date($item['fecha_inicio'])) ?></td>
                                     <td><?= e(display_date($item['fecha_vencimiento'])) ?></td>
@@ -155,7 +155,7 @@ if (!function_exists('tipo_suscripcion_label')) {
         <details class="card gs-form-panel shadow-sm" id="nueva-vigencia" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/suscripciones' || (int) ($selectedClientId ?? 0) > 0 ? 'open' : '' ?>>
             <summary>Nueva suscripción</summary>
             <div class="card-body">
-                <form method="post" action="<?= e(url('/suscripciones')) ?>" id="create-subscription-form">
+                <form method="post" action="<?= e(url('/suscripciones')) ?>" id="create-subscription-form" data-form-behavior="create-subscription">
                     <?= csrf_field() ?>
                     <div class="mb-3">
                         <label class="form-label" for="cliente_id">Cliente</label>
@@ -206,8 +206,8 @@ if (!function_exists('tipo_suscripcion_label')) {
                                     <?= e((string) $modalidad['nombre_modalidad']) ?>
                                     (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
                                     <?= e(duration_label(max(1, (int) ($modalidad['duracion_meses'] ?? 1)))) ?>,
-                                    Costo: <?= e(money((float) ($modalidad['costo'] ?? 0))) ?>,
-                                    Venta: <?= e(money((float) $modalidad['precio'])) ?>)
+                                    Costo: <?= e(display_money((float) ($modalidad['costo'] ?? 0))) ?>,
+                                    Venta: <?= e(display_money((float) $modalidad['precio'])) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -242,7 +242,7 @@ if (!function_exists('tipo_suscripcion_label')) {
                     </div>
                     <div class="alert alert-light border py-2 mb-3">
                         Ganancia estimada:
-                        <strong class="js-ganancia"><?= e(money((float) 0)) ?></strong>
+                        <strong class="js-ganancia"><?= e(display_money((float) 0)) ?></strong>
                     </div>
 
                     <div class="row g-2">
@@ -303,105 +303,3 @@ if (!function_exists('tipo_suscripcion_label')) {
         </details>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('create-subscription-form');
-    if (!form) return;
-
-    const plataformaSelect = form.querySelector('.js-plataforma');
-    const modalidadSelect = form.querySelector('.js-modalidad');
-    const usuarioWrap = form.querySelector('.js-usuario-wrap');
-    const usuarioLabel = form.querySelector('.js-usuario-label');
-    const usuarioInput = form.querySelector('.js-usuario-input');
-    const usuarioHelp = form.querySelector('.js-usuario-help');
-    const costoBaseInput = form.querySelector('.js-costo-base');
-    const precioVentaInput = form.querySelector('.js-precio-venta');
-    const gananciaEl = form.querySelector('.js-ganancia');
-
-    const applyFilters = () => {
-        const plataformaId = plataformaSelect.value;
-        const selectedPlatformOption = plataformaSelect.options[plataformaSelect.selectedIndex];
-        const tipoServicio = selectedPlatformOption ? selectedPlatformOption.dataset.tipo : '';
-        const datoRenovacion = selectedPlatformOption ? selectedPlatformOption.dataset.datoRenovacion : 'NO_APLICA';
-        let hasVisible = false;
-
-        for (const option of modalidadSelect.options) {
-            if (!option.value) {
-                option.hidden = false;
-                continue;
-            }
-            const belongs = option.dataset.plataformaId === plataformaId;
-            option.hidden = !belongs;
-            if (belongs) hasVisible = true;
-        }
-
-        if (modalidadSelect.selectedOptions.length > 0) {
-            const selected = modalidadSelect.selectedOptions[0];
-            if (selected && selected.value && selected.hidden) {
-                modalidadSelect.value = '';
-            }
-        }
-
-        if (!hasVisible && plataformaId !== '') {
-            modalidadSelect.value = '';
-        }
-
-        if (tipoServicio === 'DESECHABLE') {
-            usuarioWrap.classList.add('d-none');
-            usuarioInput.required = false;
-            usuarioInput.type = 'text';
-            usuarioInput.value = '';
-        } else {
-            usuarioWrap.classList.remove('d-none');
-            usuarioInput.required = true;
-            if (datoRenovacion === 'CORREO') {
-                usuarioLabel.textContent = 'Correo de la cuenta para renovar';
-                usuarioInput.type = 'email';
-                usuarioInput.placeholder = 'correo@dominio.com';
-                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usará para renovar.';
-            } else {
-                usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
-                usuarioInput.type = 'text';
-                usuarioInput.placeholder = 'Ej: usuario123';
-                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usará para renovar.';
-            }
-        }
-
-        const selectedModalidad = modalidadSelect.options[modalidadSelect.selectedIndex];
-        if (selectedModalidad && selectedModalidad.dataset.costo) {
-            costoBaseInput.value = selectedModalidad.dataset.costo;
-        }
-        if (selectedModalidad && selectedModalidad.dataset.precio) {
-            precioVentaInput.value = selectedModalidad.dataset.precio;
-        }
-        if (!selectedModalidad || !selectedModalidad.value) {
-            costoBaseInput.value = '';
-            precioVentaInput.value = '';
-        }
-        applyGanancia();
-    };
-
-    const applyGanancia = () => {
-        const costo = Number.parseFloat(costoBaseInput.value || '0');
-        const precio = Number.parseFloat(precioVentaInput.value || '0');
-        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
-        const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
-            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
-            maximumFractionDigits: 2,
-        });
-        gananciaEl.textContent = 'Bs ' + sign + abs;
-        gananciaEl.classList.toggle('text-danger', ganancia < 0);
-        gananciaEl.classList.toggle('text-success', ganancia >= 0);
-    };
-
-    plataformaSelect.addEventListener('change', applyFilters);
-    modalidadSelect.addEventListener('change', applyFilters);
-    costoBaseInput.addEventListener('input', applyGanancia);
-    precioVentaInput.addEventListener('input', applyGanancia);
-    applyFilters();
-    applyGanancia();
-})();
-</script>
-

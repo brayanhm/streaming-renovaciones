@@ -33,7 +33,7 @@ $occupationExpanded = true;
             <div class="col-md-6">
                 <label class="form-label" for="capacidad">Capacidad en dispositivos</label>
                 <input type="number" class="form-control" id="capacidad" name="capacidad" value="<?= e(form_value('/chatgpt/' . $accountId . '/actualizar', 'capacidad', (string) ($cuenta['capacidad'] ?? 20))) ?>" min="1" max="99999" step="1" required>
-                <small class="text-secondary">Solo el administrador puede vender por encima de esta capacidad.</small>
+                <small class="text-secondary">Referencia para registrar el primer llenado. Las entregas pueden continuar mientras la cuenta siga seleccionada.</small>
             </div>
             <div class="col-12">
                 <label class="form-label" for="notas">Notas</label>
@@ -49,7 +49,8 @@ $occupationExpanded = true;
 <?php if ($canAdmin): ?>
 <div class="card shadow-sm mt-3"><div class="card-body">
     <h2 class="h5">Ocupación de la cuenta</h2>
-    <?php require __DIR__ . '/../cuentas_compartidas/ocupacion.php'; ?>
+    <p>Actualmente hay <?= (int) $cuenta['ocupados'] ?> dispositivos ocupados.</p>
+    <a class="btn btn-outline-primary" data-modal-link href="<?= e(url('/chatgpt/' . $accountId . '/ocupacion')) ?>"><?= icon('users') ?><span class="button-label">Ajustar cupos</span></a>
 </div></div>
 <?php endif; ?>
 <?php require __DIR__ . '/scripts.php'; ?>

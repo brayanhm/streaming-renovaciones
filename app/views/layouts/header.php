@@ -43,7 +43,7 @@ $alertsVersion = (string) filemtime(PUBLIC_PATH . '/js/alerts.js');
 $alertsCssVersion = (string) filemtime(PUBLIC_PATH . '/css/alerts.css');
 ?>
 <!doctype html>
-<html lang="es" data-bs-theme="light" data-nav-mode="expanded">
+<html lang="es" data-bs-theme="light" data-nav-mode="expanded" data-nav-pinned="true">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,6 +55,8 @@ $alertsCssVersion = (string) filemtime(PUBLIC_PATH . '/css/alerts.css');
     <link href="<?= e(url('/css/alerts.css') . '?v=' . $alertsCssVersion) ?>" rel="stylesheet">
     <link href="<?= e(url('/css/ui.css') . '?v=' . filemtime(PUBLIC_PATH . '/css/ui.css')) ?>" rel="stylesheet">
     <script src="<?= e(url('/js/ui.js') . '?v=' . filemtime(PUBLIC_PATH . '/js/ui.js')) ?>"></script>
+    <script src="<?= e(url('/js/sidebar.js') . '?v=' . filemtime(PUBLIC_PATH . '/js/sidebar.js')) ?>"></script>
+    <link rel="stylesheet" href="<?= e(url('/css/modals.css') . '?v=' . filemtime(PUBLIC_PATH . '/css/modals.css')) ?>">
     <script src="<?= e(url('/js/icons.js') . '?v=' . $iconsVersion) ?>"></script>
     <script src="<?= e(url('/vendor/sweetalert2/sweetalert2.min.js') . '?v=11.26.25') ?>"></script>
     <script src="<?= e(url('/js/alerts.js') . '?v=' . $alertsVersion) ?>"></script>
@@ -121,8 +123,8 @@ if ($isAdmin) {
     </a>
     <?php if ($isLoggedIn): ?>
     <div class="ms-auto d-flex align-items-center gap-2">
-        <a href="<?= e(url('/perfil')) ?>" class="btn btn-outline-light btn-sm" aria-label="Mi perfil<?= $navUser !== '' ? ': ' . e($navUser) : '' ?>"><?= icon('user-cog') ?><span class="d-none d-sm-inline"><?= e($navUser) ?></span><span class="d-sm-none">Mi perfil</span></a>
-        <a class="btn btn-outline-light btn-sm" href="<?= e(url('/logout')) ?>"><?= icon('log-out') ?><span class="button-label">Salir</span></a>
+        <a href="<?= e(url('/perfil')) ?>" data-modal-link class="btn btn-outline-light btn-sm" title="Mi perfil" aria-label="Mi perfil<?= $navUser !== '' ? ': ' . e($navUser) : '' ?>"><?= icon('user-cog') ?><span class="d-none d-sm-inline"><?= e($navUser) ?></span></a>
+        <a class="btn btn-outline-light btn-sm" href="<?= e(url('/logout')) ?>" title="Salir" aria-label="Salir"><?= icon('log-out') ?><span class="button-label d-none d-sm-inline">Salir</span></a>
     </div>
     <?php endif; ?>
 </div>
@@ -134,7 +136,7 @@ if ($isAdmin) {
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Cerrar"><?= icon('x') ?></button>
         </div>
         <div class="offcanvas-body app-sidebar-body">
-            <button class="btn gs-nav-pin d-none d-lg-flex" type="button" data-nav-pin aria-pressed="true" aria-label="Contraer menú"><?= icon('menu') ?><span class="lbl">Contraer menú</span></button>
+            <button class="btn gs-nav-pin d-none d-lg-flex" type="button" data-nav-pin aria-pressed="false" aria-expanded="true" aria-controls="appSidebar" aria-label="Fijar menú abierto"><?= icon('menu') ?><span class="lbl">Fijar menú</span></button>
             <nav class="app-nav">
                 <?php foreach ($sidebarMenu as $gi => [$grupo, $items]): ?>
                     <?php $abierto = false; foreach ($items as $it) { if ($it[2]) { $abierto = true; break; } } ?>

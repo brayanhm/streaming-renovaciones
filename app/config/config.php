@@ -304,6 +304,14 @@ function request_path(): string
 
 function redirect(string $path): void
 {
+    if (is_modal_form_request()) {
+        $result = modal_form_result($path);
+        http_response_code($result['ok'] ? 200 : ($result['login'] ? 401 : 422));
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store');
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
     header('Location: ' . url($path));
     exit;
 }

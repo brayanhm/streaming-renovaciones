@@ -122,6 +122,7 @@ class AuthController extends Controller
         $this->render('auth/profile', [
             'pageTitle' => 'Mi perfil',
             'user' => $user,
+            'profileSection' => ($_GET['seccion'] ?? '') === 'password' ? 'password' : 'usuario',
         ]);
     }
 
@@ -134,11 +135,13 @@ class AuthController extends Controller
             $newUsername = trim((string) ($_POST['username'] ?? ''));
 
             if ($newUsername === '' || strlen($newUsername) < 3) {
+                set_field_errors(['username' => 'Usa al menos 3 caracteres.']);
                 flash('danger', 'El usuario debe tener al menos 3 caracteres.');
                 $this->redirect('/perfil');
             }
 
             if ($this->users->usernameExists($newUsername, $userId)) {
+                set_field_errors(['username' => 'Ese nombre ya está en uso.']);
                 flash('danger', 'Ese nombre de usuario ya está en uso.');
                 $this->redirect('/perfil');
             }
@@ -156,18 +159,21 @@ class AuthController extends Controller
 
             $user = $this->users->findById($userId);
             if ($user === null || !password_verify($currentPassword, (string) ($user['password_hash'] ?? ''))) {
+                set_field_errors(['current_password' => 'La contraseña actual es incorrecta.']);
                 flash('danger', 'La contraseña actual es incorrecta.');
-                $this->redirect('/perfil');
+                $this->redirect('/perfil?seccion=password');
             }
 
             if (strlen($newPassword) < 6) {
+                set_field_errors(['new_password' => 'Usa al menos 6 caracteres.']);
                 flash('danger', 'La nueva contraseña debe tener al menos 6 caracteres.');
-                $this->redirect('/perfil');
+                $this->redirect('/perfil?seccion=password');
             }
 
             if ($newPassword !== $confirm) {
+                set_field_errors(['confirm_password' => 'Las contraseñas deben coincidir.']);
                 flash('danger', 'Las contraseñas no coinciden.');
-                $this->redirect('/perfil');
+                $this->redirect('/perfil?seccion=password');
             }
 
             $this->users->updatePassword($userId, $newPassword);

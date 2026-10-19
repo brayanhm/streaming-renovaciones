@@ -36,7 +36,10 @@
         if (!available) return Promise.resolve({isConfirmed:false});
         modalCount++;
         if (noticeVisible) Swal.close();
-        const show = () => dialog.fire(options);
+        const show = () => dialog.fire({...options,
+            target:document.querySelector('.gs-form-modal.show') || document.body,
+            keydownListenerCapture:true,
+        });
         const result = modalQueue.then(show, show);
         modalQueue = result.catch(() => {});
         return result.finally(() => { modalCount--; drainNotices(); });
@@ -56,11 +59,11 @@
         success:message => toast(message, 'success'),
         error:(message, title = 'No se pudo completar la operación') => messageDialog(message, 'error', title),
         warning:(message, title = 'Revisa esta información') => messageDialog(message, 'warning', title),
-        async confirm({text, title = 'Confirmar acción', button = 'Confirmar', danger = false}) {
+        async confirm({text, title = 'Confirmar acción', button = 'Confirmar', cancel = 'Cancelar', danger = false}) {
             if (!available) return window.confirm(text);
             const result = await showDialog({
                 titleText:title, text, icon:'warning', iconColor:colors.warning,
-                showCancelButton:true, confirmButtonText:button, cancelButtonText:'Cancelar',
+                showCancelButton:true, confirmButtonText:button, cancelButtonText:cancel,
                 focusCancel:true, allowOutsideClick:false,
                 customClass:{container:'gs-dialog-container', popup:'gs-dialog', title:'gs-dialog-title',
                     htmlContainer:'gs-dialog-text', confirmButton:`btn ${danger ? 'btn-danger' : 'btn-primary'}`,

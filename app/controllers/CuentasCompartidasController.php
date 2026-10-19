@@ -36,20 +36,16 @@ abstract class CuentasCompartidasController extends Controller
     public function index(): void
     {
         $search = trim((string) ($_GET['q'] ?? ''));
-        $rows = $this->cuentas->all($search);
-        $summary = ['cuentas' => count($rows), 'ocupados' => 0, 'libres' => 0, 'ventas_bs' => 0.0, 'pagos_bs' => 0.0];
-        foreach ($rows as $row) {
-            foreach (['ocupados', 'libres', 'ventas_bs', 'pagos_bs'] as $key) {
-                $summary[$key] += (float) $row[$key];
-            }
-        }
+        $listing = $this->cuentas->listing($search, (string) ($_GET['filtro'] ?? ''), (int) ($_GET['page'] ?? 1), (int) ($_GET['por_pagina'] ?? 25));
+        $canAdmin = $this->canAdmin();
         $this->render(static::SERVICE . '/index', [
-            'pageTitle' => static::LABEL, 'rows' => $rows, 'summary' => $summary,
-            'search' => $search, 'canAdmin' => $this->canAdmin(), 'distribucion' => $this->cuentas->currentDistribution(),
+            'pageTitle' => static::LABEL,
+            'search' => $search, 'canAdmin' => $canAdmin, 'distribucion' => $this->cuentas->currentDistribution(),
+            'indexSelectionToken' => $canAdmin ? $this->issueToken('distribuir_listado', 0) : '',
             'creationToken' => $this->issueToken('crear', 0),
             'importToken' => static::SERVICE === 'chatgpt' ? $this->issueToken('importar', 0) : '',
             'avisosChatgpt' => static::SERVICE === 'chatgpt' ? (new \App\Models\ChatgptAvisos())->resumen() : null,
-        ]);
+        ] + $listing);
     }
 
     public function show(int $id): void
@@ -103,6 +99,7 @@ abstract class CuentasCompartidasController extends Controller
             'saleToken' => $this->issueToken('vender', $id), 'paymentToken' => $this->issueToken('pagar', $id),
             'selectionToken' => $this->issueToken('distribuir', $id), 'cycleToken' => $this->issueToken('ciclo', $id, (int) $cuenta['ciclo_actual']),
             'planToken' => $this->issueToken('plan', $id), 'ciclos' => $this->cuentas->cycles($id),
+            'historialDistribucion' => $this->cuentas->distributionHistory($id),
             'stateToken' => $this->issueToken('estado', $id),
             'periodToken' => $canReviewPeriod ? $this->issueToken('vigencia', $id) : '',
         ]);
@@ -141,9 +138,23 @@ abstract class CuentasCompartidasController extends Controller
         $this->render(static::SERVICE . '/edit', [
             'pageTitle' => 'Editar cuenta ' . static::LABEL, 'cuenta' => $this->account($id),
             'password' => '', 'canAdmin' => true,
-            'occupationToken' => $this->issueToken('ocupacion', $id),
-            'occupationAdjustments' => $this->cuentas->occupationAdjustments($id),
         ]);
+    }
+
+    public function occupationForm(int $id): void
+    {
+        $this->requireAdmin();
+        $this->render('cuentas_compartidas/ajustar_ocupacion', ['pageTitle' => 'Ajustar cupos de ' . static::LABEL,
+            'modalPage' => true, 'cuenta' => $this->account($id), 'service' => static::SERVICE, 'canAdmin' => true,
+            'occupationToken' => $this->issueToken('ocupacion', $id),
+            'occupationAdjustments' => $this->cuentas->occupationAdjustments($id)]);
+    }
+
+    public function distributionHistory(int $id): void
+    {
+        $this->render('cuentas_compartidas/ver_historial', ['pageTitle' => 'Historial de distribución de ' . static::LABEL,
+            'modalPage' => true, 'modalSize' => 'wide', 'cuenta' => $this->account($id), 'service' => static::SERVICE,
+            'historialDistribucion' => $this->cuentas->distributionHistory($id), 'historyExpanded' => true]);
     }
 
     public function update(int $id): void
@@ -176,7 +187,7 @@ abstract class CuentasCompartidasController extends Controller
             flash('success', 'Ocupación actualizada de ' . $result['ocupados_antes'] . ' a ' . $result['ocupados_despues'] . '. Las ventas y los pagos se conservan.');
         } catch (\Throwable $error) {
             $this->operationError($error);
-            $this->redirect($this->path('/' . $id . '/editar') . '#ocupacion');
+            $this->redirect($this->path('/' . $id . '/ocupacion'));
         }
         $this->redirect($this->path('/' . $id));
     }
@@ -207,7 +218,7 @@ abstract class CuentasCompartidasController extends Controller
         try {
             $date = (string) ($_POST['fecha_venta'] ?? date('Y-m-d'));
             $this->validateDate($date, 'fecha_venta');
-            $sale = $this->cuentas->sell($id, (int) ($_POST['dispositivos'] ?? 0), $date, $token, $this->canAdmin());
+            $sale = $this->cuentas->sell($id, (int) ($_POST['dispositivos'] ?? 0), $date, $token);
             audit(static::SERVICE . '.vender', 'Cuenta ' . $id . ' / venta ' . $sale);
             flash('success', 'Venta registrada. Puedes copiar la entrega sin volver a consumir cupos.');
             $this->redirect($this->path('/' . $id) . '?venta=' . $sale);
@@ -237,16 +248,32 @@ abstract class CuentasCompartidasController extends Controller
     public function selectDistribution(int $id): void
     {
         $this->requireAdmin();
-        $token = $this->validateToken('distribuir', $id);
+        $fromIndex = ($_POST['origen'] ?? '') === 'listado';
+        $token = $this->validateToken($fromIndex ? 'distribuir_listado' : 'distribuir', $fromIndex ? 0 : $id);
+        $withPayment = ($_POST['registrar_pago'] ?? '') === '1';
         try {
-            $this->cuentas->selectDistribution($id);
+            if ($withPayment) {
+                $amount = is_string($_POST['monto_bs'] ?? null) ? $_POST['monto_bs'] : '';
+                $paymentId = $this->cuentas->payAndSelectDistribution($id, date('Y-m-d'), $amount, $token);
+                audit(static::SERVICE . '.pagar_distribuir', 'Cuenta ' . $id . ' / pago ' . $paymentId);
+            } else {
+                $this->cuentas->selectDistribution($id);
+            }
             unset($_SESSION[static::SERVICE . '_operaciones'][$token]);
             audit(static::SERVICE . '.distribuir', 'Cuenta ' . $id);
-            flash('success', 'Cuenta seleccionada para distribución. Los cupos y accesos anteriores se conservan.');
+            flash('success', ($withPayment ? 'Pago de hoy registrado y cuenta seleccionada para distribución. ' : 'Cuenta seleccionada para distribución. ')
+                . 'Los cupos y accesos anteriores se conservan.');
         } catch (\Throwable $error) {
+            if ($withPayment) set_old($_POST);
             $this->operationError($error);
         }
-        $this->redirect($this->path('/' . $id));
+        $search = is_string($_POST['q'] ?? null) ? trim($_POST['q']) : '';
+        $context = $search !== '' ? ['q' => $search] : [];
+        $filter = (string) ($_POST['filtro'] ?? '');
+        if (in_array($filter, ['actual', 'listas', 'gratis', 'gracia', 'pendientes', 'inactivas'], true)) $context['filtro'] = $filter;
+        if ((int) ($_POST['page'] ?? 1) > 1) $context['page'] = (int) $_POST['page'];
+        if (in_array((int) ($_POST['por_pagina'] ?? 25), [10, 50, 100], true)) $context['por_pagina'] = (int) $_POST['por_pagina'];
+        $this->redirect($fromIndex ? $this->path() . ($context ? '?' . http_build_query($context) : '') : $this->path('/' . $id));
     }
 
     public function setPlan(int $id): void
@@ -305,7 +332,7 @@ abstract class CuentasCompartidasController extends Controller
             if ((int) ($last['cuenta'] ?? 0) === (int) $account['id']) {
                 $sale = $this->cuentas->sale((int) $account['id'], (int) ($last['venta'] ?? 0));
                 if ($sale !== null && $modelClass::deliveryUnavailableReason($account, $sale) === null) {
-                    $lastDelivery = $this->deliveryData($account, $sale, $canAdmin);
+                    $lastDelivery = $this->deliveryData($account, $sale);
                 }
             }
         }
@@ -332,16 +359,15 @@ abstract class CuentasCompartidasController extends Controller
                 throw new \InvalidArgumentException('Selecciona una cantidad de dispositivos válida para este servicio.');
             }
             $devices = (int) $rawDevices;
-            $canAdmin = $this->canAdmin();
             $date = $_SESSION[static::SERVICE . '_operaciones'][$token]['fecha_entrega'] ?? date('Y-m-d');
             $_SESSION[static::SERVICE . '_operaciones'][$token]['fecha_entrega'] = $date;
-            $saleId = $this->cuentas->sell($id, $devices, $date, $token, $canAdmin);
+            $saleId = $this->cuentas->sell($id, $devices, $date, $token);
             $account = $this->cuentas->find($id);
             $sale = $this->cuentas->sale($id, $saleId);
             if ($account === null || $sale === null || $sale['liberada_at'] !== null) {
                 throw new \RuntimeException('La entrega pertenece a un ciclo anterior. Recarga la pantalla de distribución.');
             }
-            $payload = $this->deliveryData($account, $sale, $canAdmin);
+            $payload = $this->deliveryData($account, $sale);
             $payload['nextToken'] = $this->issueToken('entregar', $id);
             $_SESSION[static::SERVICE . '_ultima_entrega'] = ['cuenta' => $id, 'venta' => $saleId];
             audit(static::SERVICE . '.entregar', 'Cuenta ' . $id . ' / venta ' . $saleId . ' / ' . $devices . ' ' . static::UNIT);
@@ -359,7 +385,7 @@ abstract class CuentasCompartidasController extends Controller
         $this->jsonResponse($payload, $status);
     }
 
-    private function deliveryData(array $account, array $sale, bool $canAdmin): array
+    private function deliveryData(array $account, array $sale): array
     {
         $modelClass = static::MODEL;
         $reason = $modelClass::deliveryUnavailableReason($account, $sale);
@@ -374,7 +400,9 @@ abstract class CuentasCompartidasController extends Controller
             $this->messageContext($account, $password, $devices, (string) $sale['fecha_vencimiento'], (string) $sale['monto_bs']));
         return ['ok' => true, 'saleId' => (int) $sale['id'], 'devices' => $devices, 'text' => $text,
             'occupied' => (int) $account['ocupados'], 'capacity' => (int) $account['capacidad'],
-            'remaining' => (int) $account['libres'], 'state' => $account['estado_distribucion'], 'canExceed' => $canAdmin,
+            'remaining' => (int) $account['libres'], 'state' => $account['estado_distribucion'],
+            'distributionStartedAt' => display_datetime($account['inicio_distribucion']),
+            'distributionCompletedAt' => display_datetime($account['cupos_completados_at']),
             'eligible' => (int) $account['activo'] === 1 && $account['distribucion_actual']
                 && in_array($account['estado_periodo'], ['PAGADO', 'GRACIA'], true)];
     }

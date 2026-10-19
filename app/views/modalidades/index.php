@@ -85,16 +85,16 @@ $returnQuery = $selectedPlatformId > 0
                                 <tr><td colspan="9" class="text-center text-secondary py-4"><?= ($search ?? '') !== '' || $selectedPlatformId > 0 ? 'No encontramos planes con estos filtros.' : 'Todavía no hay planes. Usa «Nuevo plan» para comenzar.' ?></td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
-                                <tr>
+                                <tr data-record-key="plan-<?= (int) $item['id'] ?>">
                                     <td><?= e((string) $item['plataforma_nombre']) ?></td>
                                     <td class="fw-semibold"><?= e((string) $item['nombre_modalidad']) ?></td>
                                     <td><?= e(Modalidad::tipoCuentaLabel((string) ($item['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($item['dispositivos']) ? (int) $item['dispositivos'] : null)) ?></td>
                                     <td><?= e(duration_label(max(1, (int) ($item['duracion_meses'] ?? 1)))) ?></td>
                                     <td><?= e((string) ($item['dispositivos'] ?? '-')) ?></td>
-                                    <td><?= e(money((float) ($item['costo'] ?? 0))) ?></td>
-                                    <td><?= e(money((float) $item['precio'])) ?></td>
+                                    <td><?= e(display_money((float) ($item['costo'] ?? 0))) ?></td>
+                                    <td><?= e(display_money((float) $item['precio'])) ?></td>
                                     <td class="<?= (float) ($item['utilidad_plan'] ?? 0) < 0 ? 'text-danger fw-semibold' : 'text-success fw-semibold' ?>">
-                                        <?= e(money((float) ($item['utilidad_plan'] ?? 0))) ?>
+                                        <?= e(display_money((float) ($item['utilidad_plan'] ?? 0))) ?>
                                     </td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
@@ -121,7 +121,7 @@ $returnQuery = $selectedPlatformId > 0
         <details class="card gs-form-panel shadow-sm" id="nuevo-plan" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/tipos-suscripcion' ? 'open' : '' ?>>
             <summary>Nuevo plan</summary>
             <div class="card-body">
-                <form method="post" action="<?= e(url('/tipos-suscripcion')) ?>" id="create-plan-form">
+                <form method="post" action="<?= e(url('/tipos-suscripcion')) ?>" id="create-plan-form" data-form-behavior="create-plan">
                     <?= csrf_field() ?>
                     <?php if ($selectedPlatformId > 0): ?>
                         <input type="hidden" name="return_plataforma_id" value="<?= e((string) $selectedPlatformId) ?>">
@@ -185,7 +185,7 @@ $returnQuery = $selectedPlatformId > 0
                     </div>
                     <div class="alert alert-light border py-2 mb-3">
                         Ganancia estimada por plan:
-                        <strong class="js-ganancia"><?= e(money((float) 0)) ?></strong>
+                        <strong class="js-ganancia"><?= e(display_money((float) 0)) ?></strong>
                     </div>
                     <button type="submit" class="btn btn-success w-100 btn-lg"><?= icon('save') ?><span class="button-label">Guardar plan</span></button>
                 </form>
@@ -193,87 +193,3 @@ $returnQuery = $selectedPlatformId > 0
         </details>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('create-plan-form');
-    if (!form) return;
-
-    const tipoCuenta = form.querySelector('.js-tipo-cuenta');
-    const plataforma = form.querySelector('.js-plataforma');
-    const duracion = form.querySelector('.js-duracion');
-    const duracionesList = form.querySelector('#duraciones-list');
-    const duracionHelp = form.querySelector('.js-duracion-help');
-    const dispositivosWrap = form.querySelector('.js-dispositivos-wrap');
-    const dispositivos = form.querySelector('#dispositivos');
-    const costoInput = form.querySelector('.js-costo');
-    const precioInput = form.querySelector('.js-precio');
-    const gananciaEl = form.querySelector('.js-ganancia');
-
-    const parseDuraciones = (csv) => {
-        if (!csv) return [];
-        const values = [];
-        for (const raw of csv.split(',')) {
-            const parsed = Number.parseInt(raw.trim(), 10);
-            if (Number.isNaN(parsed) || parsed <= 0 || values.includes(parsed)) {
-                continue;
-            }
-            values.push(parsed);
-        }
-        values.sort((a, b) => a - b);
-        return values;
-    };
-
-    const applyDuraciones = () => {
-        const selected = plataforma.options[plataforma.selectedIndex];
-        const values = parseDuraciones(selected ? selected.dataset.duraciones : '');
-
-        duracionesList.innerHTML = '';
-        for (const value of values) {
-            const option = document.createElement('option');
-            option.value = String(value);
-            duracionesList.appendChild(option);
-        }
-
-        if (values.length > 0) {
-            duracionHelp.textContent = 'Duraciones configuradas para esta plataforma: ' + values.join(', ') + ' meses.';
-        } else {
-            duracionHelp.textContent = 'Esta plataforma no tiene duraciones fijas. Puedes indicar cualquier mes positivo.';
-        }
-    };
-
-    const apply = () => {
-        const value = tipoCuenta.value;
-        const needs = value === 'POR_DISPOSITIVOS' || value === 'AMBOS';
-        dispositivosWrap.classList.toggle('d-none', !needs);
-        dispositivos.required = value === 'POR_DISPOSITIVOS';
-        if (!needs) {
-            dispositivos.value = '';
-        }
-    };
-
-    const applyGanancia = () => {
-        const costo = Number.parseFloat(costoInput.value || '0');
-        const precio = Number.parseFloat(precioInput.value || '0');
-        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
-        const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
-            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
-            maximumFractionDigits: 2,
-        });
-        gananciaEl.textContent = 'Bs ' + sign + abs;
-        gananciaEl.classList.toggle('text-danger', ganancia < 0);
-        gananciaEl.classList.toggle('text-success', ganancia >= 0);
-    };
-
-    plataforma.addEventListener('change', applyDuraciones);
-    tipoCuenta.addEventListener('change', apply);
-    costoInput.addEventListener('input', applyGanancia);
-    precioInput.addEventListener('input', applyGanancia);
-    applyDuraciones();
-    apply();
-    applyGanancia();
-})();
-</script>
-
-

@@ -8,7 +8,7 @@ declare(strict_types=1);
  * No carga las migraciones generales ni lee/escribe la base de producción.
  */
 
-$worker = in_array('--worker', $argv, true);
+$worker = in_array('--worker', $argv, true) || in_array('--payment-worker', $argv, true);
 $pureOnly = in_array('--pure', $argv, true);
 $testDatabase = $worker
     ? (string) getenv('DB_NAME')
@@ -96,7 +96,7 @@ function clToken(): string
     return bin2hex(random_bytes(32));
 }
 
-function clConcurrentSales(int $id, string $date, array $tokens, bool $canExceed = false): array
+function clConcurrentSales(int $id, string $date, array $tokens): array
 {
     // La fila se retiene hasta que ambos procesos estén listos para vender.
     $locker = clPdo();
@@ -106,7 +106,7 @@ function clConcurrentSales(int $id, string $date, array $tokens, bool $canExceed
     try {
         foreach ($tokens as $token) {
             $pipes = [];
-            $process = proc_open([PHP_BINARY, '-d', 'session.save_path=' . session_save_path(), __FILE__, '--worker', (string) $id, '1', $date, $token, $canExceed ? '--admin' : '--operator'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            $process = proc_open([PHP_BINARY, '-d', 'session.save_path=' . session_save_path(), __FILE__, '--worker', (string) $id, '1', $date, $token], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
             clCheck(is_resource($process), 'No pudo iniciarse el proceso de venta.');
             fclose($pipes[0]);
             $children[] = [$process, $pipes];
@@ -160,13 +160,21 @@ function clTest(string $name, callable $action): void
 
 if ($worker) {
     try {
-        $workerArgs = array_slice($argv, array_search('--worker', $argv, true) + 1);
-        [$accountId, $devices, $saleDate, $token] = $workerArgs;
-        $model = new ClaudeCuenta(clPdo());
+        $paymentWorker = in_array('--payment-worker', $argv, true);
+        $workerArgs = array_slice($argv, array_search($paymentWorker ? '--payment-worker' : '--worker', $argv, true) + 1);
+        if ($paymentWorker) {
+            [$service, $accountId, $saleDate, $amount, $token] = $workerArgs;
+            $modelClass = $service === 'chatgpt' ? ChatgptCuenta::class : ClaudeCuenta::class;
+            $model = new $modelClass(clPdo());
+        } else {
+            [$accountId, $devices, $saleDate, $token] = $workerArgs;
+            $model = new ClaudeCuenta(clPdo());
+        }
         echo "READY\n";
         flush();
-        $model->sell((int) $accountId, (int) $devices, $saleDate, $token, in_array('--admin', $argv, true));
-        echo "SOLD\n";
+        if ($paymentWorker) $model->payAndSelectDistribution((int) $accountId, $saleDate, $amount, $token);
+        else $model->sell((int) $accountId, (int) $devices, $saleDate, $token);
+        echo $paymentWorker ? "PAID\n" : "SOLD\n";
         exit(0);
     } catch (DomainException | InvalidArgumentException | RuntimeException $exception) {
         if ($exception instanceof PDOException) {
@@ -372,7 +380,7 @@ try {
     clTest('administrador vende cupos adicionales y reinicia el ciclo conservando historial', static function () use ($model, $pdo, $paymentDate): void {
         $id = clCreateAccount($model, $paymentDate);
         for ($sale = 0; $sale < 5; $sale++) {
-            $model->sell($id, 1, $paymentDate, clToken(), true);
+            $model->sell($id, 1, $paymentDate, clToken());
         }
         $before = $model->find($id);
         clEq($before['ocupados'], 5, 'Debe comenzar en cinco cupos ocupados.');
@@ -380,8 +388,8 @@ try {
         clEq($before['supera_recomendado'], false, 'Alcanzar lo recomendado no debe contar como exceso.');
         clEq($before['hasta_recomendado'], 0, 'Al alcanzar cinco quedan cero hasta lo recomendado.');
         $token = clToken();
-        $sixth = $model->sell($id, 1, $paymentDate, $token, true);
-        clEq($model->sell($id, 1, $paymentDate, $token, true), $sixth, 'Repetir la sexta venta debe ser idempotente.');
+        $sixth = $model->sell($id, 1, $paymentDate, $token);
+        clEq($model->sell($id, 1, $paymentDate, $token), $sixth, 'Repetir la sexta venta debe ser idempotente.');
         $account = $model->find($id);
         clEq($account['ocupados'], 6, 'La sexta venta debe ocupar el sexto cupo.');
         clEq($account['recomendado'], 5, 'La recomendación debe seguir siendo cinco cupos.');
@@ -394,7 +402,7 @@ try {
         clEq(count($sales), 6, 'Debe conservar la sexta venta una sola vez en el historial.');
         clEq($sales[0]['monto_bs'], '85.00', 'La sexta venta sigue costando Bs 85.');
         clEq($sales[0]['fecha_vencimiento'], $before['fecha_vencimiento'], 'Superar cinco no cambia la vigencia.');
-        $model->sell($id, 1, $paymentDate, clToken(), true);
+        $model->sell($id, 1, $paymentDate, clToken());
         $account = $model->find($id);
         clEq($account['ocupados'], 7, 'Una cuenta que ya supera cinco debe admitir otra venta.');
         clEq($account['excedidos'], 2, 'Debe contar todos los cupos excedidos.');
@@ -413,7 +421,7 @@ try {
         clCheck(count(array_filter($history, static fn(array $sale): bool => $sale['liberada_at'] === null)) === 0, 'Todas las ventas deben quedar liberadas.');
         $release = $pdo->query('SELECT dispositivos_liberados FROM claude_liberaciones WHERE cuenta_principal_id = ' . $id)->fetchColumn();
         clEq((int) $release, 7, 'El historial de liberación debe registrar los siete cupos.');
-        clEq($model->sell($id, 1, $paymentDate, $token, true), $sixth, 'Repetir la venta liberada debe conservar su identidad.');
+        clEq($model->sell($id, 1, $paymentDate, $token), $sixth, 'Repetir la venta liberada debe conservar su identidad.');
         clEq($model->find($id)['ocupados'], 0, 'Repetir una venta liberada no debe ocupar cupos.');
         clEq(count($model->sales($id)), 7, 'Repetir una venta liberada no debe duplicar el historial.');
     });
@@ -516,17 +524,25 @@ try {
     runDeliveryTests($pdo, 'clTest');
     require_once __DIR__ . '/ocupacion.php';
     runOccupationTests($pdo, 'clTest');
+    require_once __DIR__ . '/distribucion_fechas.php';
+    runDistributionDateTests($pdo, 'clTest');
+    require_once __DIR__ . '/distribucion_orden.php';
+    runDistributionOrderTests($pdo, 'clTest');
+    require_once __DIR__ . '/distribucion_seleccion.php';
+    runDistributionSelectionTests($pdo, 'clTest');
+    require_once __DIR__ . '/distribucion_pago.php';
+    runDistributionPaymentTests($pdo, 'clTest');
     require_once __DIR__ . '/hallazgos_chatgpt.php';
     runChatgptFindingTests($pdo, 'clTest');
 
-    clTest('dos vendedores concurrentes no superan el último cupo disponible', static function () use ($model, $paymentDate): void {
+    clTest('dos vendedores concurrentes pueden seguir distribuyendo al alcanzar cinco cupos', static function () use ($model, $paymentDate): void {
         $id = clCreateAccount($model, $paymentDate);
         for ($i = 0; $i < 4; $i++) {
             $model->sell($id, 1, $paymentDate, clToken());
         }
-        clEq(clConcurrentSales($id, $paymentDate, [clToken(), clToken()]), ['REJECTED', 'SOLD'], 'Solo una venta puede consumir el último cupo.');
-        clEq($model->find($id)['ocupados'], 5, 'No debe exceder la capacidad.');
-        clEq($model->find($id)['estado_distribucion'], 'Vendida', 'Debe pasar automáticamente a Vendida.');
+        clEq(clConcurrentSales($id, $paymentDate, [clToken(), clToken()]), ['SOLD', 'SOLD'], 'Ambas ventas deben permitirse en la seleccionada.');
+        clEq($model->find($id)['ocupados'], 6, 'Ambas ventas se suman aunque crucen cinco.');
+        clEq($model->find($id)['estado_distribucion'], 'En distribución', 'Alcanzar cinco no cambia la selección.');
     });
 
     clTest('dos ventas concurrentes del administrador superan la capacidad y conservan ingresos', static function () use ($model, $paymentDate): void {
@@ -534,13 +550,15 @@ try {
         for ($sale = 0; $sale < 4; $sale++) {
             $model->sell($id, 1, $paymentDate, clToken());
         }
-        clEq(clConcurrentSales($id, $paymentDate, [clToken(), clToken()], true), ['SOLD', 'SOLD'], 'Ambas ventas deben registrarse aunque crucen lo recomendado.');
+        clEq(clConcurrentSales($id, $paymentDate, [clToken(), clToken()]), ['SOLD', 'SOLD'], 'Ambas ventas deben registrarse aunque crucen lo recomendado.');
         $account = $model->find($id);
         clEq($account['ocupados'], 6, 'Ambas ventas deben alcanzar seis cupos.');
         clEq($account['excedidos'], 1, 'La concurrencia debe informar un cupo excedido.');
         clEq($account['libres'], 0, 'El contador compatible no debe quedar negativo.');
         clEq((string) $account['ventas_bs'], '510.00', 'Debe registrar los Bs 170 de ambas ventas concurrentes.');
         clEq(count($model->sales($id)), 6, 'Debe conservar ambos registros concurrentes.');
+        clEq((int) $account['ocupados_al_completar'], 5, 'El primer llenado concurrente no debe desplazarse a la venta adicional.');
+        clEq(count($model->distributionHistory($id)), 1, 'Las ventas concurrentes deben conservar un único registro por ciclo.');
     });
 
     clTest('ventas concurrentes con el mismo token no duplican ocupación ni ingresos', static function () use ($model, $paymentDate): void {
@@ -549,7 +567,7 @@ try {
             $model->sell($id, 1, $paymentDate, clToken());
         }
         $token = clToken();
-        clEq(clConcurrentSales($id, $paymentDate, [$token, $token], true), ['SOLD', 'SOLD'], 'Ambos reintentos deben devolver una venta válida.');
+        clEq(clConcurrentSales($id, $paymentDate, [$token, $token]), ['SOLD', 'SOLD'], 'Ambos reintentos deben devolver una venta válida.');
         $sales = $model->sales($id);
         clEq(count($sales), 6, 'El mismo token concurrente debe registrar una sola venta.');
         clEq($model->sell($id, 1, $paymentDate, $token), (int) $sales[0]['id'], 'El token debe devolver el registro concurrente original.');

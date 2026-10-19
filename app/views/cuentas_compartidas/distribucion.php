@@ -6,7 +6,7 @@ $saleBlockedMessage = !$isActive ? 'La cuenta está inactiva. El administrador d
     : (!$credentialsReady ? 'Completa el correo y la contraseña antes de vender.'
     : (!in_array($period, ['PAGADO', 'GRACIA'], true) ? 'La cuenta está Gratis o con fechas pendientes. Revisa el plan antes de vender.'
     : (!$selected ? 'Esta cuenta no está seleccionada para distribución. El administrador debe elegirla.'
-    : 'Cuenta vendida: todos sus cupos están ocupados. Solo el administrador puede registrar ventas adicionales.')));
+    : 'La cuenta no está disponible para nuevas entregas.')));
 $serviceModel = $service === 'chatgpt' ? \App\Models\ChatgptCuenta::class : \App\Models\ClaudeCuenta::class;
 $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_gratis' => 0]))['estado_periodo'], ['PAGADO', 'GRACIA'], true);
 ?>
@@ -14,7 +14,7 @@ $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_g
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div>
             <h2 class="h5 mb-2" id="distribution-title">Distribución</h2>
-            <span class="badge text-bg-<?= $occupied >= $recommended ? 'success' : ($selected ? 'primary' : 'secondary') ?>"><?= e((string) ($cuenta['estado_distribucion'] ?? 'Disponible')) ?></span>
+            <span class="badge text-bg-<?= $selected ? 'primary' : ($occupied >= $recommended ? 'success' : 'secondary') ?>"><?= e((string) ($cuenta['estado_distribucion'] ?? 'Disponible')) ?></span>
             <?php if ($selected): ?><span class="badge text-bg-primary">Cuenta seleccionada</span><?php endif; ?>
             <p class="small text-secondary mb-0 mt-2"><?= $selected ? ($ready ? 'Las nuevas ventas de este servicio se registran en esta cuenta.' : 'Esta cuenta sigue seleccionada, pero las ventas están bloqueadas.') : 'Seleccionarla conserva los cupos y accesos vendidos en todas las cuentas.' ?></p>
         </div>
@@ -25,6 +25,7 @@ $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_g
         </form>
         <?php endif; ?>
     </div>
+    <?php $fechasDistribucion = $cuenta; require __DIR__ . '/fechas_distribucion.php'; ?>
     <?php if ($canAdmin): ?>
     <hr>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -37,7 +38,7 @@ $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_g
         </form>
     </div>
     <?php if ($period === 'GRATIS' && !$restoreAllowed): ?><p class="small text-secondary mt-2 mb-0">Registra un nuevo pago para recuperar la vigencia.</p><?php endif; ?>
-    <details class="mt-3" id="nuevo-ciclo">
+    <details class="mt-3" id="nuevo-ciclo" data-form-panel>
         <summary class="fw-semibold">Iniciar nuevo ciclo</summary>
         <p class="small mt-2 mb-2">Reinicia los <?= $occupied ?> <?= e($unit) ?> ocupados y selecciona esta cuenta para distribución. Las ventas y los pagos se conservan en el historial.</p>
         <form method="post" action="<?= e(url('/' . $service . '/' . $accountId . '/ciclo')) ?>" data-chatgpt-submit
@@ -62,4 +63,5 @@ $restoreAllowed = in_array($serviceModel::period(array_replace($cuenta, ['plan_g
     </details>
     <?php endif; ?>
     <?php endif; ?>
+    <?php require __DIR__ . '/historial_distribucion.php'; ?>
 </div></section>

@@ -55,7 +55,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                 <tr><td colspan="6" class="text-center text-secondary py-4"><?= ($search ?? '') !== '' ? 'No encontramos clientes para esta búsqueda.' : 'Todavía no hay clientes. Usa «Nuevo cliente» para comenzar.' ?></td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $item): ?>
-                                <tr>
+                                <tr data-record-key="cliente-<?= (int) $item['id'] ?>">
                                     <td class="fw-semibold">
                                         <a href="<?= e(url('/clientes/' . (int) $item['id'])) ?>" class="text-decoration-none"><?= e((string) $item['nombre']) ?></a>
                                     </td>
@@ -67,10 +67,10 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
                                         <div class="d-flex flex-wrap gap-1 justify-content-end">
                                             <a class="btn btn-outline-secondary btn-sm" href="<?= e(url('/suscripciones?cliente_id=' . (int) $item['id'] . '#nueva-vigencia')) ?>"><?= icon('plus') ?><span class="button-label">Asignar vigencia</span></a>
                                             <a class="btn btn-outline-primary btn-sm" href="<?= e(url('/clientes/editar/' . (int) $item['id'])) ?>"><?= icon('square-pen') ?><span class="button-label">Editar</span></a>
-                                            <form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar a «' . $item['nombre'] . '» (' . $item['telefono'] . '). También se eliminarán sus suscripciones asociadas. Esta acción no se puede deshacer desde el sistema.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar cliente" data-confirm-danger="1">
+                                            <details class="gs-action-menu"><summary class="btn btn-outline-secondary btn-sm">Más</summary><div class="gs-action-popover"><form method="post" action="<?= e(url('/clientes/eliminar/' . (int) $item['id'])) ?>" class="gs-mobile-detail-action" data-confirm="<?= e('Eliminar a «' . $item['nombre'] . '» (' . $item['telefono'] . '). También se eliminarán sus suscripciones asociadas. Esta acción no se puede deshacer desde el sistema.') ?>" data-confirm-title="Confirmar eliminación" data-confirm-button="Eliminar cliente" data-confirm-danger="1">
                                                 <?= csrf_field() ?>
                                                 <button class="btn btn-outline-danger btn-sm" type="submit"><?= icon('trash') ?><span class="button-label">Eliminar</span></button>
-                                            </form>
+                                            </form></div></details>
                                         </div>
                                     </td>
                                 </tr>
@@ -101,7 +101,7 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
         <details class="card gs-form-panel shadow-sm" id="nuevo-cliente" data-form-panel <?= ($_GET['nuevo'] ?? '') === '1' || ($_SESSION['_old_action'] ?? '') === '/clientes' ? 'open' : '' ?>>
             <summary>Nuevo cliente</summary>
             <div class="card-body">
-                <form method="post" action="<?= e(url('/clientes')) ?>" id="create-client-form">
+                <form method="post" action="<?= e(url('/clientes')) ?>" id="create-client-form" data-form-behavior="create-client">
                     <?= csrf_field() ?>
                     <?php if (!$hasSubscriptionCatalog): ?>
                         <div class="alert alert-warning">
@@ -271,70 +271,3 @@ $hasSubscriptionCatalog = !empty($plataformas ?? []) && !empty($tiposSuscripcion
         </details>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('create-client-form');
-    if (!form) return;
-
-    const plataformaSelect = form.querySelector('.js-plataforma');
-    const modalidadSelect = form.querySelector('.js-modalidad');
-    const usuarioWrap = form.querySelector('.js-usuario-wrap');
-    const usuarioLabel = form.querySelector('.js-usuario-label');
-    const usuarioInput = form.querySelector('.js-usuario-input');
-    const usuarioHelp = form.querySelector('.js-usuario-help');
-
-    const applyFilters = () => {
-        const plataformaId = plataformaSelect.value;
-        const selectedPlatformOption = plataformaSelect.options[plataformaSelect.selectedIndex];
-        const tipoServicio = selectedPlatformOption ? selectedPlatformOption.dataset.tipo : '';
-        const datoRenovacion = selectedPlatformOption ? selectedPlatformOption.dataset.datoRenovacion : 'NO_APLICA';
-        let hasVisible = false;
-
-        for (const option of modalidadSelect.options) {
-            if (option.value === '') continue;
-            const visible = plataformaId !== '' && option.dataset.plataformaId === plataformaId;
-            option.hidden = !visible;
-            option.disabled = !visible;
-            hasVisible = hasVisible || visible;
-        }
-
-        if (modalidadSelect.selectedOptions.length > 0) {
-            const selected = modalidadSelect.selectedOptions[0];
-            if (selected.value !== '' && selected.dataset.plataformaId !== plataformaId) {
-                modalidadSelect.value = '';
-            }
-        }
-
-        if (!hasVisible) {
-            modalidadSelect.value = '';
-        }
-
-        if (tipoServicio === 'DESECHABLE' || plataformaId === '') {
-            usuarioWrap.classList.add('d-none');
-            usuarioInput.required = false;
-            usuarioInput.type = 'text';
-            usuarioInput.value = '';
-            return;
-        }
-
-        usuarioWrap.classList.remove('d-none');
-        usuarioInput.required = true;
-        if (datoRenovacion === 'CORREO') {
-            usuarioLabel.textContent = 'Correo de la cuenta para renovar';
-            usuarioInput.type = 'email';
-            usuarioInput.placeholder = 'correo@dominio.com';
-            usuarioHelp.textContent = 'Ingresa el correo de la cuenta para la primera renovación.';
-        } else {
-            usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
-            usuarioInput.type = 'text';
-            usuarioInput.placeholder = 'Ej: usuario123';
-            usuarioHelp.textContent = 'Ingresa el usuario de la cuenta para la primera renovación.';
-        }
-    };
-
-    plataformaSelect.addEventListener('change', applyFilters);
-    applyFilters();
-})();
-</script>
-

@@ -425,7 +425,37 @@ class Suscripcion extends BaseModel
         ]);
     }
 
-    public function renovar(int $id, int $months): ?string
+    /** La vista previa utiliza las mismas modalidades, importes y calendario que la renovación. */
+    public function renewalOptions(int $id): array
+    {
+        $this->assertGeneralSubscription($id);
+        $row = $this->findWithRelations($id);
+        if ($row === null) return [];
+        $stmt = $this->db->prepare('SELECT duracion_meses FROM modalidades WHERE plataforma_id = :platform
+            AND nombre_modalidad = :name AND tipo_cuenta = :type AND dispositivos <=> :devices');
+        $stmt->execute(['platform' => $row['plataforma_id'], 'name' => $row['nombre_modalidad'],
+            'type' => $row['tipo_cuenta'], 'devices' => $row['dispositivos']]);
+        $durations = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+        $allowed = Plataforma::resolveRenewalMonths($durations !== [] ? implode(',', $durations) : $row['plataforma_duraciones_disponibles']);
+        $today = new DateTimeImmutable('today');
+        $due = new DateTimeImmutable($row['fecha_vencimiento']);
+        $base = $due >= $today ? $due : $today;
+        $options = [];
+        foreach ($allowed as $months) {
+            $target = $this->findMatchingRenewalModalidad((int) $row['plataforma_id'], $row['nombre_modalidad'],
+                $row['tipo_cuenta'], $row['dispositivos'] !== null ? (int) $row['dispositivos'] : null, $months);
+            if ($target === null) continue;
+            $sameDuration = (int) $row['duracion_meses'] === $months;
+            $options[$months] = ['meses' => $months, 'modalidad_id' => (int) $target['id'],
+                'precio' => number_format((float) ($sameDuration ? $row['precio_final'] : $target['precio']), 2, '.', ''),
+                'costo' => number_format((float) ($sameDuration ? $row['costo_final'] : $target['costo']), 2, '.', ''),
+                'vencimiento_actual' => $row['fecha_vencimiento'],
+                'nuevo_vencimiento' => $this->addMonthsClamped($base, $months)->format('Y-m-d')];
+        }
+        return $options;
+    }
+
+    public function renovar(int $id, int $months, ?array $expected = null): ?string
     {
         $this->assertGeneralSubscription($id);
         if ($months <= 0) {
@@ -514,6 +544,14 @@ class Suscripcion extends BaseModel
             $base = $currentDue >= $today ? $currentDue : $today;
             $newDue = $this->addMonthsClamped($base, $months);
             $newDueStr = $newDue->format('Y-m-d');
+
+            if ($expected !== null && ((string) $row['fecha_vencimiento'] !== ($expected['vencimiento_actual'] ?? '')
+                || (int) $targetModalidad['id'] !== ($expected['modalidad_id'] ?? 0)
+                || number_format((float) $nextPrecioVenta, 2, '.', '') !== ($expected['precio'] ?? '')
+                || number_format((float) $nextCostoBase, 2, '.', '') !== ($expected['costo'] ?? '')
+                || $newDueStr !== ($expected['nuevo_vencimiento'] ?? ''))) {
+                throw new \RuntimeException('La suscripción o sus precios cambiaron. Cierra y vuelve a abrir la renovación para revisar los datos actuales.');
+            }
 
             $update = $this->db->prepare(
                 'UPDATE suscripciones

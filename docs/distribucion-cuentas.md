@@ -2,14 +2,44 @@
 
 Cada servicio tiene una sola cuenta seleccionada. El administrador configura la capacidad al crear o editar cada cuenta. Las cuentas existentes conservan su capacidad y sus accesos; la migración no elige una cuenta automáticamente.
 
+## Orden predeterminado de los listados
+
+Los índices de ChatGPT y Claude muestran primero la cuenta seleccionada, incluso si ya alcanzó la referencia. Después aparecen las reservas activas, con vigencia y credenciales válidas y ocupación inferior a la referencia, ordenadas por vencimiento final más cercano (fin de gracia en ChatGPT y fin pagado en Claude), nombre e ID. Estas cuentas llevan las indicaciones **Siguiente para distribución**, **En cola · 2**, etc.
+
+A continuación se muestran las cuentas completas habilitadas, las bloqueadas activas y finalmente las inactivas. Dentro de cada grupo se conserva el orden por vencimiento, nombre e ID, dejando las fechas desconocidas al final. Buscar conserva estas prioridades; los resultados filtrados muestran **Lista para distribuir**, sin renumerar ni presentar su primera coincidencia como la siguiente global. El orden solo orienta al administrador: no cambia la selección, los cupos ni el historial.
+
+## Selección desde el listado y pago de cuentas Gratis
+
+El administrador puede pulsar **Distribuir** en una cuenta preparada directamente desde el índice de ChatGPT o Claude. La selección vuelve al mismo listado y conserva la búsqueda. Reemplaza la cuenta actual sin liberar cupos ni borrar ventas, pagos o fechas. Seleccionar una cuenta pagada o en gracia no registra otro gasto.
+
+Las cuentas **Gratis**, tanto por vencimiento como por marca manual, ofrecen **Pagar y distribuir** cuando están activas y tienen credenciales válidas. Al desplegarlo se solicita el costo real en Bs, obligatorio y mayor que cero. **Registrar pago y distribuir** guarda el gasto y comienza la vigencia en la fecha de hoy del servidor, en hora de Bolivia: un mes pagado y un mes de gracia para ChatGPT; un mes pagado para Claude. No se reutiliza automáticamente el costo anterior ni se acepta otra fecha enviada por el formulario. Esta acción también sirve para una cuenta Gratis que continúe seleccionada.
+
+El pago y la selección se ejecutan en una sola transacción. Cualquier error revierte ambas cosas. Repetir una operación o recibir dos solicitudes simultáneas no duplica el gasto; si la cuenta ya fue pagada desde otra pestaña, se exige recargar el listado. Un reintento antiguo tampoco vuelve a seleccionar una cuenta reemplazada. Los permisos de administrador y el usuario activo se comprueban en el servidor; el listado usa un token compartido de selección para que una lista larga no invalide sus primeras filas.
+
+Esta acción conserva la ocupación y el ciclo actual. La fecha de pago pasa a ser hoy, pero el inicio de distribución ya conocido del ciclo se mantiene; si estaba sin registrar, se registra el evento de selección nuevo. Reiniciar cupos y abrir otro ciclo sigue requiriendo **Iniciar nuevo ciclo** y confirmar el cierre de sesiones. Las cuentas inactivas, sin credenciales o con vigencia pendiente sin marca Gratis deben completarse antes de distribuir.
+
+`tests/distribucion_seleccion.php` y `tests/distribucion_pago.php`, incluidos en `tests/claude.php`, cubren el índice, los permisos, los costos, las fechas, la reversión ante fallos y la concurrencia de pagos para ambos servicios.
+
 ## Operación
 
 1. Abrir una cuenta con credenciales completas, activa y pagada o en gracia.
 2. Usar **Seleccionar para distribución** para cambiar la cuenta actual conservando todos los accesos y cupos ocupados. También permite volver a una cuenta que había quedado en reserva.
-3. Cuando la ocupación alcanza o supera la capacidad, la cuenta pasa automáticamente a **Vendida**, con una etiqueta verde. El estado se actualiza al registrar la última entrega, sin recargar, y se conserva al seleccionar otra cuenta o cambiar su plan. Los vendedores no pueden superar el límite; el administrador puede registrar ventas adicionales solamente en la cuenta seleccionada y habilitada. Una venta de dos dispositivos ChatGPT consume dos cupos. Si un ajuste libera cupos, aumenta la capacidad o se confirma un nuevo ciclo, el estado se recalcula según la nueva ocupación. Los avisos de plan Gratis, inactividad y vigencia se muestran por separado y conservan sus bloqueos.
+3. Cuando la ocupación alcanza o supera la capacidad de referencia (20 dispositivos en ChatGPT y 5 cupos en Claude, configurables), se registra el primer llenado, pero la cuenta seleccionada sigue **En distribución**. Administradores y vendedores pueden seguir entregando en ella hasta que el administrador seleccione otra. El cambio reemplaza la selección de forma atómica: la anterior conserva sus cupos e historial y bloquea nuevas ventas, incluidos los formularios que quedaron abiertos. Si la anterior está llena, se muestra **Vendida**; de lo contrario queda en reserva. Una venta de dos dispositivos ChatGPT consume dos cupos. Los avisos de plan Gratis, inactividad, credenciales y vigencia conservan sus bloqueos para todos los roles. Crear, pagar o activar una cuenta no cambia automáticamente la selección.
 4. Para retirar accesos anteriores y reutilizar una cuenta, cerrar sus sesiones fuera del sistema, desplegar **Iniciar nuevo ciclo** y confirmar el cierre en todos los dispositivos. El ciclo reinicia la ocupación, selecciona la cuenta y conserva los historiales de ventas, pagos y reinicios.
 
 Registrar un pago o cambiar la selección no reinicia la ocupación. Un formulario repetido de ciclo devuelve el resultado original sin liberar ventas nuevas.
+
+## Fechas e historial de distribución
+
+Cada cuenta conserva el inicio de distribución y el primer llenado de cada ciclo, con fecha y hora de Bolivia. El inicio se registra al seleccionar la cuenta para distribución o al confirmar **Iniciar nuevo ciclo**, que también la selecciona. Cambiar temporalmente a otra cuenta y volver conserva el inicio original.
+
+El primer llenado se registra cuando la ocupación pasa de estar por debajo de su capacidad a alcanzarla o superarla. Se contemplan las ventas, los ajustes de ocupación y las reducciones de capacidad. También se guardan la capacidad y la ocupación de ese momento. Liberar cupos, aumentar la capacidad o volver a llenar no reemplaza esa primera fecha. Un nuevo pago, marcar Gratis o cambiar la actividad tampoco reinicia el registro.
+
+Las fechas del ciclo actual se muestran en el listado, el detalle y la pantalla de distribución. Registrar la última entrega actualiza la fecha de llenado sin recargar. El detalle incluye **Historial de distribución**, visible también para operadores, con los ciclos registrados. Iniciar un nuevo ciclo conserva las fechas anteriores y deja pendiente el llenado del nuevo.
+
+La tabla `cuentas_distribucion_historial` se crea con la migración compartida y no reconstruye eventos anteriores. Las cuentas existentes muestran **Sin registrar** cuando no se conoce una fecha. Una selección repetida de la cuenta que ya estaba seleccionada no inventa su inicio. Si una cuenta existente registra una transición nueva a llena, se guarda ese evento y su inicio anterior puede seguir sin registrar. Los ciclos antiguos sin eventos nuevos conservan su historial de reinicios, pero no reciben fechas de distribución supuestas.
+
+`tests/distribucion_fechas.php`, incluido en `tests/claude.php`, verifica estas reglas para ambos servicios, la migración repetida, las respuestas de entrega y las tres pantallas.
 
 Cada formulario de ciclo corresponde al ciclo que estaba abierto al cargar la cuenta. Si otro administrador o pestaña inicia un ciclo, los formularios anteriores se rechazan y requieren recargar. Activar y desactivar envían el estado solicitado; repetir una desactivación mantiene la cuenta desactivada.
 
@@ -66,4 +96,4 @@ php tests/chatgpt_avisos.php
 php tests/run.php
 ```
 
-`tests/claude.php` incluye los casos de distribución, entregas y ajustes de ocupación de ambos servicios, permisos y las regresiones de `tests/hallazgos_chatgpt.php`. La selección, las ventas y los nuevos ciclos bloquean primero la fila de su servicio para mantener una selección única y respetar el último cupo en operaciones concurrentes.
+`tests/claude.php` incluye los casos de distribución, entregas y ajustes de ocupación de ambos servicios, permisos y las regresiones de `tests/hallazgos_chatgpt.php`. La selección, las ventas y los nuevos ciclos bloquean primero la fila de su servicio para mantener una selección única y contabilizar todas las entregas concurrentes, incluso al superar la referencia.

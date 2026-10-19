@@ -11,7 +11,7 @@ use App\Models\Plataforma;
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="post" action="<?= e(url('/suscripciones/actualizar/' . (int) $item['id'])) ?>" id="edit-subscription-form">
+        <form method="post" action="<?= e(url('/suscripciones/actualizar/' . (int) $item['id'])) ?>" id="edit-subscription-form" data-form-behavior="subscription">
             <?= csrf_field() ?>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -57,8 +57,8 @@ use App\Models\Plataforma;
                                 <?= e((string) $modalidad['nombre_modalidad']) ?>
                                 (<?= e(Modalidad::tipoCuentaLabel((string) ($modalidad['tipo_cuenta'] ?? 'CUENTA_COMPLETA'), isset($modalidad['dispositivos']) ? (int) $modalidad['dispositivos'] : null)) ?>,
                                 <?= e(duration_label(max(1, (int) ($modalidad['duracion_meses'] ?? 1)))) ?>,
-                                Costo: <?= e(money((float) ($modalidad['costo'] ?? 0))) ?>,
-                                Venta: <?= e(money((float) $modalidad['precio'])) ?>)
+                                Costo: <?= e(display_money((float) ($modalidad['costo'] ?? 0))) ?>,
+                                Venta: <?= e(display_money((float) $modalidad['precio'])) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -96,7 +96,7 @@ use App\Models\Plataforma;
                     <label class="form-label">Ganancia</label>
                     <div class="form-control bg-light">
                         <strong class="js-ganancia">
-                            <?= e(money((float) ((float) ($item['precio_venta'] ?? 0) - (float) ($item['costo_base'] ?? 0)))) ?>
+                            <?= e(display_money((float) ((float) ($item['precio_venta'] ?? 0) - (float) ($item['costo_base'] ?? 0)))) ?>
                         </strong>
                     </div>
                 </div>
@@ -154,118 +154,3 @@ use App\Models\Plataforma;
         </form>
     </div>
 </div>
-
-<script>
-(() => {
-    const form = document.getElementById('edit-subscription-form');
-    if (!form) return;
-
-    const plataformaSelect = form.querySelector('.js-plataforma');
-    const modalidadSelect = form.querySelector('.js-modalidad');
-    const usuarioWrap = form.querySelector('.js-usuario-wrap');
-    const usuarioLabel = form.querySelector('.js-usuario-label');
-    const usuarioInput = form.querySelector('.js-usuario-input');
-    const usuarioHelp = form.querySelector('.js-usuario-help');
-    const costoBaseInput = form.querySelector('.js-costo-base');
-    const precioVentaInput = form.querySelector('.js-precio-venta');
-    const gananciaEl = form.querySelector('.js-ganancia');
-    const originalModalidadId = modalidadSelect.value;
-    const originalCosto = costoBaseInput.value;
-    const originalPrecio = precioVentaInput.value;
-
-    const applyFilters = () => {
-        const plataformaId = plataformaSelect.value;
-        const selectedPlatformOption = plataformaSelect.options[plataformaSelect.selectedIndex];
-        const tipoServicio = selectedPlatformOption ? selectedPlatformOption.dataset.tipo : '';
-        const datoRenovacion = selectedPlatformOption ? selectedPlatformOption.dataset.datoRenovacion : 'NO_APLICA';
-
-        for (const option of modalidadSelect.options) {
-            if (!option.value) {
-                option.hidden = false;
-                continue;
-            }
-            option.hidden = option.dataset.plataformaId !== plataformaId;
-        }
-
-        if (modalidadSelect.selectedOptions.length > 0) {
-            const selected = modalidadSelect.selectedOptions[0];
-            if (selected && selected.hidden) {
-                modalidadSelect.value = '';
-            }
-        }
-
-        if (tipoServicio === 'DESECHABLE') {
-            usuarioWrap.classList.add('d-none');
-            usuarioInput.required = false;
-            usuarioInput.type = 'text';
-            usuarioInput.value = '';
-        } else {
-            usuarioWrap.classList.remove('d-none');
-            usuarioInput.required = true;
-            if (datoRenovacion === 'CORREO') {
-                usuarioLabel.textContent = 'Correo de la cuenta para renovar';
-                usuarioInput.type = 'email';
-                usuarioInput.placeholder = 'correo@dominio.com';
-                usuarioHelp.textContent = 'Ingresa el correo exacto de la cuenta que se usará para renovar.';
-            } else {
-                usuarioLabel.textContent = 'Usuario de la cuenta para renovar';
-                usuarioInput.type = 'text';
-                usuarioInput.placeholder = 'Ej: usuario123';
-                usuarioHelp.textContent = 'Ingresa el usuario exacto de la cuenta que se usará para renovar.';
-            }
-        }
-
-        applyGanancia();
-    };
-
-    const syncPricingFromSelected = () => {
-        const selectedModalidad = modalidadSelect.options[modalidadSelect.selectedIndex];
-        if (
-            selectedModalidad &&
-            selectedModalidad.value === originalModalidadId &&
-            originalCosto !== '' &&
-            originalPrecio !== ''
-        ) {
-            costoBaseInput.value = originalCosto;
-            precioVentaInput.value = originalPrecio;
-            applyGanancia();
-            return;
-        }
-        if (selectedModalidad && selectedModalidad.dataset.costo) {
-            costoBaseInput.value = selectedModalidad.dataset.costo;
-        }
-        if (selectedModalidad && selectedModalidad.dataset.precio) {
-            precioVentaInput.value = selectedModalidad.dataset.precio;
-        }
-        applyGanancia();
-    };
-
-    const applyGanancia = () => {
-        const costo = Number.parseFloat(costoBaseInput.value || '0');
-        const precio = Number.parseFloat(precioVentaInput.value || '0');
-        const ganancia = (Number.isNaN(precio) ? 0 : precio) - (Number.isNaN(costo) ? 0 : costo);
-        const sign = ganancia < 0 ? '-' : '';
-        const abs = Math.abs(ganancia).toLocaleString('es-BO', {
-            minimumFractionDigits: Number.isInteger(Math.abs(ganancia)) ? 0 : 2,
-            maximumFractionDigits: 2,
-        });
-        gananciaEl.textContent = 'Bs ' + sign + abs;
-        gananciaEl.classList.toggle('text-danger', ganancia < 0);
-        gananciaEl.classList.toggle('text-success', ganancia >= 0);
-    };
-
-    plataformaSelect.addEventListener('change', applyFilters);
-    modalidadSelect.addEventListener('change', () => {
-        applyFilters();
-        syncPricingFromSelected();
-    });
-    costoBaseInput.addEventListener('input', applyGanancia);
-    precioVentaInput.addEventListener('input', applyGanancia);
-    applyFilters();
-    if (costoBaseInput.value === '' || precioVentaInput.value === '') {
-        syncPricingFromSelected();
-    }
-    applyGanancia();
-})();
-</script>
-

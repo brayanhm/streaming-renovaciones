@@ -12,14 +12,10 @@
     let pendingDevices = null;
 
     const availability = () => {
-        const occupied = Number(form.dataset.occupied);
-        const capacity = Number(form.dataset.capacity);
-        const canExceed = form.dataset.canExceed === '1';
         buttons.forEach(button => {
             const devices = Number(button.value);
             button.disabled = busy || form.dataset.eligible !== '1'
-                || (pendingDevices !== null && devices !== pendingDevices)
-                || (!canExceed && occupied + devices > capacity && pendingDevices === null);
+                || (pendingDevices !== null && devices !== pendingDevices);
             button.querySelector('.button-label').textContent = busy ? 'Registrando…' : labels.get(button);
         });
     };
@@ -81,18 +77,18 @@
     const updateAccount = payload => {
         form.dataset.occupied = String(payload.occupied);
         form.dataset.capacity = String(payload.capacity);
-        form.dataset.canExceed = payload.canExceed ? '1' : '0';
         form.dataset.eligible = payload.eligible ? '1' : '0';
         document.querySelector('[data-distribution-occupied]').textContent = payload.occupied;
         document.querySelector('[data-distribution-capacity]').textContent = payload.capacity;
         document.querySelector('[data-distribution-remaining]').textContent = payload.remaining;
+        document.querySelector('[data-distribution-started]').textContent = payload.distributionStartedAt;
+        document.querySelector('[data-distribution-completed]').textContent = payload.distributionCompletedAt;
         const state = document.querySelector('[data-distribution-state]');
         state.textContent = payload.state;
-        state.className = `badge text-bg-${payload.occupied >= payload.capacity ? 'success' : 'primary'}`;
+        state.className = 'badge text-bg-primary';
         notice.hidden = payload.eligible && payload.occupied < payload.capacity;
         notice.textContent = !payload.eligible ? 'La cuenta ya no está disponible. Recarga la pantalla de distribución.'
-            : (payload.canExceed ? 'Cuenta vendida: todos sus cupos están ocupados. Puedes registrar entregas adicionales como administrador.'
-            : 'Cuenta vendida: todos sus cupos están ocupados. El administrador debe seleccionar otra cuenta.');
+            : 'Capacidad de referencia alcanzada. Puedes seguir entregando en esta cuenta hasta que el administrador seleccione otra.';
     };
     form.addEventListener('submit', async event => {
         event.preventDefault();
