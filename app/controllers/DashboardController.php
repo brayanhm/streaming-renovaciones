@@ -24,14 +24,15 @@ class DashboardController extends Controller
     private function renderPanel(): void
     {
         $this->suscripciones->recalculateStates(RECUP_DAYS);
-        $dashboardStates = ['PENDIENTES', 'TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
+        $dashboardStates = ['TODOS', 'CONTACTAR_2D', 'REENVIAR_1D', 'ESPERA', 'ACTIVO', 'VENCIDO'];
 
         $contacto = trim((string) ($_GET['contacto'] ?? ''));
         $usuario = trim((string) ($_GET['usuario'] ?? ''));
         $telefono = trim((string) ($_GET['telefono'] ?? ''));
-        $selectedStatus = strtoupper(trim((string) ($_GET['estado'] ?? 'PENDIENTES')));
+        $selectedStatus = strtoupper(trim((string) ($_GET['estado'] ?? 'TODOS')));
         if (!in_array($selectedStatus, $dashboardStates, true)) {
-            $selectedStatus = 'PENDIENTES';
+            // Los enlaces anteriores a Pendientes también abren todas las vigentes.
+            $selectedStatus = 'TODOS';
         }
 
         $allRows = $this->suscripciones->all('', '', 'TODOS', $contacto, $usuario, $telefono);
@@ -54,14 +55,8 @@ class DashboardController extends Controller
         }
         $this->sortRowsForMessaging($activeRows);
 
-        $nonExpiredStates = ['REENVIAR_1D', 'CONTACTAR_2D', 'ESPERA', 'ACTIVO'];
-        $filteredRows = array_values(array_filter(
-            $activeRows,
-            static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), $nonExpiredStates, true)
-        ));
-        if ($selectedStatus === 'PENDIENTES') {
-            $filteredRows = array_values(array_filter($activeRows, static fn (array $row): bool => in_array((string) $row['estado'], ['REENVIAR_1D', 'CONTACTAR_2D', 'RECUP'], true)));
-        } elseif ($selectedStatus === 'VENCIDO') {
+        $filteredRows = $this->nonExpiredRows($activeRows);
+        if ($selectedStatus === 'VENCIDO') {
             $filteredRows = array_values(array_filter(
                 $activeRows,
                 static fn (array $item): bool => in_array((string) ($item['estado'] ?? ''), ['VENCIDO', 'RECUP'], true)
@@ -97,7 +92,6 @@ class DashboardController extends Controller
         }
 
         $counts = $this->buildDashboardCounts($allRows);
-        $counts['PENDIENTES'] = count(array_filter($activeRows, static fn (array $row): bool => in_array((string) $row['estado'], ['REENVIAR_1D', 'CONTACTAR_2D', 'RECUP'], true)));
 
         $perPage = PER_PAGE;
         $totalRows = count($filteredRows);
@@ -280,6 +274,15 @@ class DashboardController extends Controller
             return 'MENOS_1';
         }
         return 'MENOS_2';
+    }
+
+    private function nonExpiredRows(array $rows): array
+    {
+        // Incluir todos los vencimientos futuros, también fuera del plazo de aviso.
+        return array_values(array_filter($rows, static fn (array $row): bool =>
+            (int) ($row['flag_no_renovo'] ?? 0) === 0
+            && in_array((string) ($row['estado'] ?? ''), ['REENVIAR_1D', 'CONTACTAR_2D', 'ESPERA', 'ACTIVO'], true)
+        ));
     }
 
     private function sortRowsForMessaging(array &$rows): void

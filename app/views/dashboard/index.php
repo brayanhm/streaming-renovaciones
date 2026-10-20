@@ -5,7 +5,6 @@ use App\Models\Modalidad;
 use App\Models\Plataforma;
 
 $states = [
-    'PENDIENTES' => ['label' => 'Pendientes de hoy', 'badge' => 'warning'],
     'TODOS' => ['label' => 'Vigentes', 'badge' => 'secondary'],
     'CONTACTAR_2D' => ['label' => 'Por vencer', 'badge' => 'warning'],
     'REENVIAR_1D' => ['label' => 'Vence hoy', 'badge' => 'info'],
@@ -150,7 +149,7 @@ $contactarBase = '/contactar';
                 <tbody>
                     <?php if (empty($rows)): ?>
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-secondary"><?php if (($selectedStatus ?? '') === 'PENDIENTES'): ?>No hay contactos pendientes para hoy. <a href="<?= e(url($panelBase . '?estado=TODOS')) ?>">Ver suscripciones vigentes</a><?php else: ?>No hay suscripciones con estos filtros.<?php endif; ?></td>
+                            <td colspan="6" class="text-center py-4 text-secondary">No hay suscripciones con estos filtros.</td>
                         </tr>
                     <?php endif; ?>
 
